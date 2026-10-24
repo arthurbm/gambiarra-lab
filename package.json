@@ -32,7 +32,8 @@
     "dev:cli": "gambi",
     "dev:hub": "gambi hub serve",
     "event": "bun scripts/event.ts",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "link:gambi": "bun scripts/link-local-gambi.ts"
   },
   "dependencies": {
     "zod": "catalog:"
