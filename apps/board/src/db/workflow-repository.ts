@@ -1,4 +1,4 @@
-import type { ChallengeProposal } from "@gambi/agents";
+import type { ChallengeProposal } from "@gambiarra-lab/agents";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 

@@ -1,4 +1,4 @@
-import { projectStationToPixels } from "@gambi/board/metro";
+import { projectStationToPixels } from "@gambiarra-lab/board/metro";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import type { BoardState } from "@/lib/orpc";

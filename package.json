@@ -26,7 +26,13 @@
     "build": "turbo run build",
     "check-types": "turbo run check-types",
     "check": "ultracite check",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "dev:cli": "gambi",
+    "dev:hub": "gambi hub serve",
+    "dev:board": "bun run --cwd apps/board dev",
+    "dev:board-web": "bun run --cwd apps/board-web dev",
+    "event": "bun scripts/event.ts",
+    "board:e2e": "bun scripts/event.ts --fake --ephemeral"
   },
   "dependencies": {
     "zod": "catalog:"
@@ -35,6 +41,8 @@
     "@biomejs/biome": "2.5.15",
     "@gambiarra-lab/config": "workspace:*",
     "@types/bun": "catalog:",
+    "gambi": "^0.6.0",
+    "gambi-sdk": "^0.6.0",
     "turbo": "^2.11.7",
     "typescript": "catalog:",
     "ultracite": "8.0.0"

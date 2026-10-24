@@ -1,6 +1,6 @@
 # Gambi board
 
-`@gambi/board` is the local event server. `@gambi/board-web` is its TanStack Router client. The server owns the lobby, squads, phases, audit log, and SQLite recovery. It listens on `0.0.0.0:3001`; Vite listens on `0.0.0.0:3002` and proxies `/rpc`, `/events`, and `/api-reference` to the server.
+`@gambiarra-lab/board` is the local event server. `@gambiarra-lab/board-web` is its TanStack Router client. The server owns the lobby, squads, phases, audit log, and SQLite recovery. It listens on `0.0.0.0:3001`; Vite listens on `0.0.0.0:3002` and proxies `/rpc`, `/events`, and `/api-reference` to the server.
 
 ## Run it
 
@@ -75,7 +75,7 @@ The generated layout had `apps/server`, `apps/web`, `packages/api`, `packages/db
 
 The generated root package, catalog, config package, environment packages, lockfile, and Biome config were not copied. Gambi keeps its existing Bun workspace, `@gambi/config`, TypeScript 5, Ultracite 7.0.7, Biome 2.3.11, and root lockfile.
 
-Package names changed to `@gambi/board` and `@gambi/board-web`. Every transplanted dependency uses a literal version instead of `catalog:` or a range. The main runtime versions are Hono 4.12.32, oRPC 1.14.12, Drizzle ORM 0.45.2, `@libsql/client` 0.17.4, React 19.2.8, TanStack Router 1.170.18, Vite 8.1.5, Tailwind 4.3.3, and TypeScript 5.9.3.
+Package names changed to `@gambiarra-lab/board` and `@gambiarra-lab/board-web`. Every transplanted dependency uses a literal version instead of `catalog:` or a range. The main runtime versions are Hono 4.12.32, oRPC 1.14.12, Drizzle ORM 0.45.2, `@libsql/client` 0.17.4, React 19.2.8, TanStack Router 1.170.18, Vite 8.1.5, Tailwind 4.3.3, and TypeScript 5.9.3.
 
 The released scaffold returned a newly constructed Hono response for oRPC and OpenAPI handlers. That mixes Node and Bun stream types under TypeScript 5. This transplant returns the handler's existing `Response` instead.
 

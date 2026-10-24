@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { HarnessArtifactFile } from "@gambi/agents";
+import type { HarnessArtifactFile } from "@gambiarra-lab/agents";
 import { z } from "zod";
 
 export const TILE_FILE_MAX_BYTES = 512 * 1024;

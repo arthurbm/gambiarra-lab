@@ -1,13 +1,13 @@
-import type { HarnessEvent } from "@gambi/agents";
+import type { HarnessEvent } from "@gambiarra-lab/agents";
 import {
   HarnessTransportError,
   TunnelHarnessTransport,
-} from "@gambi/agents/tunnel";
+} from "@gambiarra-lab/agents/tunnel";
 import {
   createHarnessParticipantSession,
   type HarnessParticipantSession,
   type HarnessParticipantSessionOptions,
-} from "@gambi/core/harness-participant-session";
+} from "gambi-sdk";
 import { createClient, type GambiClient } from "gambi-sdk";
 
 import type { BoardRepository, HubHarnessParticipant } from "./db/repository";

@@ -1,4 +1,4 @@
-# `@gambi/agents`
+# `@gambiarra-lab/agents`
 
 UI-agnostic social orchestration for harness participants. The package models
 squads, challenges, drafts, human decisions, typed dispatches, reviews, and
@@ -13,7 +13,7 @@ answer.
 ## Example
 
 ```ts
-import { Orchestrator, MemoryHarnessTransport } from "@gambi/agents";
+import { Orchestrator, MemoryHarnessTransport } from "@gambiarra-lab/agents";
 import { openai } from "@ai-sdk/openai";
 
 const harness = new MemoryHarnessTransport();
@@ -82,7 +82,7 @@ client returned by `createClient()` and scope one transport to each squad's
 harness participant:
 
 ```ts
-import { TunnelHarnessTransport } from "@gambi/agents/tunnel";
+import { TunnelHarnessTransport } from "@gambiarra-lab/agents/tunnel";
 import { createClient } from "gambi-sdk";
 
 const client = createClient({ hubUrl: "http://localhost:3000" });

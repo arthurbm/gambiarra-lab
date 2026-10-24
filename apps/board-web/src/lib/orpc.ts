@@ -1,4 +1,4 @@
-import type { AppRouterClient } from "@gambi/board/router";
+import type { AppRouterClient } from "@gambiarra-lab/board/router";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";

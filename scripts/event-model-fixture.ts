@@ -1,4 +1,4 @@
-import { createParticipantSession } from "../packages/core/src/participant-session";
+import { createParticipantSession } from "gambi-sdk";
 
 interface FixtureConfig {
   hubUrl: string;

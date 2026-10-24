@@ -1,4 +1,4 @@
-import type { ChallengeProposal } from "@gambi/agents";
+import type { ChallengeProposal } from "@gambiarra-lab/agents";
 import type { Context as HonoContext } from "hono";
 
 import type { BoardRepository } from "../db/repository";

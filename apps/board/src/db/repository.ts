@@ -1,4 +1,4 @@
-import type { HarnessArtifactFile } from "@gambi/agents";
+import type { HarnessArtifactFile } from "@gambiarra-lab/agents";
 import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm";
 
 import {

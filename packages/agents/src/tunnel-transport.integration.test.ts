@@ -3,12 +3,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  createClient,
   createHarnessParticipantSession,
   type HarnessParticipantSession,
-} from "@gambi/core/harness-participant-session";
-import { createHub, type Hub } from "@gambi/core/hub";
+  type Hub,
+  hub as gambiHub,
+} from "gambi-sdk";
 import { MockLanguageModelV3 } from "ai/test";
-import { createClient } from "../../sdk/src/client.ts";
 import { Orchestrator } from "./orchestrator.ts";
 import { TunnelHarnessTransport } from "./tunnel-transport.ts";
 import type { DomainEvent } from "./types.ts";
@@ -21,7 +22,7 @@ function createTestHub(): Hub {
   let lastError: unknown;
   for (let attempt = 0; attempt < 20; attempt += 1) {
     try {
-      return createHub({ hostname: "127.0.0.1", port: randomPort() });
+      return gambiHub.create({ hostname: "127.0.0.1", port: randomPort() });
     } catch (error) {
       lastError = error;
     }

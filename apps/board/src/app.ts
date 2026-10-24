@@ -1,4 +1,4 @@
-import { Orchestrator } from "@gambi/agents";
+import { Orchestrator } from "@gambiarra-lab/agents";
 import type { Client } from "@libsql/client";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";

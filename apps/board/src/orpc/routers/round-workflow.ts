@@ -1,4 +1,4 @@
-import type { ChallengeProposal } from "@gambi/agents";
+import type { ChallengeProposal } from "@gambiarra-lab/agents";
 import { z } from "zod";
 
 import type { Context } from "../context";

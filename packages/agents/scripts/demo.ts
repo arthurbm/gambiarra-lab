@@ -3,13 +3,14 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  createClient,
+  createGambi,
   createHarnessParticipantSession,
   type HarnessParticipantSession,
-} from "@gambi/core/harness-participant-session";
-import { createHub, type Hub } from "@gambi/core/hub";
+  type Hub,
+  hub as gambiHub,
+} from "gambi-sdk";
 import { MockLanguageModelV3 } from "ai/test";
-import { createClient } from "../../sdk/src/client.ts";
-import { createGambi } from "../../sdk/src/provider.ts";
 import { Orchestrator } from "../src/orchestrator.ts";
 import { TunnelHarnessTransport } from "../src/tunnel-transport.ts";
 import type { DomainEvent, Squad } from "../src/types.ts";
@@ -123,7 +124,7 @@ onSignal("SIGTERM", () => {
 
 try {
   if (!(options.hubUrl || options.roomCode)) {
-    localHub = createHub({ hostname: "127.0.0.1", port: 0 });
+    localHub = gambiHub.create({ hostname: "127.0.0.1", port: 0 });
   }
   const hubUrl = options.hubUrl ?? localHub?.url ?? "http://localhost:3000";
   const client = createClient({ hubUrl });

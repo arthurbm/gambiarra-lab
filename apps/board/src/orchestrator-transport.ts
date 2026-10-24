@@ -3,7 +3,7 @@ import type {
   HarnessOpenOptions,
   HarnessSession,
   HarnessTransport,
-} from "@gambi/agents";
+} from "@gambiarra-lab/agents";
 
 import type { BoardRepository } from "./db/repository";
 import type { BoardHarnessRuntime } from "./harness-runtime";
