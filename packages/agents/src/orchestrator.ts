@@ -48,23 +48,23 @@ type DomainEventInput = DomainEvent extends infer Event
   : never;
 
 export interface OrchestratorOptions {
-  model: LanguageModel;
-  squads: Squad[];
-  rounds: Round[];
-  transports: Record<string, HarnessTransport>;
-  initialState?: WorldState;
-  initialHandoff?: string;
-  restoredSessions?: Record<string, string>;
-  maxReturns?: number;
   generateId?: (kind: string) => string;
+  initialHandoff?: string;
+  initialState?: WorldState;
+  maxReturns?: number;
+  model: LanguageModel;
+  restoredSessions?: Record<string, string>;
+  rounds: Round[];
+  squads: Squad[];
+  transports: Record<string, HarnessTransport>;
 }
 
 export interface AskHumanInput {
-  squadId: string;
-  roundId: string;
   question: string;
   reason: string;
   returnCount?: number;
+  roundId: string;
+  squadId: string;
 }
 
 export interface ReviewResult {
@@ -85,23 +85,23 @@ export interface ChallengeProposal {
 }
 
 interface FinishInput {
-  summary: string;
   challenges?: CreateChallengeInput[];
+  summary: string;
 }
 
 interface FinishOutput {
-  summary: string;
   challenges: Challenge[];
+  summary: string;
 }
 
 type AgentTool<Input, Output> = ReturnType<typeof tool<Input, Output>>;
 
 interface OrchestratorToolSet extends ToolSet {
-  listSquads: AgentTool<Record<string, never>, Squad[]>;
-  dispatch: AgentTool<SendDispatchInput, Dispatch>;
-  readWorld: AgentTool<Record<string, never>, WorldState>;
   askHuman: AgentTool<AskHumanInput, string>;
+  dispatch: AgentTool<SendDispatchInput, Dispatch>;
   finish: AgentTool<FinishInput, FinishOutput>;
+  listSquads: AgentTool<Record<string, never>, Squad[]>;
+  readWorld: AgentTool<Record<string, never>, WorldState>;
 }
 
 const seededDraftSchema = z.object({

@@ -6,10 +6,6 @@ export type BoardConnectionStatus = "connected" | "reconnecting" | "offline";
 let connectionStatus: BoardConnectionStatus = "offline";
 const statusListeners = new Set<() => void>();
 export interface HarnessStreamItem {
-  key: string;
-  squadId: string;
-  participantId: string;
-  sessionId: string;
   event: {
     type: string;
     text?: string;
@@ -19,6 +15,10 @@ export interface HarnessStreamItem {
     status?: string;
     message?: string;
   };
+  key: string;
+  participantId: string;
+  sessionId: string;
+  squadId: string;
 }
 const EMPTY_HARNESS_EVENTS: HarnessStreamItem[] = [];
 const harnessEvents = new Map<string, HarnessStreamItem[]>();

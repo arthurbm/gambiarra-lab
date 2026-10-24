@@ -5,9 +5,9 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 export interface HarnessTilePalette {
-  sky: string;
-  ground: string;
   accent: string;
+  ground: string;
+  sky: string;
 }
 
 const CURATED_TILE_PALETTES: HarnessTilePalette[] = [

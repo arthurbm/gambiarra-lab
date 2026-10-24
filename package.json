@@ -1,6 +1,7 @@
 {
   "name": "gambiarra-lab",
   "private": true,
+  "type": "module",
   "workspaces": {
     "packages": [
       "apps/*",
@@ -20,19 +21,18 @@
       "tailwindcss": "^4.3.3"
     }
   },
-  "type": "module",
   "scripts": {
-    "dev": "turbo run dev",
+    "board:e2e": "bun scripts/event.ts --fake --ephemeral",
     "build": "turbo run build",
-    "check-types": "turbo run check-types",
     "check": "ultracite check",
-    "fix": "ultracite fix",
-    "dev:cli": "gambi",
-    "dev:hub": "gambi hub serve",
+    "check-types": "turbo run check-types",
+    "dev": "turbo run dev",
     "dev:board": "bun run --cwd apps/board dev",
     "dev:board-web": "bun run --cwd apps/board-web dev",
+    "dev:cli": "gambi",
+    "dev:hub": "gambi hub serve",
     "event": "bun scripts/event.ts",
-    "board:e2e": "bun scripts/event.ts --fake --ephemeral"
+    "fix": "ultracite fix"
   },
   "dependencies": {
     "zod": "catalog:"

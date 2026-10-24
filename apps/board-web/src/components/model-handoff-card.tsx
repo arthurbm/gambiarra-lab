@@ -27,13 +27,13 @@ import {
 import { client, orpc } from "@/lib/orpc";
 
 interface HandoffSummary {
-  squads?: Array<{ id?: string; name?: string }>;
   decisions?: Array<{ squadId?: string; roundId?: string; build?: string }>;
   pending?: Array<{
     squadId?: string;
     roundId?: string;
     hasDecision?: boolean;
   }>;
+  squads?: Array<{ id?: string; name?: string }>;
 }
 
 type Workflow = Awaited<ReturnType<typeof client.workflow.get>>;

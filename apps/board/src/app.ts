@@ -33,21 +33,21 @@ export interface CreateBoardAppOptions {
   adminToken?: string;
   databaseUrl?: string;
   eventBus?: BoardEventBus;
-  onError?: (error: unknown) => void;
   harness?: false | Omit<BoardHarnessRuntimeOptions, "events" | "repository">;
   harnessRuntime?: BoardHarnessRuntime;
+  onError?: (error: unknown) => void;
   orchestratorRuntime?: OrchestratorActions;
 }
 
 export interface BoardRuntime {
   app: Hono;
   client: Client;
-  repository: BoardRepository;
-  workflow: WorkflowRepository;
-  orchestrator?: Orchestrator;
+  close: () => Promise<void>;
   events: BoardEventBus;
   harness?: BoardHarnessRuntime;
-  close: () => Promise<void>;
+  orchestrator?: Orchestrator;
+  repository: BoardRepository;
+  workflow: WorkflowRepository;
 }
 
 export async function createBoardApp(

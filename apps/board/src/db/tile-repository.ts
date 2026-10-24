@@ -5,28 +5,28 @@ import type { BoardDatabase } from "./client";
 import { tilePublications, tiles } from "./schema";
 
 export interface TileVersionView {
-  id: string;
-  squadId: string;
-  roundId: string | null;
-  dispatchId: string | null;
+  authorName: string | null;
+  authorPersonId: string | null;
   boardVersion: number;
-  sourceParticipantId: string;
-  sourceSessionId: string;
-  sourceVersion: number;
+  createdAt: string;
+  dispatchId: string | null;
+  id: string;
+  isLive: boolean;
+  manifest: TileManifest | null;
+  publicationKind: string | null;
+  publishedAt: string | null;
+  publishedByName: string | null;
+  readme: string | null;
+  roundId: string | null;
   sourceHarnessId: string;
   sourceModel: string | null;
+  sourceParticipantId: string;
   sourceReason: string;
-  manifest: TileManifest | null;
-  readme: string | null;
+  sourceSessionId: string;
+  sourceVersion: number;
+  squadId: string;
   valid: boolean;
   validationError: string | null;
-  authorPersonId: string | null;
-  authorName: string | null;
-  createdAt: string;
-  isLive: boolean;
-  publicationKind: string | null;
-  publishedByName: string | null;
-  publishedAt: string | null;
 }
 
 function parseManifest(value: string | null): TileManifest | null {

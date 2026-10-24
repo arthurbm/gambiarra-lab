@@ -61,16 +61,16 @@
   }
 
   html {
-    background: var(--background);
     font-family: var(--font-sans);
+    background: var(--background);
   }
 
   body {
     min-width: 320px;
     margin: 0;
-    background: var(--background);
     color: var(--foreground);
     caret-color: var(--destructive);
+    background: var(--background);
   }
 
   button:not(:disabled),
@@ -79,8 +79,8 @@
   }
 
   ::selection {
-    background: var(--accent);
     color: var(--foreground);
+    background: var(--accent);
   }
 
   * {
@@ -95,39 +95,39 @@
 
 .route-tabs {
   display: flex;
-  min-height: 46px;
   align-items: stretch;
   justify-content: flex-end;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
+  min-height: 46px;
   font-family: var(--font-mono);
   text-transform: uppercase;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
 }
 
 .route-mark {
   display: inline-flex;
   align-items: center;
-  margin-right: auto;
   padding: 0 1rem;
-  color: var(--muted-foreground);
+  margin-right: auto;
   font-size: 0.66rem;
+  color: var(--muted-foreground);
   letter-spacing: 0.08em;
 }
 
 .route-tabs a {
   display: inline-flex;
-  align-items: center;
   gap: 0.45rem;
+  align-items: center;
   padding: 0 1rem;
-  border-left: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  color: var(--foreground);
   font-size: 0.72rem;
+  color: var(--foreground);
   text-decoration: none;
+  border-left: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
 }
 
 .route-tabs a[aria-current="page"] {
-  background: var(--primary);
   color: var(--primary-foreground);
+  background: var(--primary);
 }
 
 .route-tabs svg,
@@ -139,12 +139,12 @@
 
 .board-shell {
   display: grid;
-  min-height: calc(100svh - 46px);
+  grid-template-rows: minmax(520px, 1fr) auto;
   grid-template-columns: minmax(230px, 18vw) minmax(520px, 1fr) minmax(
       220px,
       16vw
     );
-  grid-template-rows: minmax(520px, 1fr) auto;
+  min-height: calc(100svh - 46px);
   background: var(--background);
 }
 
@@ -172,16 +172,16 @@
 .phase-margin section > p {
   margin: 0;
   font-size: 0.68rem;
-  letter-spacing: 0.08em;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .book-heading h1,
 .plan-heading h2 {
   margin: 0.2rem 0 0;
   font-weight: 570;
-  letter-spacing: -0.03em;
   text-transform: uppercase;
+  letter-spacing: -0.03em;
 }
 
 .book-heading h1 {
@@ -190,9 +190,9 @@
 
 .squad-list {
   display: flex;
-  margin: 1.25rem 0;
-  padding: 0;
   flex-direction: column;
+  padding: 0;
+  margin: 1.25rem 0;
   list-style: none;
 }
 
@@ -203,17 +203,17 @@
 
 .squad-title-row {
   display: flex;
+  gap: 0.75rem;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
 }
 
 .squad-title-row h2 {
   margin: 0;
-  color: var(--primary);
   font-family: var(--font-mono);
   font-size: 0.83rem;
   font-weight: 650;
+  color: var(--primary);
   text-transform: uppercase;
 }
 
@@ -225,17 +225,17 @@
 
 .member-list {
   display: flex;
-  margin: 0.7rem 0 0;
-  padding: 0;
   flex-direction: column;
   gap: 0.45rem;
+  padding: 0;
+  margin: 0.7rem 0 0;
   list-style: none;
 }
 
 .member-list li {
   display: flex;
-  align-items: center;
   gap: 0.45rem;
+  align-items: center;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   text-transform: uppercase;
@@ -243,8 +243,8 @@
 
 .empty-line {
   margin: 0.6rem 0 0;
-  color: var(--muted-foreground);
   font-size: 0.75rem;
+  color: var(--muted-foreground);
 }
 
 .join-link,
@@ -258,36 +258,36 @@
 
 .command-slip {
   display: flex;
+  gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
   padding: 0.8rem;
-  border: 1px dashed var(--border);
   background: color-mix(in srgb, var(--muted) 58%, transparent);
+  border: 1px dashed var(--border);
 }
 
 .command-slip code {
   min-width: 0;
-  overflow-wrap: anywhere;
   font-family: var(--font-mono);
   font-size: 0.72rem;
+  overflow-wrap: anywhere;
 }
 
 .harness-status {
   display: flex;
-  align-items: center;
   gap: 0.5rem;
-  color: var(--primary);
+  align-items: center;
   font-family: var(--font-mono);
   font-size: 0.72rem;
+  color: var(--primary);
   text-transform: uppercase;
 }
 
 .harness-status svg,
 .stream-ledger svg {
+  flex: 0 0 auto;
   width: 1rem;
   height: 1rem;
-  flex: 0 0 auto;
 }
 
 .hosted-list {
@@ -298,8 +298,8 @@
 
 .field-note {
   margin: 0;
-  color: var(--muted-foreground);
   font-size: 0.78rem;
+  color: var(--muted-foreground);
 }
 
 .squad-workbench {
@@ -310,24 +310,24 @@
 
 .round-workflow {
   display: flex;
-  margin-bottom: 2.5rem;
   flex-direction: column;
   gap: 1rem;
+  margin-bottom: 2.5rem;
 }
 
 .workflow-heading {
   display: grid;
+  grid-template-columns: minmax(220px, 0.65fr) minmax(280px, 1.35fr);
+  gap: 2rem;
   padding: 1rem 0;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  grid-template-columns: minmax(220px, 0.65fr) minmax(280px, 1.35fr);
-  gap: 2rem;
 }
 
 .workflow-heading > div {
   display: flex;
-  align-items: center;
   gap: 0.7rem;
+  align-items: center;
 }
 
 .workflow-heading h2,
@@ -340,8 +340,8 @@
 
 .workflow-heading p {
   margin: 0;
-  white-space: pre-line;
   line-height: 1.55;
+  white-space: pre-line;
 }
 
 .proposal-ledger {
@@ -352,13 +352,13 @@
 
 .proposal-slip {
   display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: flex-start;
   min-width: 0;
   padding: 1rem;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.8rem;
-  border-right: 1px dashed var(--border);
   background: color-mix(in srgb, var(--card) 72%, transparent);
+  border-right: 1px dashed var(--border);
 }
 
 .proposal-slip:last-child {
@@ -367,8 +367,8 @@
 
 .proposal-slip > div {
   display: flex;
-  align-items: center;
   gap: 0.5rem;
+  align-items: center;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   text-transform: uppercase;
@@ -394,9 +394,9 @@
 
 .draft-checklist label {
   display: flex;
-  min-height: 44px;
-  align-items: center;
   gap: 0.7rem;
+  align-items: center;
+  min-height: 44px;
   font-size: 0.78rem;
 }
 
@@ -407,21 +407,21 @@
 
 .review-history {
   display: flex;
-  margin: 0;
-  padding: 0;
   flex-direction: column;
   gap: 0.5rem;
+  padding: 0;
+  margin: 0;
   list-style: none;
 }
 
 .review-history li {
   display: grid;
-  padding: 0.6rem;
   grid-template-columns: auto 1fr auto;
-  align-items: center;
   gap: 0.6rem;
-  border: 1px solid var(--border);
+  align-items: center;
+  padding: 0.6rem;
   font-size: 0.74rem;
+  border: 1px solid var(--border);
 }
 
 .review-history small {
@@ -434,10 +434,10 @@
 
 .objective-slip {
   max-width: 760px;
-  margin-bottom: 1.5rem;
   padding: 1rem;
-  border: 1px solid var(--border);
+  margin-bottom: 1.5rem;
   background: var(--card);
+  border: 1px solid var(--border);
 }
 
 .challenge-register {
@@ -453,8 +453,8 @@
 }
 
 .handoff-slip {
-  margin-top: 1rem;
   padding-top: 1rem;
+  margin-top: 1rem;
   border-top: 1px dashed var(--border);
 }
 
@@ -467,9 +467,9 @@
 
 .handoff-slip dl {
   display: grid;
-  margin: 0;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.7rem;
+  margin: 0;
 }
 
 .handoff-slip dl div {
@@ -478,9 +478,9 @@
 }
 
 .handoff-slip dt {
-  color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: 0.62rem;
+  color: var(--muted-foreground);
   text-transform: uppercase;
 }
 
@@ -499,9 +499,9 @@
 
 .handoff-details {
   display: grid;
-  margin-top: 0.8rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
+  margin-top: 0.8rem;
 }
 
 .handoff-details section:first-child {
@@ -528,9 +528,9 @@
 
 .handoff-details ul {
   display: flex;
-  padding: 0;
   flex-direction: column;
   gap: 0.25rem;
+  padding: 0;
   list-style: none;
 }
 
@@ -540,11 +540,11 @@
 }
 
 .dispatch-dependency {
-  margin: 0 0 1rem;
   padding: 0.65rem;
-  border: 1px dashed var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--card));
+  margin: 0 0 1rem;
   font-size: 0.78rem;
+  background: color-mix(in srgb, var(--accent) 10%, var(--card));
+  border: 1px dashed var(--accent);
 }
 
 .publish-round {
@@ -553,17 +553,17 @@
 
 .escalation-ledger {
   display: flex;
-  padding-top: 1rem;
   flex-direction: column;
   gap: 1rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
 
 .escalation-ledger > header {
   display: flex;
+  gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
 }
 
 .escalation-ledger > p {
@@ -579,16 +579,16 @@
 
 .stream-ledger {
   display: flex;
+  flex-direction: column;
   min-height: 280px;
   max-height: 52vh;
-  margin: 0;
   padding: 0;
+  margin: 0;
   overflow-y: auto;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  background: var(--foreground);
   color: var(--background);
   list-style: none;
+  background: var(--foreground);
+  border: 1px solid var(--border);
 }
 
 .stream-ledger li {
@@ -600,24 +600,24 @@
 }
 
 .stream-ledger span {
-  color: var(--accent);
   font-family: var(--font-mono);
   font-size: 0.64rem;
-  letter-spacing: 0.06em;
+  color: var(--accent);
   text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .stream-ledger p {
   margin: 0.2rem 0 0;
-  white-space: pre-wrap;
   font-size: 0.8rem;
   line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .stream-ledger .stream-empty {
-  color: color-mix(in srgb, var(--background) 65%, transparent);
   font-family: var(--font-mono);
   font-size: 0.72rem;
+  color: color-mix(in srgb, var(--background) 65%, transparent);
 }
 
 .squad-choice svg,
@@ -629,8 +629,8 @@
 .city-sheet {
   position: relative;
   grid-column: 2;
-  overflow: hidden;
   padding: clamp(1rem, 2vw, 2rem);
+  overflow: hidden;
   background: #f4e9d4;
 }
 
@@ -639,9 +639,9 @@
   position: absolute;
   width: 42px;
   height: 42px;
-  border-color: var(--destructive);
-  content: "";
   pointer-events: none;
+  content: "";
+  border-color: var(--destructive);
 }
 
 .city-sheet::before {
@@ -661,9 +661,9 @@
 .plan-heading {
   position: relative;
   display: flex;
+  gap: 1rem;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
   padding: 0.4rem 1rem 1rem;
 }
 
@@ -674,8 +674,8 @@
 
 .plan-heading dl {
   display: flex;
-  margin: 0;
   gap: 1rem;
+  margin: 0;
   font-size: 0.62rem;
 }
 
@@ -711,8 +711,8 @@
   height: 100%;
   fill: none;
   stroke: color-mix(in srgb, var(--border) 42%, transparent);
-  stroke-dasharray: 6 5;
   stroke-width: 1;
+  stroke-dasharray: 6 5;
 }
 
 .parcel-grid {
@@ -737,9 +737,9 @@
 .metro-line {
   fill: none;
   stroke: var(--primary);
+  stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 4;
 }
 
 .metro-stop circle {
@@ -755,15 +755,15 @@
 }
 
 .metro-stop text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   fill: var(--foreground);
   stroke: var(--card);
   stroke-width: 4;
   paint-order: stroke fill;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .metro-stop.offline text {
@@ -777,19 +777,19 @@
 
 .finale-heading {
   display: flex;
-  margin-bottom: 1.5rem;
+  gap: 2rem;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 2rem;
+  margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
 }
 
 .finale-heading p,
 .finale-ledger > header p {
   margin: 0;
-  color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: 0.66rem;
+  color: var(--muted-foreground);
   text-transform: uppercase;
 }
 
@@ -801,8 +801,8 @@
 
 .finale-heading dl {
   display: flex;
-  margin: 0 0 1rem;
   gap: 1.5rem;
+  margin: 0 0 1rem;
 }
 
 .finale-heading dl div {
@@ -810,9 +810,9 @@
 }
 
 .finale-heading dt {
-  color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: 0.58rem;
+  color: var(--muted-foreground);
   text-transform: uppercase;
 }
 
@@ -828,9 +828,9 @@
 
 .finale-ledger > header {
   display: flex;
-  margin-bottom: 1rem;
-  align-items: baseline;
   gap: 1rem;
+  align-items: baseline;
+  margin-bottom: 1rem;
 }
 
 .finale-ledger > header h2 {
@@ -845,10 +845,10 @@
 
 .finale-decisions {
   display: flex;
-  margin: 0;
-  padding: 0;
   flex-direction: column;
   gap: 1rem;
+  padding: 0;
+  margin: 0;
   list-style: none;
 }
 
@@ -893,13 +893,13 @@
 .parcel {
   position: relative;
   display: flex;
-  min-width: 0;
-  overflow: hidden;
-  padding: clamp(0.45rem, 0.8vw, 0.7rem);
   flex-direction: column;
-  border: 1px solid var(--accent);
-  background: color-mix(in srgb, var(--card) 82%, #fff8e9);
   gap: 0.5rem;
+  min-width: 0;
+  padding: clamp(0.45rem, 0.8vw, 0.7rem);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--card) 82%, #fff8e9);
+  border: 1px solid var(--accent);
 }
 
 .parcel-number {
@@ -908,20 +908,20 @@
   left: 0.8rem;
   z-index: 1;
   padding: 0.16rem 0.28rem;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
   font-family: var(--font-mono);
   font-size: clamp(0.72rem, 1.3vw, 0.9rem);
-  letter-spacing: -0.04em;
   line-height: 1;
+  letter-spacing: -0.04em;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
 }
 
 .tile-viewport {
   position: relative;
   width: 100%;
-  overflow: hidden;
   aspect-ratio: 4 / 3;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  overflow: hidden;
   background: var(--muted);
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
 }
 
 .tile-publication,
@@ -941,8 +941,8 @@
 
 .tile-frame {
   display: block;
-  border: 0;
   background: var(--muted);
+  border: 0;
 }
 
 .tile-loading {
@@ -950,29 +950,29 @@
   right: 0.45rem;
   bottom: 0.45rem;
   padding: 0.2rem 0.35rem;
-  background: var(--foreground);
-  color: var(--background);
   font-family: var(--font-mono);
   font-size: 0.58rem;
-  letter-spacing: 0.04em;
+  color: var(--background);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--foreground);
 }
 
 .measured-empty-lot {
   position: relative;
   display: grid;
-  padding: 18% 12% 10%;
   grid-template-columns: repeat(5, 1fr);
-  align-items: end;
   gap: 0.35rem;
+  align-items: end;
+  padding: 18% 12% 10%;
   background: color-mix(in srgb, var(--accent) 9%, var(--card));
 }
 
 .measured-empty-lot::before,
 .measured-empty-lot::after {
   position: absolute;
-  border: 1px dashed color-mix(in srgb, var(--border) 62%, transparent);
   content: "";
+  border: 1px dashed color-mix(in srgb, var(--border) 62%, transparent);
 }
 
 .measured-empty-lot::before {
@@ -988,8 +988,8 @@
 .measured-empty-lot span {
   display: block;
   height: 38%;
-  border: 1px solid color-mix(in srgb, var(--primary) 72%, transparent);
   background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 72%, transparent);
 }
 
 .measured-empty-lot span:nth-child(2),
@@ -1018,9 +1018,9 @@
 
 .parcel-plate-heading {
   display: flex;
+  gap: 0.45rem;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.45rem;
 }
 
 .parcel-plate h3,
@@ -1047,22 +1047,22 @@
 
 .parcel-provenance {
   margin-top: 0.28rem !important;
-  color: var(--primary);
   font-family: var(--font-mono);
   font-size: 0.58rem;
-  letter-spacing: 0.03em;
+  color: var(--primary);
   text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .parcel-description {
   display: -webkit-box;
+  -webkit-box-orient: vertical;
   margin-top: 0.24rem !important;
   overflow: hidden;
-  color: var(--muted-foreground);
-  -webkit-box-orient: vertical;
-  font-size: 0.66rem;
   -webkit-line-clamp: 2;
+  font-size: 0.66rem;
   line-height: 1.35;
+  color: var(--muted-foreground);
 }
 
 @starting-style {
@@ -1074,9 +1074,9 @@
 
 .phase-margin {
   display: flex;
+  flex-direction: column;
   grid-row: 1 / 3;
   grid-column: 3;
-  flex-direction: column;
   gap: 1.7rem;
   border-left: 1px solid var(--border);
   box-shadow: -8px 2px 20px rgb(37 50 46 / 9%);
@@ -1084,34 +1084,34 @@
 
 .phase-margin section {
   display: flex;
-  padding-bottom: 1.5rem;
   flex-direction: column;
   gap: 0.7rem;
+  padding-bottom: 1.5rem;
   border-bottom: 1px dashed var(--border);
 }
 
 .phase-margin h2 {
   margin: 0;
-  color: var(--destructive);
   font-family: var(--font-mono);
   font-size: clamp(1.25rem, 1.8vw, 1.65rem);
   font-weight: 680;
-  letter-spacing: -0.03em;
+  color: var(--destructive);
   text-transform: uppercase;
+  letter-spacing: -0.03em;
 }
 
 .room-register strong {
-  color: var(--primary);
   font-family: var(--font-mono);
   font-size: 1.4rem;
+  color: var(--primary);
 }
 
 .room-register output {
   display: flex;
-  align-items: center;
   gap: 0.45rem;
-  color: var(--primary);
+  align-items: center;
   font-size: 0.72rem;
+  color: var(--primary);
 }
 
 .connection-status[data-status="reconnecting"] {
@@ -1124,8 +1124,8 @@
 
 .phase-data {
   display: flex;
-  margin: 0;
   gap: 1.2rem;
+  margin: 0;
   font-family: var(--font-mono);
   font-size: 0.72rem;
 }
@@ -1138,15 +1138,15 @@
 .event-ledger {
   grid-column: 2;
   padding: 0 1rem 1.2rem;
-  border-top: 1px solid var(--border);
   background: var(--card);
+  border-top: 1px solid var(--border);
 }
 
 .event-ledger > header {
   display: flex;
+  gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
   padding: 0.7rem 0;
 }
 
@@ -1168,15 +1168,15 @@
 
 .loading-sheet {
   max-width: 1100px;
-  margin: 3rem auto;
   padding: 1rem;
+  margin: 3rem auto;
 }
 
 .interior-page {
   width: min(1100px, calc(100% - 2rem));
   min-height: calc(100svh - 46px);
-  margin: 0 auto;
   padding: clamp(2rem, 6vw, 5rem) 0;
+  margin: 0 auto;
 }
 
 .narrow-page {
@@ -1192,16 +1192,16 @@
   margin: 1.4rem 0 0.7rem;
   font-size: clamp(2rem, 5vw, 4.5rem);
   font-weight: 600;
-  letter-spacing: -0.04em;
   line-height: 0.95;
+  letter-spacing: -0.04em;
 }
 
 .interior-heading p {
   max-width: 65ch;
   margin: 0;
-  color: var(--muted-foreground);
   font-family: var(--font-sans);
   font-size: 1rem;
+  color: var(--muted-foreground);
 }
 
 .admin-heading [data-slot="badge"] {
@@ -1228,19 +1228,19 @@
 }
 
 .tile-register {
-  margin-top: 1.2rem;
   padding: 1.2rem;
-  border: 1px solid var(--border);
+  margin-top: 1.2rem;
   background: var(--card);
+  border: 1px solid var(--border);
 }
 
 .tile-register > header {
   display: flex;
+  gap: 1rem;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
   padding-bottom: 1rem;
+  margin-bottom: 1rem;
   border-bottom: 1px dashed var(--border);
 }
 
@@ -1258,8 +1258,8 @@
 .tile-register header p {
   max-width: 65ch;
   margin-top: 0.3rem;
-  color: var(--muted-foreground);
   font-size: 0.78rem;
+  color: var(--muted-foreground);
 }
 
 .tile-register > [data-slot="field-group"] {
@@ -1268,25 +1268,25 @@
 
 .tile-version-list {
   display: flex;
-  margin: 1.2rem 0 0;
-  padding: 0;
   flex-direction: column;
+  padding: 0;
+  margin: 1.2rem 0 0;
   list-style: none;
 }
 
 .tile-version-list li {
   display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 220px) auto;
+  gap: 0.75rem;
+  align-items: center;
   padding: 0.75rem 0;
   border-top: 1px dashed color-mix(in srgb, var(--border) 62%, transparent);
-  grid-template-columns: minmax(180px, 1fr) minmax(150px, 220px) auto;
-  align-items: center;
-  gap: 0.75rem;
 }
 
 .tile-version-list li > div {
   display: flex;
-  min-width: 0;
   flex-direction: column;
+  min-width: 0;
 }
 
 .tile-version-list strong {
@@ -1296,8 +1296,8 @@
 }
 
 .tile-version-list span {
-  color: var(--muted-foreground);
   font-size: 0.7rem;
+  color: var(--muted-foreground);
 }
 
 .tile-version-list [data-slot="select-trigger"] {
@@ -1311,11 +1311,11 @@
 }
 
 .phase-confirmation p {
-  margin: 0;
   grid-column: 1 / -1;
-  color: var(--destructive);
+  margin: 0;
   font-family: var(--font-mono);
   font-size: 0.75rem;
+  color: var(--destructive);
 }
 
 .squad-choice {
@@ -1324,12 +1324,12 @@
 
 .squad-choice [data-slot="toggle-group-item"] {
   display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.8rem;
+  justify-items: start;
   width: 100%;
   height: auto;
   min-height: 2.8rem;
-  grid-template-columns: auto 1fr auto;
-  justify-items: start;
-  gap: 0.8rem;
   text-align: left;
 }
 
@@ -1415,12 +1415,12 @@ code {
 
   .route-tabs {
     position: fixed;
-    z-index: 20;
     right: 0;
     bottom: 0;
     left: 0;
-    min-height: 58px;
+    z-index: 20;
     justify-content: stretch;
+    min-height: 58px;
     border-top: 1px solid var(--border);
     border-bottom: 0;
     box-shadow: 0 -5px 18px rgb(37 50 46 / 12%);
@@ -1429,12 +1429,12 @@ code {
   .route-tabs a {
     flex: 1;
     flex-direction: column;
-    justify-content: center;
     gap: 0.18rem;
+    justify-content: center;
     padding: 0.35rem;
+    font-size: 0.62rem;
     border-right: 1px solid var(--border);
     border-left: 0;
-    font-size: 0.62rem;
   }
 
   .route-mark {
@@ -1507,15 +1507,15 @@ code {
 
   .finale-heading,
   .finale-ledger > header {
-    align-items: flex-start;
     flex-direction: column;
     gap: 0.6rem;
+    align-items: flex-start;
   }
 
   .finale-heading dl {
-    width: 100%;
-    justify-content: space-between;
     gap: 0.5rem;
+    justify-content: space-between;
+    width: 100%;
   }
 
   .handoff-slip dl {
@@ -1536,25 +1536,25 @@ code {
 
   .ledger-mobile {
     display: flex;
-    margin: 0;
-    padding: 0;
     flex-direction: column;
     gap: 0.65rem;
+    padding: 0;
+    margin: 0;
     list-style: none;
   }
 
   .ledger-mobile li {
     display: grid;
-    padding: 0.7rem;
-    border: 1px solid var(--border);
     grid-template-columns: auto 1fr;
     gap: 0.25rem 0.7rem;
+    padding: 0.7rem;
     font-size: 0.72rem;
+    border: 1px solid var(--border);
   }
 
   .ledger-mobile span {
-    color: var(--muted-foreground);
     font-family: var(--font-mono);
+    color: var(--muted-foreground);
     text-transform: uppercase;
   }
 
@@ -1570,8 +1570,8 @@ code {
   }
 
   .command-slip {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .stream-ledger {
@@ -1585,8 +1585,8 @@ code {
 
   .tile-register > header,
   .tile-version-list li {
-    align-items: stretch;
     grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .tile-register > header {

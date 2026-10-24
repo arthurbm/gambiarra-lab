@@ -3,12 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts",
   "exports": {
     ".": "./src/app.ts",
     "./metro": "./src/domain/metro.ts",
     "./router": "./src/orpc/routers/index.ts"
   },
+  "main": "src/index.ts",
   "scripts": {
     "build": "tsdown",
     "check-types": "tsc --noEmit",

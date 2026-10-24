@@ -47,12 +47,12 @@ const SQUAD_NAMES = [
 ] as const;
 
 export interface AuditEvent {
+  actorName: string | null;
+  actorPersonId: string | null;
+  createdAt: string;
+  payload: Record<string, unknown>;
   sequence: number;
   type: string;
-  actorPersonId: string | null;
-  actorName: string | null;
-  payload: Record<string, unknown>;
-  createdAt: string;
 }
 
 export interface BoardState {
@@ -63,12 +63,9 @@ export interface BoardState {
     currentPhase: BoardPhase;
     roomCode: string | null;
   };
-  squads: Array<{
-    id: string;
-    ordinal: number;
-    name: string;
-    members: Array<{ id: string; name: string; joinedAt: string }>;
-  }>;
+  events: AuditEvent[];
+  harnesses: HarnessView[];
+  revision: number;
   rounds: Array<{
     number: number;
     slug: string;
@@ -76,43 +73,46 @@ export interface BoardState {
     skippable: boolean;
     status: string;
   }>;
-  events: AuditEvent[];
-  harnesses: HarnessView[];
+  squads: Array<{
+    id: string;
+    ordinal: number;
+    name: string;
+    members: Array<{ id: string; name: string; joinedAt: string }>;
+  }>;
   tiles: TileVersionView[];
-  revision: number;
 }
 
 export interface HarnessView {
-  participantId: string;
-  nickname: string;
-  harnessId: string;
-  model: string | null;
-  hosted: boolean;
-  ownerPersonId: string | null;
-  ownerName: string | null;
   connected: boolean;
+  harnessId: string;
+  hosted: boolean;
   lastSeenAt: string | null;
+  model: string | null;
+  nickname: string;
+  ownerName: string | null;
+  ownerPersonId: string | null;
+  participantId: string;
 }
 
 export interface SquadHarnessView {
-  squadId: string;
-  roundId: string;
   assignment: HarnessView | null;
-  steerer: { personId: string; personName: string } | null;
+  roundId: string;
   session: { sessionId: string; status: string } | null;
+  squadId: string;
+  steerer: { personId: string; personName: string } | null;
 }
 
 export interface HubHarnessParticipant {
-  id: string;
-  nickname: string;
-  model: string;
-  harness: { id: string; model?: string; hosted?: boolean };
   connection: { connected: boolean; lastTunnelSeenAt?: number | null };
+  harness: { id: string; model?: string; hosted?: boolean };
+  id: string;
+  model: string;
+  nickname: string;
 }
 
 interface Actor {
-  personId?: string;
   name?: string;
+  personId?: string;
 }
 
 function parsePhase(value: string): BoardPhase {

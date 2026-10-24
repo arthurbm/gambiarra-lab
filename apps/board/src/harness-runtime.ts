@@ -4,11 +4,12 @@ import {
   TunnelHarnessTransport,
 } from "@gambiarra-lab/agents/tunnel";
 import {
+  createClient,
   createHarnessParticipantSession,
+  type GambiClient,
   type HarnessParticipantSession,
   type HarnessParticipantSessionOptions,
 } from "gambi-sdk";
-import { createClient, type GambiClient } from "gambi-sdk";
 
 import type { BoardRepository, HubHarnessParticipant } from "./db/repository";
 import type { BoardEventBus } from "./sse";
@@ -62,12 +63,12 @@ export interface BoardHarnessRuntime {
 }
 
 export interface HarnessStreamEvent {
-  type: "harness.stream";
-  squadId: string;
-  roundId: string;
-  participantId: string;
-  sessionId: string;
   event: HarnessEvent;
+  participantId: string;
+  roundId: string;
+  sessionId: string;
+  squadId: string;
+  type: "harness.stream";
 }
 
 interface GatewayEntry {

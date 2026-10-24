@@ -1,10 +1,10 @@
 import type { HarnessEvent } from "./transport.ts";
 
 export interface Squad {
-  id: string;
-  name: string;
   harnessParticipantId?: string;
+  id: string;
   memberNames: string[];
+  name: string;
 }
 
 export interface Round {
@@ -15,71 +15,71 @@ export interface Round {
 
 export interface Challenge {
   id: string;
-  squadId: string;
-  roundId: string;
   objective: string;
+  roundId: string;
   seededDraftIds: string[];
+  squadId: string;
   status: "draft" | "dispatched";
 }
 
 export type DraftOrigin = "human" | "harness";
 
 export interface Draft {
-  id: string;
-  challengeId: string;
   authorName: string;
-  origin: DraftOrigin;
+  challengeId: string;
   content: string;
+  id: string;
+  origin: DraftOrigin;
 }
 
 export interface Decision {
-  id: string;
-  challengeId: string;
-  squadId: string;
-  roundId: string;
   build: string;
-  cut: string;
-  reason: string;
+  challengeId: string;
   consideredDraftIds: string[];
+  cut: string;
+  id: string;
+  reason: string;
+  roundId: string;
+  squadId: string;
   steererName: string;
 }
 
 export interface DispatchPayload {
-  objective: string;
-  input: string;
-  expectedOutput: string;
   constraints: string[];
   decision: Decision;
+  expectedOutput: string;
+  input: string;
+  objective: string;
 }
 
 export interface Dispatch {
-  id: string;
   challengeId: string;
-  squadId: string;
+  id: string;
+  payload: DispatchPayload;
   roundId: string;
   sessionId: string;
-  payload: DispatchPayload;
+  squadId: string;
 }
 
 export interface Review {
-  id: string;
   dispatchId: string;
-  squadId: string;
-  roundId: string;
+  id: string;
   outcome: "accepted" | "returned";
   reason?: string;
   reviewerName: string;
+  roundId: string;
+  squadId: string;
 }
 
 export interface Escalation {
   id: string;
-  squadId: string;
-  roundId: string;
   question: string;
   reason: string;
-  returnCount: number;
-  status: "pending" | "answered";
   response?: string;
+  returnCount: number;
+  roundId: string;
+  squadId: string;
+  status: "pending" | "answered";
 }
 
 export type DomainEvent =
@@ -125,14 +125,14 @@ export type DomainEvent =
     };
 
 export interface WorldState {
-  squads: Squad[];
-  rounds: Round[];
   challenges: Challenge[];
-  drafts: Draft[];
   decisions: Decision[];
   dispatches: Dispatch[];
-  reviews: Review[];
+  drafts: Draft[];
   escalations: Escalation[];
+  reviews: Review[];
+  rounds: Round[];
+  squads: Squad[];
 }
 
 export interface SeededDraftInput {
@@ -143,33 +143,33 @@ export interface SeededDraftInput {
 
 export interface CreateChallengeInput {
   id?: string;
-  squadId: string;
-  roundId: string;
   objective: string;
+  roundId: string;
   seededDrafts: SeededDraftInput[];
+  squadId: string;
 }
 
 export interface RecordDecisionInput {
-  id?: string;
-  challengeId: string;
   build: string;
-  cut: string;
-  reason: string;
+  challengeId: string;
   consideredDraftIds: string[];
+  cut: string;
+  id?: string;
+  reason: string;
   steererName: string;
 }
 
 export interface SendDispatchInput {
-  id?: string;
   challengeId: string;
-  input: string;
-  expectedOutput: string;
   constraints?: string[];
+  expectedOutput: string;
+  id?: string;
+  input: string;
 }
 
 export interface RecordReviewInput {
-  id?: string;
   dispatchId: string;
+  id?: string;
   outcome: Review["outcome"];
   reason?: string;
   reviewerName: string;

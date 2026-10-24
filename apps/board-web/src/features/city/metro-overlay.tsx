@@ -7,11 +7,11 @@ type Squad = BoardState["squads"][number];
 type Tile = BoardState["tiles"][number];
 
 interface MetroPoint {
-  x: number;
-  y: number;
+  connected: boolean;
   label: string;
   squadId: string;
-  connected: boolean;
+  x: number;
+  y: number;
 }
 
 function measureMetro(container: HTMLElement, squads: Squad[], tiles: Tile[]) {

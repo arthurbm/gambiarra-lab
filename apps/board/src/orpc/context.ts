@@ -11,7 +11,6 @@ interface HarnessActions {
     prompt: string;
     squadId: string;
   }) => Promise<{ sessionId: string; revision: number }>;
-  reconcileHosted: (desiredCount?: number) => Promise<void>;
   promptSession: (input: {
     participantId: string;
     prompt: string;
@@ -19,28 +18,29 @@ interface HarnessActions {
     sessionId: string;
     squadId: string;
   }) => Promise<string>;
+  reconcileHosted: (desiredCount?: number) => Promise<void>;
 }
 
 export interface OrchestratorActions {
   listModels: () => Promise<
     Array<{ id: string; nickname: string; model: string }>
   >;
-  run: (prompt: string) => Promise<unknown>;
   proposeChallenges: (
     prompt: string,
     roundId: string
   ) => Promise<ChallengeProposal[]>;
+  run: (prompt: string) => Promise<unknown>;
   swapModel: (participantId: string, handoff: string) => string;
 }
 
 export interface CreateContextOptions {
-  context: HonoContext;
-  repository: BoardRepository;
-  workflow: WorkflowRepository;
-  events: BoardEventBus;
   adminToken: string;
+  context: HonoContext;
+  events: BoardEventBus;
   harness?: HarnessActions;
   orchestrator?: OrchestratorActions;
+  repository: BoardRepository;
+  workflow: WorkflowRepository;
 }
 
 export function createContext(options: CreateContextOptions) {

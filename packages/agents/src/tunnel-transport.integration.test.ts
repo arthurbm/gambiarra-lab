@@ -2,14 +2,14 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { MockLanguageModelV3 } from "ai/test";
 import {
   createClient,
   createHarnessParticipantSession,
+  hub as gambiHub,
   type HarnessParticipantSession,
   type Hub,
-  hub as gambiHub,
 } from "gambi-sdk";
-import { MockLanguageModelV3 } from "ai/test";
 import { Orchestrator } from "./orchestrator.ts";
 import { TunnelHarnessTransport } from "./tunnel-transport.ts";
 import type { DomainEvent } from "./types.ts";

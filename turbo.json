@@ -3,58 +3,32 @@
   "ui": "tui",
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        ".env*"
-      ],
-      "outputs": [
-        "dist/**"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**"]
     },
     "lint": {
-      "dependsOn": [
-        "^lint"
-      ]
+      "dependsOn": ["^lint"]
     },
     "check-types": {
-      "dependsOn": [
-        "^check-types"
-      ],
-      "outputs": [
-        "dist/**"
-      ]
+      "dependsOn": ["^check-types"],
+      "outputs": ["dist/**"]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "start": {
-      "dependsOn": [
-        "build"
-      ],
+      "dependsOn": ["build"],
       "cache": false,
       "persistent": true,
-      "passThroughEnv": [
-        "*"
-      ]
+      "passThroughEnv": ["*"]
     },
     "db:migrate": {
       "cache": false,
       "interactive": true
     }
   },
-  "globalEnv": [
-    "CI",
-    "CORS_ORIGIN",
-    "DATABASE_URL",
-    "NODE_ENV"
-  ],
-  "globalDependencies": [
-    ".env*",
-    "apps/*/.env*",
-    "packages/*/.env*"
-  ]
+  "globalEnv": ["CI", "CORS_ORIGIN", "DATABASE_URL", "NODE_ENV"],
+  "globalDependencies": [".env*", "apps/*/.env*", "packages/*/.env*"]
 }

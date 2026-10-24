@@ -5,20 +5,12 @@
     "composite": false,
     "outDir": "dist",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     },
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "strictNullChecks": true,
-    "types": [
-      "bun"
-    ]
+    "types": ["bun"]
   },
-  "include": [
-    "src/**/*.ts",
-    "drizzle.config.ts",
-    "tsdown.config.ts"
-  ]
+  "include": ["src/**/*.ts", "drizzle.config.ts", "tsdown.config.ts"]
 }

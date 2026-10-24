@@ -1,22 +1,22 @@
 export interface HarnessEventForBoard {
-  type: string;
-  sessionId: string;
-  version?: number;
-  reason?: "watch" | "final";
   files?: Array<{
     path: string;
     encoding: "base64" | "utf8";
     content?: string;
   }>;
+  reason?: "watch" | "final";
+  sessionId: string;
+  type: string;
+  version?: number;
 }
 
 export interface HarnessStreamEnvelope {
-  type: "harness.stream";
-  squadId: string;
-  roundId: string;
-  participantId: string;
-  sessionId: string;
   event: HarnessEventForBoard;
+  participantId: string;
+  roundId: string;
+  sessionId: string;
+  squadId: string;
+  type: "harness.stream";
 }
 
 export type BoardSseEvent =

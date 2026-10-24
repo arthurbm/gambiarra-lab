@@ -53,38 +53,39 @@ const challengeProposalSetSchema = z
   .min(1);
 
 interface RecordedDecision {
-  id: string;
-  challengeId: string;
-  squadId: string;
-  roundId: string;
   build: string;
-  cut: string;
-  reason: string;
+  challengeId: string;
   consideredDraftIds: string[];
+  cut: string;
+  id: string;
+  reason: string;
+  roundId: string;
+  squadId: string;
   steererName: string;
 }
 
 interface DispatchPayload {
-  objective: string;
-  input: string;
-  expectedOutput: string;
   constraints: string[];
   decision: RecordedDecision;
+  expectedOutput: string;
+  input: string;
+  objective: string;
 }
 
 export interface OrchestratorModelView {
-  participantId: string;
-  modelLabel: string;
-  previousModelLabel: string;
-  handoff: string;
-  actorPersonId: string;
   actorName: string;
-  roundId: string;
-  createdAt: string;
+  actorPersonId: string;
   consumedAt: string | null;
+  createdAt: string;
+  handoff: string;
+  modelLabel: string;
+  participantId: string;
+  previousModelLabel: string;
+  roundId: string;
 }
 
 export interface FinaleView {
+  orchestratorModel: OrchestratorModelView | null;
   squads: Array<{
     id: string;
     ordinal: number;
@@ -113,7 +114,6 @@ export interface FinaleView {
     drafts: { human: number; harness: number };
     returnedReviews: number;
   };
-  orchestratorModel: OrchestratorModelView | null;
 }
 
 interface Actor {
@@ -126,10 +126,6 @@ type BoardTransaction = Parameters<
 >[0];
 
 export interface WorkflowView {
-  roundId: string;
-  maxReturns: number;
-  orchestratorSteerer: { personId: string; personName: string } | null;
-  orchestratorModel: OrchestratorModelView | null;
   challenges: Array<{
     id: string;
     squadId: string;
@@ -185,6 +181,10 @@ export interface WorkflowView {
     createdAt: string;
     answeredAt: string | null;
   }>;
+  maxReturns: number;
+  orchestratorModel: OrchestratorModelView | null;
+  orchestratorSteerer: { personId: string; personName: string } | null;
+  roundId: string;
 }
 
 function parsePayload(value: string): DispatchPayload {

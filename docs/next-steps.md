@@ -34,3 +34,7 @@ O lab pode ir para `ai@7` antes do gambi. O `createGambi()` do `gambi-sdk` devol
 ## 5. Arena reconstruída
 
 A segunda experiência é uma arena reconstruída sobre o Gambi, usando o Gambiarra Arena só como referência de regras e jogos, sem importar o código. Ela vive em `apps/arena` (e `apps/arena-web`, se precisar de UI), reaproveita `packages/ui` e é o segundo consumidor de que `packages/agents` precisa antes de qualquer extração.
+
+## 6. Dívida de lint do Ultracite 8
+
+O scaffold trouxe o Ultracite 8, mais rígido que o 7 que o gambi usava quando o board foi escrito. O `bun x ultracite fix` já aplicou as correções seguras. Restam cerca de 150 erros de regras novas, principalmente `noJsxPropsBind`, `noAwaitInLoops`, `noDescendingSpecificity`, `noUnnecessaryConditions` e `useDestructuring`. Corrija junto com cada mudança no arquivo afetado, ou desligue uma regra no `biome.jsonc` com o motivo anotado.

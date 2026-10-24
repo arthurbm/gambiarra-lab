@@ -1,4 +1,31 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": ["ultracite/biome/core", "ultracite/biome/react", "ultracite/biome/tanstack"],
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/tanstack"
+  ],
+  "files": {
+    "includes": [
+      "!**/dist",
+      "!**/.turbo",
+      "!**/routeTree.gen.ts",
+      "!**/bts.jsonc",
+      "!.agents",
+      "!.claude",
+      "!.impeccable",
+      "!docs/gambiarra-2026-08-23/evidence",
+      "!apps/board/drizzle/meta"
+    ]
+  },
+  "javascript": {
+    "globals": ["Bun"]
+  },
+  "linter": {
+    "rules": {
+      "performance": {
+        "noBarrelFile": "off"
+      }
+    }
+  }
 }

@@ -2,15 +2,15 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { MockLanguageModelV3 } from "ai/test";
 import {
   createClient,
   createGambi,
   createHarnessParticipantSession,
+  hub as gambiHub,
   type HarnessParticipantSession,
   type Hub,
-  hub as gambiHub,
 } from "gambi-sdk";
-import { MockLanguageModelV3 } from "ai/test";
 import { Orchestrator } from "../src/orchestrator.ts";
 import { TunnelHarnessTransport } from "../src/tunnel-transport.ts";
 import type { DomainEvent, Squad } from "../src/types.ts";
@@ -115,12 +115,8 @@ const onSignal = process.once.bind(process) as unknown as (
   signal: "SIGINT" | "SIGTERM",
   listener: () => Promise<void>
 ) => typeof process;
-onSignal("SIGINT", () => {
-  return cleanup().finally(() => process.exit(130));
-});
-onSignal("SIGTERM", () => {
-  return cleanup().finally(() => process.exit(143));
-});
+onSignal("SIGINT", () => cleanup().finally(() => process.exit(130)));
+onSignal("SIGTERM", () => cleanup().finally(() => process.exit(143)));
 
 try {
   if (!(options.hubUrl || options.roomCode)) {

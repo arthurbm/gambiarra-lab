@@ -2,8 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HarnessParticipantSession } from "gambi-sdk";
-import type { GambiClient } from "gambi-sdk";
+import type { GambiClient, HarnessParticipantSession } from "gambi-sdk";
 
 import { createBoardApp } from "../app";
 import type { BoardHarnessRuntime } from "../harness-runtime";

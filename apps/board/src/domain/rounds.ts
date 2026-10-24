@@ -1,10 +1,10 @@
 export interface SeededRound {
+  challenge: string;
   number: number;
+  proposals: readonly [string, string, ...string[]];
+  skippable: boolean;
   slug: string;
   title: string;
-  skippable: boolean;
-  challenge: string;
-  proposals: readonly [string, string, ...string[]];
 }
 
 export const SEEDED_ROUNDS: readonly SeededRound[] = [

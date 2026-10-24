@@ -48,8 +48,8 @@ export type HarnessEvent =
     };
 
 export interface HarnessTransport {
+  close(sessionId: string): Promise<void>;
   readonly events: AsyncIterable<HarnessEvent>;
   open(options: HarnessOpenOptions): Promise<HarnessSession>;
   prompt(sessionId: string, prompt: string): Promise<void>;
-  close(sessionId: string): Promise<void>;
 }
