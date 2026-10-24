@@ -1,0 +1,3 @@
+{
+  "extends": "@gambiarra-lab/config/tsconfig.base.json"
+}
