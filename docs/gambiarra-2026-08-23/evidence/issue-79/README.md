@@ -22,16 +22,16 @@ issue 79 (não troque as extensões por `.png`):
 ```markdown
 Evidência do ensaio determinístico de `bun run board:e2e` (sem chamadas pagas):
 
-- [Admin · desktop 1440×900](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/01-admin-desktop-1440x900.jpg)
-- [Membro · mobile 390×844](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/02-member-mobile-390x844.jpg)
-- [Rodada 4 · desktop 1440×900](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/03-round-4-city-desktop-1440x900.jpg)
-- [Rodada 4 · mobile 390×844](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/04-round-4-city-mobile-390x844.jpg)
-- [Rodada 5 · desktop 1280×720](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/05-round-5-crisis-desktop-1280x720.jpg)
-- [Rodada 6 · desktop 1280×720](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/06-round-6-model-swap-desktop-1280x720.jpg)
-- [Finale após restart · desktop 1440×900](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/07-finale-after-restart-desktop-1440x900.jpg)
-- [Finale após restart · mobile 390×844](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/08-finale-after-restart-mobile-390x844.jpg)
+- [Admin · desktop 1440×900](./01-admin-desktop-1440x900.jpg)
+- [Membro · mobile 390×844](./02-member-mobile-390x844.jpg)
+- [Rodada 4 · desktop 1440×900](./03-round-4-city-desktop-1440x900.jpg)
+- [Rodada 4 · mobile 390×844](./04-round-4-city-mobile-390x844.jpg)
+- [Rodada 5 · desktop 1280×720](./05-round-5-crisis-desktop-1280x720.jpg)
+- [Rodada 6 · desktop 1280×720](./06-round-6-model-swap-desktop-1280x720.jpg)
+- [Finale após restart · desktop 1440×900](./07-finale-after-restart-desktop-1440x900.jpg)
+- [Finale após restart · mobile 390×844](./08-finale-after-restart-mobile-390x844.jpg)
 
-O roteiro completo e os resultados de restart/cleanup estão no [README de evidência](https://github.com/arthurbm/gambi/blob/codex/spec-68-harness-board/docs/product/gambiarra-2026-08-23/evidence/issue-79/README.md).
+O roteiro completo e os resultados de restart/cleanup estão no [README de evidência](./README.md).
 ```
 
 O supervisor recebeu `SIGUSR1`, encerrou somente o board com `SIGTERM`, reabriu

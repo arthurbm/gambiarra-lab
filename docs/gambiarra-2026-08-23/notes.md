@@ -23,8 +23,8 @@ Squads são times de produto: cada bairro sai do jeito do squad, dentro das guid
 contexto (10) → setup (10) → R1 fundação: manifest/placa (8) → R2 construção: tile 3D (12) → R3 metrô: decisão entre squads (10, pulável) → R4 troca de modelo do orquestrador ao vivo (7, pulável) → números e conversa (3).
 
 ## Fontes
-- `docs/research/tres-inteligencias-revisitadas-notas.md`
-- `docs/research/harness-orchestration-options.md`
-- `docs/research/acp-status-and-gas-town.md`
-- `docs/adr/0006-harness-participants-over-acp.md`
+- [`docs/tres-inteligencias-revisitadas-notas.md`](../tres-inteligencias-revisitadas-notas.md)
+- [gambi: `docs/research/harness-orchestration-options.md`](https://github.com/arthurbm/gambi/blob/main/docs/research/harness-orchestration-options.md)
+- [gambi: `docs/research/acp-status-and-gas-town.md`](https://github.com/arthurbm/gambi/blob/main/docs/research/acp-status-and-gas-town.md)
+- [gambi: `docs/adr/0006-harness-participants-over-acp.md`](https://github.com/arthurbm/gambi/blob/main/docs/adr/0006-harness-participants-over-acp.md)
 - Decks de inspiração: `~/Documents/UNIVERSIDADE/ARQUITETURA-DE-SOFTWARE/arch-software-presentation`, `~/Documents/PESSOAL/APRESENTACOES/creating-gen-ai-products`

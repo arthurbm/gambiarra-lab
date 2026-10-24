@@ -5,6 +5,16 @@ squads, challenges, drafts, human decisions, typed dispatches, reviews, and
 escalations. It owns no persistence and has no knowledge of a particular event,
 round format, board, or visual theme.
 
+It implements one orchestration pattern: **hub-and-spoke with a human steerer**,
+archetype B in Meira et al., *As Três Inteligências Revisitadas*, with a decision
+recorded before every dispatch. The book is an inspiration and a reference, not
+the specification of a future "Gambi Agents". Other patterns (debate, assembly,
+one orchestrator per squad) belong to the experiences that need them, and only
+what two experiences share moves into this package. See `AGENTS.md` at the repo
+root.
+
+The package is private and is not published while the board is its only consumer.
+
 The orchestrator uses an injected AI SDK `LanguageModel`. Its fixed tools are
 `listSquads`, `dispatch`, `readWorld`, `askHuman`, and `finish`. `askHuman` is
 the only steering channel and pauses the tool loop until the host supplies an
