@@ -17,6 +17,7 @@ Gambiarra Lab is where the Gambiarra Club builds social experiences on top of [G
 
 ```bash
 bun install
+bun run link:gambi           # until gambi 0.7.0: local gambi-sdk and CLI (rerun after every install)
 bun run dev:hub              # gambi hub serve (published CLI)
 bun run dev:board            # board server
 bun run dev:board-web        # board web
