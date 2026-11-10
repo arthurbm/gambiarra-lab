@@ -24,7 +24,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@ai-sdk/openai-compatible": "^3.0.90",
+    "@ai-sdk/open-responses": "^2.0.85",
     "@types/bun": "latest",
     "gambi-sdk": "^0.7.1",
     "typescript": "^5"

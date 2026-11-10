@@ -1,4 +1,4 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createOpenResponses } from "@ai-sdk/open-responses";
 
 export interface RoomModelSummary {
   id: string;
@@ -15,16 +15,20 @@ interface ModelsResponse {
 }
 
 /**
- * Models of a Gambi room for the AI SDK v7, through the room's
- * OpenAI-compatible chat completions endpoint. Model IDs follow the hub:
- * a participant ID, `model:<name>`, or `*` for any available participant.
+ * Models of a Gambi room for the AI SDK v7, through the room's Open Responses
+ * endpoint, the protocol Gambi defaults to. The hub falls back to chat
+ * completions for participants that only speak that. Model IDs follow the
+ * hub: a participant ID, `model:<name>`, or `*` for any available participant.
  */
 export function createRoomModels(options: {
   hubUrl: string;
   roomCode: string;
 }) {
   const baseURL = `${options.hubUrl}/rooms/${options.roomCode}/v1`;
-  const provider = createOpenAICompatible({ baseURL, name: "gambi" });
+  const provider = createOpenResponses({
+    url: `${baseURL}/responses`,
+    name: "gambi",
+  });
 
   return {
     participant: (id: string) => provider(id),
