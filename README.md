@@ -2,7 +2,7 @@
 
 Experiências do [Gambiarra Club](https://gambiarra.club) construídas sobre o [Gambi](https://github.com/arthurbm/gambi): salas onde pessoas, os modelos delas e os harnesses delas (OpenCode, Claude Code, Codex) trabalham juntos.
 
-> **Status:** roda contra o `gambi@0.7.1` publicado. O que falta está em [`docs/next-steps.md`](docs/next-steps.md).
+> **Status:** roda contra o `gambi@0.7.2` publicado. O que falta está em [`docs/next-steps.md`](docs/next-steps.md).
 
 ## Gambi embaixo, experiências em cima
 
@@ -43,7 +43,7 @@ Nenhum pacote vai para o npm enquanto tiver um consumidor só.
 
 ## Rodando
 
-Precisa de [Bun](https://bun.sh). O `gambi` CLI e o `gambi-sdk` vêm do npm (`^0.7.1`).
+Precisa de [Bun](https://bun.sh). O `gambi` CLI e o `gambi-sdk` vêm do npm (`^0.7.2`).
 
 ```bash
 bun install
@@ -51,8 +51,6 @@ bun run check-types
 bun test apps/board/src
 bun test packages/agents
 ```
-
-O `gambi` está em `trustedDependencies` porque o postinstall dele prepara o binário da plataforma. Sem isso o `bun install` bloqueia o script e o `gambi` falha com `EACCES`.
 
 `bun run board:e2e` roda o evento completo com harnesses falsos e banco efêmero, sem chamar modelo. Os harnesses `fake` rodam `scripts/fake-acp-agent.ts`, que chama o `runFakeAcpAgent()` do `gambi-sdk`. `bun run event` é a versão com OpenCode de verdade.
 

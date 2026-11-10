@@ -41,14 +41,11 @@
     "@biomejs/biome": "2.5.15",
     "@gambiarra-lab/config": "workspace:*",
     "@types/bun": "catalog:",
-    "gambi": "^0.7.1",
-    "gambi-sdk": "^0.7.1",
+    "gambi": "^0.7.2",
+    "gambi-sdk": "^0.7.2",
     "turbo": "^2.11.7",
     "typescript": "catalog:",
     "ultracite": "8.0.0"
   },
-  "packageManager": "bun@1.4.3",
-  "trustedDependencies": [
-    "gambi"
-  ]
+  "packageManager": "bun@1.4.3"
 }
