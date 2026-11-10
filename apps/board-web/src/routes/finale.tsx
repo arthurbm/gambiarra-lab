@@ -26,6 +26,7 @@ function FinalePage() {
   const finale = useQuery(orpc.workflow.finale.queryOptions());
   const state = useQuery(orpc.board.state.queryOptions());
 
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome's type inference collapses TanStack Query's result union and sees isPending as always false; it is true while the query is loading.
   if (finale.isPending || state.isPending) {
     return <main className="interior-page">Abrindo o registro final...</main>;
   }

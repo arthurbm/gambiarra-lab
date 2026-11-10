@@ -48,6 +48,7 @@ function HomeComponent() {
   const state = useQuery(orpc.board.state.queryOptions());
   const connectionStatus = useBoardConnectionStatus();
 
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome's type inference collapses TanStack Query's result union and sees isLoading as always false; it is true while the query is loading.
   if (state.isLoading) {
     return (
       <main className="loading-sheet">

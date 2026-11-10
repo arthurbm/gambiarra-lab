@@ -163,6 +163,7 @@ function AdminPage() {
   );
   const currentPhase = state.data?.config.currentPhase;
   const nextPhase = currentPhase ? NEXT_PHASE[currentPhase] : undefined;
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome's type inference collapses TanStack Query's result union and sees isPending as always false; it is true while the query is loading.
   const phaseUnavailable = state.isPending || state.isError || !currentPhase;
   const people = state.data?.squads.flatMap((squad) => squad.members) ?? [];
 
