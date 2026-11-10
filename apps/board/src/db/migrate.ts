@@ -23,6 +23,7 @@ export async function migrateBoardDatabase(client: Client) {
       continue;
     }
     const migrationUrl = new URL(filename, migrationsDirectory);
+    // biome-ignore lint/performance/noAwaitInLoops: migrations apply in filename order, and each is recorded before the next one runs.
     const migrationSql = await Bun.file(migrationUrl).text();
     await client.executeMultiple(migrationSql);
     await client.execute({

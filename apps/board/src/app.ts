@@ -189,6 +189,7 @@ export async function createBoardApp(
       });
 
       while (!aborted) {
+        // biome-ignore lint/performance/noAwaitInLoops: SSE keepalive; one ping per interval until the client disconnects.
         await stream.sleep(15_000);
         if (!aborted) {
           await stream.writeSSE({ event: "ping", data: "{}" });

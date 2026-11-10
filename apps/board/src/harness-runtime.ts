@@ -115,17 +115,17 @@ export function withCityTileStarter(
 }
 
 function delay(ms: number, signal?: AbortSignal) {
-  return new Promise<void>((resolve) => {
+  return new Promise<void>((done) => {
     if (signal?.aborted) {
-      resolve();
+      done();
       return;
     }
-    const timeout = setTimeout(resolve, ms);
+    const timeout = setTimeout(done, ms);
     signal?.addEventListener(
       "abort",
       () => {
         clearTimeout(timeout);
-        resolve();
+        done();
       },
       { once: true }
     );
@@ -149,7 +149,9 @@ class HarnessGateway {
   readonly #repository: BoardRepository;
   readonly #roomCode: string;
   readonly #startedSessions = new Set<string>();
-  #closed = false;
+  // Widened to boolean: Biome narrows the field to its `false` initializer and
+  // misses that close() flips it at runtime.
+  #closed = false as boolean;
 
   constructor(options: {
     client: GambiClient;
@@ -199,7 +201,8 @@ class HarnessGateway {
     } catch (error) {
       if (error instanceof HarnessTransportError && error.recoverable) {
         throw new Error(
-          "A entrega do prompt ficou incerta porque o canal caiu. Confira o stream e reenvie explicitamente se necessário."
+          "A entrega do prompt ficou incerta porque o canal caiu. Confira o stream e reenvie explicitamente se necessário.",
+          { cause: error }
         );
       }
       throw error;
@@ -385,15 +388,18 @@ class HarnessGateway {
       return;
     }
     this.#entries.delete(entry.sessionId);
-    delay(
+    this.reconnectAfterDelay(entry).catch(this.#onError);
+  }
+
+  private async reconnectAfterDelay(entry: GatewayEntry) {
+    await delay(
       Math.min(1000 * 2 ** entry.generation, RETRY_MAX_MS),
       this.#abort.signal
-    ).then(() => {
-      if (!(this.#closed || this.#entries.has(entry.sessionId))) {
-        const replacement = this.openEntry(entry, entry.generation + 1);
-        replacement.open.catch(this.#onError);
-      }
-    });
+    );
+    if (this.#closed || this.#entries.has(entry.sessionId)) {
+      return;
+    }
+    await this.openEntry(entry, entry.generation + 1).open;
   }
 }
 
@@ -407,7 +413,9 @@ class HostedHarnessSupervisor {
   readonly #roomCode: string;
   readonly #sessions = new Map<number, HarnessParticipantSession>();
   readonly #workspace = createCityTileWorkspace();
-  #closed = false;
+  // Widened to boolean: Biome narrows the field to its `false` initializer and
+  // misses that close() flips it at runtime.
+  #closed = false as boolean;
   #desired = 0;
 
   constructor(options: {
@@ -486,24 +494,34 @@ class HostedHarnessSupervisor {
         return;
       }
       this.#sessions.set(ordinal, session);
-      session.waitUntilClosed().then(() => {
-        if (this.#sessions.get(ordinal) === session) {
-          this.#sessions.delete(ordinal);
-        }
-        if (!this.#closed && ordinal <= this.#desired) {
-          delay(
-            Math.min(1000 * 2 ** attempt, RETRY_MAX_MS),
-            this.#abort.signal
-          ).then(() => this.spawn(ordinal, attempt + 1).catch(this.#onError));
-        }
-      });
+      session
+        .waitUntilClosed()
+        .then(() => this.handleSessionClosed(ordinal, session, attempt));
     } catch (error) {
       this.#onError(error);
-      delay(
-        Math.min(1000 * 2 ** attempt, RETRY_MAX_MS),
-        this.#abort.signal
-      ).then(() => this.spawn(ordinal, attempt + 1).catch(this.#onError));
+      this.respawnAfterDelay(ordinal, attempt).catch(this.#onError);
     }
+  }
+
+  private handleSessionClosed(
+    ordinal: number,
+    session: HarnessParticipantSession,
+    attempt: number
+  ) {
+    if (this.#sessions.get(ordinal) === session) {
+      this.#sessions.delete(ordinal);
+    }
+    if (!this.#closed && ordinal <= this.#desired) {
+      this.respawnAfterDelay(ordinal, attempt).catch(this.#onError);
+    }
+  }
+
+  private async respawnAfterDelay(ordinal: number, attempt: number) {
+    await delay(
+      Math.min(1000 * 2 ** attempt, RETRY_MAX_MS),
+      this.#abort.signal
+    );
+    await this.spawn(ordinal, attempt + 1);
   }
 }
 
@@ -557,6 +575,7 @@ export async function createBoardHarnessRuntime(
     let attempt = 0;
     while (!abort.signal.aborted) {
       try {
+        // biome-ignore lint/performance/noAwaitInLoops: reconnect loop with backoff; each pass reconciles and then watches the room until it drops.
         await reconcileParticipants();
         for await (const _event of client.events.watchRoom({
           roomCode: options.roomCode,

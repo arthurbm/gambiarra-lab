@@ -91,7 +91,8 @@ async function pump(
 ) {
   const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
   let pending = "";
-  while (true) {
+  for (;;) {
+    // biome-ignore lint/performance/noAwaitInLoops: reads the child's output stream one chunk at a time.
     const { done, value } = await reader.read();
     if (done) {
       break;
@@ -256,6 +257,7 @@ async function main() {
     }
     shuttingDown = true;
     for (const child of [...children].reverse()) {
+      // biome-ignore lint/performance/noAwaitInLoops: children stop in reverse start order, so the board goes down before the hub it depends on.
       await stopChild(child);
     }
     if (database?.cleanupDirectory) {
@@ -328,6 +330,7 @@ async function main() {
           readyWhen: (line) => line.includes('"type":"ready"'),
         });
         addChild(child);
+        // biome-ignore lint/performance/noAwaitInLoops: fixtures start one at a time so a failed one stops startup before the next spawns.
         await waitReady(child);
       }
     }

@@ -130,7 +130,7 @@ function parsePayload(value: string): Record<string, unknown> {
   }
 }
 
-function squadId(ordinal: number) {
+function squadIdForOrdinal(ordinal: number) {
   return `squad-${ordinal}`;
 }
 
@@ -157,6 +157,7 @@ export class BoardRepository {
         .onConflictDoNothing();
 
       for (const round of SEEDED_ROUNDS) {
+        // biome-ignore lint/performance/noAwaitInLoops: runs inside a database transaction, whose statements execute one at a time on its connection.
         await tx
           .insert(rounds)
           .values({ id: `round-${round.number}`, ...round })
@@ -436,7 +437,7 @@ export class BoardRepository {
     if (!binding.session) {
       throw new Error("A sessão do squad ainda não foi aberta.");
     }
-    const sessionId = binding.session.sessionId;
+    const { sessionId } = binding.session;
     const actor = await this.requireSquadMember(
       input.actorPersonId,
       input.squadId
@@ -572,7 +573,8 @@ export class BoardRepository {
           ? participant.id.slice("board-person-".length)
           : undefined;
         const [person] = personId
-          ? await tx.select().from(people).where(eq(people.id, personId))
+          ? // biome-ignore lint/performance/noAwaitInLoops: runs inside a database transaction, whose statements execute one at a time on its connection; each participant's ownership change must see the previous one's writes.
+            await tx.select().from(people).where(eq(people.id, personId))
           : [];
         if (person) {
           await tx
@@ -963,7 +965,7 @@ export class BoardRepository {
     if (input.squadCount < current.squadCount) {
       const removedIds = Array.from(
         { length: current.squadCount - input.squadCount },
-        (_, index) => squadId(input.squadCount + index + 1)
+        (_, index) => squadIdForOrdinal(input.squadCount + index + 1)
       );
       const occupied = await this.db
         .select({ personId: memberships.personId })
@@ -990,10 +992,11 @@ export class BoardRepository {
         .where(eq(boardConfig.id, 1));
 
       for (let ordinal = 1; ordinal <= input.squadCount; ordinal += 1) {
+        // biome-ignore lint/performance/noAwaitInLoops: runs inside a database transaction, whose statements execute one at a time on its connection.
         await tx
           .insert(squads)
           .values({
-            id: squadId(ordinal),
+            id: squadIdForOrdinal(ordinal),
             ordinal,
             name: SQUAD_NAMES[ordinal - 1] ?? `Squad ${ordinal}`,
             active: true,
@@ -1152,10 +1155,11 @@ export class BoardRepository {
   private async ensureSquads(count: number) {
     await this.db.transaction(async (tx) => {
       for (let ordinal = 1; ordinal <= count; ordinal += 1) {
+        // biome-ignore lint/performance/noAwaitInLoops: runs inside a database transaction, whose statements execute one at a time on its connection.
         await tx
           .insert(squads)
           .values({
-            id: squadId(ordinal),
+            id: squadIdForOrdinal(ordinal),
             ordinal,
             name: SQUAD_NAMES[ordinal - 1] ?? `Squad ${ordinal}`,
             active: true,

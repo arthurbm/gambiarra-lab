@@ -243,6 +243,7 @@ export class WorkflowRepository {
       for (const squad of squadRows) {
         const roundId = `round-${round.number}`;
         const challengeId = stableId("challenge", roundId, squad.id);
+        // biome-ignore lint/performance/noAwaitInLoops: runs inside a database transaction, whose statements execute one at a time on its connection; the seed check reads the challenge inserted just above.
         await tx
           .insert(challenges)
           .values({
@@ -263,6 +264,7 @@ export class WorkflowRepository {
           continue;
         }
         for (const [index, proposal] of round.proposals.entries()) {
+          // biome-ignore lint/performance/noAwaitInLoops: runs inside a database transaction, whose statements execute one at a time on its connection.
           await tx
             .insert(drafts)
             .values({
@@ -292,6 +294,7 @@ export class WorkflowRepository {
         activeSquads.length > 1
           ? activeSquads[(index + 1) % activeSquads.length]
           : undefined;
+      // biome-ignore lint/performance/noAwaitInLoops: runs inside a database transaction, whose statements execute one at a time on its connection.
       const [current] = await tx
         .select({ objective: challenges.objective })
         .from(challenges)
@@ -577,6 +580,7 @@ export class WorkflowRepository {
         if (challenge.status !== "draft") {
           throw new Error("Os desafios desta rodada já foram enviados.");
         }
+        // biome-ignore lint/performance/noAwaitInLoops: runs inside a database transaction, whose statements execute one at a time on its connection; a challenge already sent aborts before later writes.
         const [dependency] = await tx
           .select()
           .from(challengeDependencies)
@@ -700,7 +704,7 @@ export class WorkflowRepository {
     if (
       input.consideredDraftIds.length === 0 ||
       input.consideredDraftIds.some(
-        (id) => !selectedDrafts.some((draft) => draft.id === id)
+        (draftId) => !selectedDrafts.some((draft) => draft.id === draftId)
       )
     ) {
       throw new Error(
@@ -991,7 +995,7 @@ export class WorkflowRepository {
       .select()
       .from(escalations)
       .where(eq(escalations.id, input.escalationId));
-    if (!escalation || escalation.status !== "pending") {
+    if (escalation?.status !== "pending") {
       throw new Error("Esta pendência já foi respondida ou não existe.");
     }
     const revision = await this.db.transaction(async (tx) => {

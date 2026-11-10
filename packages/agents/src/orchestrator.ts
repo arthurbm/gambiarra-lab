@@ -140,7 +140,9 @@ export class Orchestrator {
   readonly #humanContext: string[] = [];
   #model: LanguageModel;
   #sequence = 0;
-  #closed = false;
+  // Widened to boolean: Biome narrows the field to its `false` initializer and
+  // misses that close() flips it at runtime.
+  #closed = false as boolean;
 
   constructor(options: OrchestratorOptions) {
     if (
@@ -597,7 +599,6 @@ export class Orchestrator {
   ): Promise<void> {
     try {
       for await (const event of transport.events) {
-        // biome-ignore lint/suspicious/noUnnecessaryConditions: close() flips #closed at runtime; Biome narrows the field to its `false` initializer.
         if (this.#closed) {
           return;
         }

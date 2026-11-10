@@ -11,7 +11,9 @@ import type { BoardEventBus } from "./sse";
 
 class HarnessEventBuffer implements AsyncIterable<HarnessEvent> {
   readonly #queue: HarnessEvent[] = [];
-  #closed = false;
+  // Widened to boolean: Biome narrows the field to its `false` initializer and
+  // misses that close() flips it at runtime.
+  #closed = false as boolean;
   #waiting?: (result: IteratorResult<HarnessEvent>) => void;
 
   emit(event: HarnessEvent) {
@@ -63,7 +65,9 @@ export class BoardOrchestratorTransport implements HarnessTransport {
   readonly #unsubscribeArtifacts: () => void;
   readonly #unsubscribeEvents: () => void;
   readonly events: AsyncIterable<HarnessEvent> = this.#events;
-  #closed = false;
+  // Widened to boolean: Biome narrows the field to its `false` initializer and
+  // misses that dispose() flips it at runtime.
+  #closed = false as boolean;
 
   constructor(options: {
     eventBus: BoardEventBus;

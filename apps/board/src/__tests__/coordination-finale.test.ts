@@ -143,9 +143,9 @@ describe("rounds 4 to 6 and finale", () => {
       roundId: "round-5",
     });
     expect(
-      crisis.challenges.map((challenge) => ({
-        squadId: challenge.squadId,
-        neighbor: challenge.dependsOnSquad?.id,
+      crisis.challenges.map((crisisChallenge) => ({
+        squadId: crisisChallenge.squadId,
+        neighbor: crisisChallenge.dependsOnSquad?.id,
       }))
     ).toEqual([
       { squadId: "squad-1", neighbor: "squad-2" },
@@ -159,6 +159,7 @@ describe("rounds 4 to 6 and finale", () => {
     const client = await registerSquadOne(runtime);
     const admin = rpcClient(runtime, true);
     for (let index = 0; index < 5; index += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: each advance moves the board one phase forward from the previous one.
       await admin.phase.advance();
     }
     await prepareRoundSquad(runtime);
@@ -167,7 +168,7 @@ describe("rounds 4 to 6 and finale", () => {
       personId: "person-steerer",
     });
     await client.orchestrator.publish({ actorPersonId: "person-steerer" });
-    const challenge = (await client.workflow.get({})).challenges[0];
+    const [challenge] = (await client.workflow.get({})).challenges;
     await client.drafts.create({
       actorPersonId: "person-steerer",
       challengeId: challenge?.id ?? "",
@@ -332,7 +333,7 @@ describe("rounds 4 to 6 and finale", () => {
       personId: "person-steerer",
     });
     await client.orchestrator.publish({ actorPersonId: "person-steerer" });
-    const roundOne = (await client.workflow.get({})).challenges[0];
+    const [roundOne] = (await client.workflow.get({})).challenges;
     await client.decisions.record({
       actorPersonId: "person-steerer",
       challengeId: roundOne?.id ?? "",
@@ -348,6 +349,7 @@ describe("rounds 4 to 6 and finale", () => {
       })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     for (let index = 0; index < 5; index += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: each advance moves the board one phase forward from the previous one.
       await admin.phase.advance();
     }
     await client.people.join({ personId: "person-observer", name: "Lia" });

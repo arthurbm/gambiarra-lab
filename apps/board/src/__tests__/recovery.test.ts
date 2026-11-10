@@ -164,7 +164,7 @@ test("recovers a dispatched Decision and its escalation after restart", async ()
       actorPersonId: "person-dispatch",
       personId: "person-dispatch",
     });
-    const challenge = (await client.workflow.get({})).challenges[0];
+    const [challenge] = (await client.workflow.get({})).challenges;
     await client.orchestrator.publish({ actorPersonId: "person-dispatch" });
     await client.decisions.record({
       actorPersonId: "person-dispatch",
@@ -298,7 +298,7 @@ test("routes a returned review through a persisted harness session after restart
       actorPersonId: "person-session",
       personId: "person-session",
     });
-    const challenge = (await client.workflow.get({})).challenges[0];
+    const [challenge] = (await client.workflow.get({})).challenges;
     await client.orchestrator.publish({ actorPersonId: "person-session" });
     await client.decisions.record({
       actorPersonId: "person-session",
