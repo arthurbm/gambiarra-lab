@@ -2,10 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createLocalDirectoryWorkspace,
-  type WorkspaceArtifactFile,
-} from "gambi-sdk";
+import { createLocalDirectoryWorkspace } from "gambi-sdk";
 
 import { createCityTileWorkspace } from "../starter/city-tile";
 
@@ -28,7 +25,7 @@ test("seeds the city tile starter into a gambi-sdk workspace", async () => {
     expect(await Bun.file(join(directory, ".gambi.json")).json()).toEqual(
       context
     );
-    const files: WorkspaceArtifactFile[] = await prepared.collect();
+    const files = await prepared.collect();
     expect(files.map((file) => file.path).toSorted()).toEqual([
       "README.md",
       "index.html",

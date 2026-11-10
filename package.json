@@ -41,8 +41,8 @@
     "@biomejs/biome": "2.5.15",
     "@gambiarra-lab/config": "workspace:*",
     "@types/bun": "catalog:",
-    "gambi": "^0.7.0",
-    "gambi-sdk": "^0.7.0",
+    "gambi": "^0.7.1",
+    "gambi-sdk": "^0.7.1",
     "turbo": "^2.11.7",
     "typescript": "catalog:",
     "ultracite": "8.0.0"

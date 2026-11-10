@@ -3,12 +3,7 @@
 // it to hosted harnesses through createCityTileWorkspace().
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  createLocalDirectoryWorkspace,
-  type PreparedWorkspace,
-  type Workspace,
-  type WorkspaceContext,
-} from "gambi-sdk";
+import { createLocalDirectoryWorkspace, type Workspace } from "gambi-sdk";
 
 export interface HarnessTilePalette {
   accent: string;
@@ -193,8 +188,8 @@ export function createCityTileWorkspace(
   base: Workspace = createLocalDirectoryWorkspace()
 ): Workspace {
   return {
-    async prepare(context: WorkspaceContext): Promise<PreparedWorkspace> {
-      const prepared: PreparedWorkspace = await base.prepare(context);
+    async prepare(context) {
+      const prepared = await base.prepare(context);
       await seedCityTileStarter(prepared.path, {
         harness: context.harness,
         model: context.model,
