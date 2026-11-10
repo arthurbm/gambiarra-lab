@@ -108,9 +108,7 @@ async function cleanup(): Promise<void> {
   }
   cleaningUp = true;
   await orchestrator?.close();
-  for (const session of harnessSessions) {
-    await session.close();
-  }
+  await Promise.all(harnessSessions.map((session) => session.close()));
   localHub?.close();
   if (gambiHome) {
     await rm(gambiHome, { recursive: true, force: true });
@@ -153,6 +151,7 @@ try {
 
   for (const squad of squads) {
     harnessSessions.push(
+      // biome-ignore lint/performance/noAwaitInLoops: one at a time so a failed start leaves the sessions already opened tracked for cleanup, and so the sessions do not race on the shared gambiHome.
       await createHarnessParticipantSession({
         hubUrl,
         roomCode,
@@ -245,8 +244,7 @@ try {
   );
   await Promise.all(firstArtifacts);
 
-  const accepted = dispatches[0];
-  const returned = dispatches[1];
+  const [accepted, returned] = dispatches;
   if (!(accepted && returned)) {
     throw new Error("The demo did not create both dispatches.");
   }
