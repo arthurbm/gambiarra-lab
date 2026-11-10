@@ -156,10 +156,9 @@ export function ModelHandoffCard({
                     <h4>Decisões anteriores</h4>
                     {handoff.decisions?.length ? (
                       <ul>
-                        {handoff.decisions.map((decision, index) => (
-                          <li
-                            key={`${decision.squadId}:${decision.roundId}:${index}`}
-                          >
+                        {/* One decision per challenge and one challenge per squad and round. */}
+                        {handoff.decisions.map((decision) => (
+                          <li key={`${decision.squadId}:${decision.roundId}`}>
                             {decision.squadId} · {decision.roundId}:{" "}
                             {decision.build}
                           </li>
@@ -173,8 +172,8 @@ export function ModelHandoffCard({
                     <h4>Trabalho pendente</h4>
                     {handoff.pending?.length ? (
                       <ul>
-                        {handoff.pending.map((item, index) => (
-                          <li key={`${item.squadId}:${item.roundId}:${index}`}>
+                        {handoff.pending.map((item) => (
+                          <li key={`${item.squadId}:${item.roundId}`}>
                             {item.squadId} · {item.roundId}
                             {item.hasDecision
                               ? " · decisão pronta"

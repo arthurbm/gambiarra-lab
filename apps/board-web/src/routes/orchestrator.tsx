@@ -53,6 +53,7 @@ function OrchestratorPage() {
     }
   }
 
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome's type inference collapses TanStack Query's result union and sees isPending as always false; it is true while the query is loading.
   if (workflow.isPending) {
     return (
       <main className="interior-page">Carregando caderno da rodada...</main>
