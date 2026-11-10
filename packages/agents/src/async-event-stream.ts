@@ -6,10 +6,11 @@ interface Subscription<T> {
 
 export class AsyncEventStream<T> implements AsyncIterable<T> {
   readonly #subscriptions = new Set<Subscription<T>>();
-  #closed = false;
+  // Widened to boolean: Biome narrows the field to its `false` initializer and
+  // misses that close() flips it at runtime.
+  #closed = false as boolean;
 
   emit(value: T): void {
-    // biome-ignore lint/suspicious/noUnnecessaryConditions: close() flips #closed at runtime; Biome narrows the field to its `false` initializer.
     if (this.#closed) {
       return;
     }

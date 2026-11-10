@@ -290,6 +290,7 @@ describe("tile versions and publication", () => {
     const squads: Awaited<ReturnType<typeof prepareSquad>>[] = [];
     for (const ordinal of [1, 2, 3]) {
       squads.push(
+        // biome-ignore lint/performance/noAwaitInLoops: prepareSquad reconciles the hub participant list as a whole, so each squad must finish setup before the next one starts.
         await prepareSquad(runtime, {
           personId: `person-tile-${ordinal}`,
           personName: `Pessoa ${ordinal}`,
@@ -298,6 +299,7 @@ describe("tile versions and publication", () => {
       );
     }
     for (const [index, binding] of squads.entries()) {
+      // biome-ignore lint/performance/noAwaitInLoops: each ingest bumps the board revision; the test keeps squads in order.
       await runtime.repository.ingestTileArtifact({
         ...binding,
         sourceVersion: 1,
@@ -340,7 +342,7 @@ describe("tile versions and publication", () => {
       brokenHtml.indexOf("broken fixture")
     );
 
-    const binding = squads[0];
+    const [binding] = squads;
     if (!binding) {
       throw new Error("missing squad fixture");
     }

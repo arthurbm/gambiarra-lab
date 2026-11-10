@@ -197,7 +197,7 @@ test("routes orchestrator dispatches through the assigned board harness", async 
       participantId: "board-hosted-orchestrator",
     });
 
-    const orchestrator = runtime.orchestrator;
+    const { orchestrator } = runtime;
     expect(orchestrator).toBeDefined();
     const challenge = orchestrator?.createChallenge({
       squadId: "squad-1",
