@@ -101,6 +101,13 @@ file that is already there. A `fake` hosted harness runs
 `scripts/fake-acp-agent.ts` through `createFakeHarnessAdapter()`, because the
 bundled SDK cannot locate its own copy of the fake agent.
 
+A harness someone runs on their own machine (`gambi participant join --harness
+…`) cannot be seeded: the tunnel has no channel to write files there. The board
+puts the starter files in the text of the first prompt of each harness session
+instead, asking the harness to create the missing ones and never overwrite a
+file. Prompts after the first go through unchanged. The `/me` page prints the
+join command with `--room=<code>`, because room codes may start with `-`.
+
 ## Harness runtime
 
 The board does not create hub rooms. Create one once, then give the board its

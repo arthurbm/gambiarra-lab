@@ -13,9 +13,16 @@ import {
   type HarnessParticipantSessionOptions,
 } from "gambi-sdk";
 
-import type { BoardRepository, HubHarnessParticipant } from "./db/repository";
+import type {
+  BoardRepository,
+  HarnessView,
+  HubHarnessParticipant,
+} from "./db/repository";
 import type { BoardEventBus } from "./sse";
-import { createCityTileWorkspace } from "./starter/city-tile";
+import {
+  cityTileStarterPrompt,
+  createCityTileWorkspace,
+} from "./starter/city-tile";
 
 const RECONCILE_INTERVAL_MS = 3000;
 const RETRY_MAX_MS = 15_000;
@@ -88,6 +95,25 @@ interface GatewayEntry {
   transport: TunnelHarnessTransport;
 }
 
+/**
+ * The text of a session's first prompt. Hosted harnesses already run in a
+ * seeded workspace; a harness someone runs on their own machine receives the
+ * starter in the prompt instead.
+ */
+export function withCityTileStarter(
+  harness: Pick<HarnessView, "harnessId" | "hosted" | "model"> | undefined,
+  prompt: string
+): string {
+  if (!harness || harness.hosted) {
+    return prompt;
+  }
+  const starter = cityTileStarterPrompt({
+    harness: harness.harnessId,
+    model: harness.model ?? "",
+  });
+  return `${starter}\n${prompt}`;
+}
+
 function delay(ms: number, signal?: AbortSignal) {
   return new Promise<void>((resolve) => {
     if (signal?.aborted) {
@@ -122,6 +148,7 @@ class HarnessGateway {
   readonly #promptCollectors = new Map<string, string[]>();
   readonly #repository: BoardRepository;
   readonly #roomCode: string;
+  readonly #startedSessions = new Set<string>();
   #closed = false;
 
   constructor(options: {
@@ -168,7 +195,7 @@ class HarnessGateway {
     });
     await entry.open;
     try {
-      await entry.transport.prompt(session.sessionId, input.prompt);
+      await this.sendPrompt(entry, input.prompt);
     } catch (error) {
       if (error instanceof HarnessTransportError && error.recoverable) {
         throw new Error(
@@ -205,7 +232,7 @@ class HarnessGateway {
     const chunks: string[] = [];
     this.#promptCollectors.set(input.sessionId, chunks);
     try {
-      await entry.transport.prompt(input.sessionId, input.prompt);
+      await this.sendPrompt(entry, input.prompt);
       const response = chunks.join("").trim();
       if (!response) {
         throw new Error(
@@ -241,6 +268,27 @@ class HarnessGateway {
     await Promise.allSettled(
       entries.map((entry) => entry.transport.close(entry.sessionId))
     );
+  }
+
+  private async sendPrompt(entry: GatewayEntry, prompt: string) {
+    const first = !this.#startedSessions.has(entry.sessionId);
+    this.#startedSessions.add(entry.sessionId);
+    try {
+      const text = first
+        ? withCityTileStarter(
+            (await this.#repository.listHarnesses()).find(
+              (harness) => harness.participantId === entry.participantId
+            ),
+            prompt
+          )
+        : prompt;
+      await entry.transport.prompt(entry.sessionId, text);
+    } catch (error) {
+      if (first) {
+        this.#startedSessions.delete(entry.sessionId);
+      }
+      throw error;
+    }
   }
 
   private ensureEntry(binding: {

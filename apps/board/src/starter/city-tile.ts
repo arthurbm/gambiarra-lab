@@ -160,24 +160,55 @@ export interface CityTileStarterOptions {
   model: string;
 }
 
+export interface CityTileStarterFile {
+  content: string;
+  path: string;
+}
+
+/** The city tile starter files, with the palette for `harness + model`. */
+export function cityTileStarterFiles(
+  options: CityTileStarterOptions
+): CityTileStarterFile[] {
+  const palette = deriveHarnessTilePalette(options.harness, options.model);
+  return [
+    { path: "index.html", content: starterIndex(palette) },
+    { path: "README.md", content: STARTER_README },
+    { path: "manifest.json", content: starterManifest(palette) },
+  ];
+}
+
 /** Writes the city tile starter into a workspace without overwriting files. */
 export async function seedCityTileStarter(
   workspacePath: string,
   options: CityTileStarterOptions
 ): Promise<void> {
   await mkdir(workspacePath, { recursive: true });
-  const palette = deriveHarnessTilePalette(options.harness, options.model);
-  await Promise.all([
-    writeStarterFileIfMissing(
-      join(workspacePath, "index.html"),
-      starterIndex(palette)
-    ),
-    writeStarterFileIfMissing(join(workspacePath, "README.md"), STARTER_README),
-    writeStarterFileIfMissing(
-      join(workspacePath, "manifest.json"),
-      starterManifest(palette)
-    ),
-  ]);
+  await Promise.all(
+    cityTileStarterFiles(options).map((file) =>
+      writeStarterFileIfMissing(join(workspacePath, file.path), file.content)
+    )
+  );
+}
+
+/**
+ * The starter as prompt text, for a harness the board cannot seed: one a
+ * person runs on their own machine. The tunnel has no channel to write files
+ * there, so the harness writes the missing files itself.
+ */
+export function cityTileStarterPrompt(options: CityTileStarterOptions): string {
+  const files = cityTileStarterFiles(options).map(
+    (file) =>
+      `--- ${file.path} ---\n${file.content.trimEnd()}\n--- end ${file.path} ---`
+  );
+  return [
+    "Before the task below, set up the city tile starter in your working directory.",
+    "For each file listed here that does not exist yet, create it with exactly this content.",
+    "Never overwrite a file that already exists. README.md explains the tile contract.",
+    "",
+    ...files,
+    "",
+    "Task:",
+  ].join("\n");
 }
 
 /**
