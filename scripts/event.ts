@@ -196,11 +196,23 @@ async function createRoom(hubUrl: string): Promise<string> {
   return body.data.room.code;
 }
 
+// Each child leads its own process group (`detached: true`). Signal the whole
+// group: `bun run dev:cli` starts the gambi npm wrapper, which runs the
+// platform binary with spawnSync and does not forward signals, so killing only
+// the leader leaves the hub running.
+function signalChild(child: Child, signal: NodeJS.Signals) {
+  try {
+    process.kill(-child.process.pid, signal);
+  } catch {
+    child.process.kill(signal);
+  }
+}
+
 async function stopChild(child: Child) {
   if (child.process.exitCode !== null) {
     return;
   }
-  child.process.kill("SIGTERM");
+  signalChild(child, "SIGTERM");
   try {
     await withTimeout(
       child.process.exited,
@@ -209,7 +221,7 @@ async function stopChild(child: Child) {
     );
   } catch (error) {
     prefixedLine(child.name, String(error), true);
-    child.process.kill("SIGKILL");
+    signalChild(child, "SIGKILL");
     await child.process.exited;
   }
 }

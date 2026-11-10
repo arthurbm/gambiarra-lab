@@ -13,20 +13,8 @@ import type { BoardHarnessRuntime } from "../harness-runtime";
 
 const FAKE_AGENT_SCRIPT = /scripts\/fake-acp-agent\.ts$/;
 
-// gambi-sdk@0.7.0 ships declarations that import the unpublished
-// `@gambi/core`, so HarnessParticipantSession cannot be extended here.
-// Spell out the shape the runtime uses.
-interface FakeSession {
-  close: HarnessParticipantSession["close"];
+interface FakeSession extends HarnessParticipantSession {
   disconnect: () => void;
-  harnessExited: HarnessParticipantSession["harnessExited"];
-  participant: HarnessParticipantSession["participant"];
-  processPid: number;
-  roomId: string;
-  sessionId: string;
-  tunnel: HarnessParticipantSession["tunnel"];
-  waitUntilClosed: HarnessParticipantSession["waitUntilClosed"];
-  workspacePath: string;
 }
 
 function createFakeSession(participantId: string): FakeSession {
