@@ -1,6 +1,7 @@
 import {
+  isStepCount,
   type LanguageModel,
-  stepCountIs,
+  type Tool,
   ToolLoopAgent,
   type ToolSet,
   tool,
@@ -94,7 +95,7 @@ interface FinishOutput {
   summary: string;
 }
 
-type AgentTool<Input, Output> = ReturnType<typeof tool<Input, Output>>;
+type AgentTool<Input, Output> = Tool<Input, Output>;
 
 interface OrchestratorToolSet extends ToolSet {
   askHuman: AgentTool<AskHumanInput, string>;
@@ -134,7 +135,7 @@ export class Orchestrator {
   readonly #generateId: (kind: string) => string;
   readonly maxReturns: number;
   readonly events: AsyncIterable<DomainEvent> = this.#eventStream;
-  #toolLoop: ToolLoopAgent<never, OrchestratorToolSet, never>;
+  #toolLoop: ToolLoopAgent<never, OrchestratorToolSet>;
   #handoff?: string;
   readonly #humanContext: string[] = [];
   #model: LanguageModel;
@@ -178,7 +179,7 @@ export class Orchestrator {
     }
   }
 
-  get toolLoop(): ToolLoopAgent<never, OrchestratorToolSet, never> {
+  get toolLoop(): ToolLoopAgent<never, OrchestratorToolSet> {
     return this.#toolLoop;
   }
 
@@ -627,7 +628,7 @@ export class Orchestrator {
 
   private createToolLoop(
     model: LanguageModel
-  ): ToolLoopAgent<never, OrchestratorToolSet, never> {
+  ): ToolLoopAgent<never, OrchestratorToolSet> {
     const tools: OrchestratorToolSet = {
       listSquads: tool({
         description: "List the squads available for coordination.",
@@ -682,7 +683,7 @@ export class Orchestrator {
       model,
       instructions: COORDINATION_INSTRUCTIONS,
       tools,
-      stopWhen: stepCountIs(20),
+      stopWhen: isStepCount(20),
     });
   }
 

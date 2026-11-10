@@ -20,10 +20,11 @@
     "test": "bun test"
   },
   "dependencies": {
-    "ai": "^6.0.6",
+    "ai": "^7.0.169",
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.90",
     "@types/bun": "latest",
     "gambi-sdk": "^0.7.1",
     "typescript": "^5"

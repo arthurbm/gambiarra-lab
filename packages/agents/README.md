@@ -124,7 +124,7 @@ other in the same harness session, and waits for artifact version 2:
 bun run --cwd packages/agents demo
 ```
 
-It uses `MockLanguageModelV3` by default and spends no model tokens. To inject a
+It uses `MockLanguageModelV4` by default and spends no model tokens. To inject a
 model already shared in an existing room through the Gambi inference plane:
 
 ```bash

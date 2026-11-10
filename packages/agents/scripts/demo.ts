@@ -2,11 +2,11 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { MockLanguageModelV3 } from "ai/test";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { MockLanguageModelV4 } from "ai/test";
 import {
   createClient,
   createFakeHarnessAdapter,
-  createGambi,
   createHarnessParticipantSession,
   hub as gambiHub,
   type HarnessParticipantSession,
@@ -49,7 +49,7 @@ Options:
   --room <code>     Use an existing room (requires its hub to be running)
   --model <name>    Use model:<name> from the room for the orchestrator
 
-Without --model, the demo uses a deterministic MockLanguageModelV3 and makes
+Without --model, the demo uses a deterministic MockLanguageModelV4 and makes
 no model calls. It always starts two deterministic fake harness participants.`);
       process.exit(0);
     } else {
@@ -60,7 +60,7 @@ no model calls. It always starts two deterministic fake harness participants.`);
 }
 
 function mockModel() {
-  return new MockLanguageModelV3({
+  return new MockLanguageModelV4({
     doGenerate: async () => ({
       content: [{ type: "text", text: "Deterministic demo complete" }],
       finishReason: { unified: "stop", raw: undefined },
@@ -168,7 +168,10 @@ try {
   }
 
   const model = options.model
-    ? createGambi({ hubUrl, roomCode }).model(options.model)
+    ? createOpenAICompatible({
+        baseURL: `${hubUrl}/rooms/${roomCode}/v1`,
+        name: "gambi",
+      })(`model:${options.model}`)
     : mockModel();
   const transports = Object.fromEntries(
     squads.map((squad) => [
@@ -276,7 +279,7 @@ try {
       status: "complete",
       hubUrl,
       roomCode,
-      orchestratorModel: options.model ?? "MockLanguageModelV3",
+      orchestratorModel: options.model ?? "MockLanguageModelV4",
       acceptedDispatch: accepted.id,
       returnedDispatch: returned.id,
       returnedSessionId: returned.sessionId,

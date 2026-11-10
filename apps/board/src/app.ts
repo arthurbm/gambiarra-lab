@@ -5,7 +5,6 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { createGambi } from "gambi-sdk";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { streamSSE } from "hono/streaming";
@@ -23,6 +22,7 @@ import {
 import { BoardOrchestratorTransport } from "./orchestrator-transport";
 import { createContext, type OrchestratorActions } from "./orpc/context";
 import { createAppRouter } from "./orpc/routers";
+import { createRoomModels, type RoomModels } from "./room-models";
 import { BoardEventBus } from "./sse";
 import {
   injectTileStatusBridge,
@@ -116,7 +116,7 @@ export async function createBoardApp(
     }
   });
   let orchestrator: Orchestrator | undefined;
-  let orchestratorProvider: ReturnType<typeof createGambi> | undefined;
+  let orchestratorProvider: RoomModels | undefined;
   let orchestratorTransports: BoardOrchestratorTransport[] = [];
   if (harnessOptions) {
     const [world, persistedModel] = await Promise.all([
@@ -137,7 +137,7 @@ export async function createBoardApp(
     const restoredSessions = Object.fromEntries(
       world.dispatches.map((dispatch) => [dispatch.squadId, dispatch.sessionId])
     );
-    orchestratorProvider = createGambi({
+    orchestratorProvider = createRoomModels({
       hubUrl: harnessOptions.hubUrl,
       roomCode: harnessOptions.roomCode,
     });
