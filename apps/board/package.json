@@ -26,7 +26,7 @@
     "@orpc/server": "1.14.12",
     "@orpc/zod": "1.14.12",
     "drizzle-orm": "0.45.2",
-    "gambi-sdk": "^0.7.1",
+    "gambi-sdk": "^0.7.2",
     "hono": "4.12.32",
     "libsql": "0.5.29",
     "zod": "4.4.3"
