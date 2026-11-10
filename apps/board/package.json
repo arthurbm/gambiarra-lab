@@ -19,7 +19,7 @@
     "start": "bun run dist/index.mjs"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^3.0.90",
+    "@ai-sdk/open-responses": "^2.0.85",
     "@gambiarra-lab/agents": "workspace:*",
     "@libsql/client": "0.17.4",
     "@orpc/openapi": "1.14.12",

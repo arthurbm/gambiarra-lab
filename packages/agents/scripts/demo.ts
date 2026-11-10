@@ -2,7 +2,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createOpenResponses } from "@ai-sdk/open-responses";
 import { MockLanguageModelV4 } from "ai/test";
 import {
   createClient,
@@ -167,8 +167,8 @@ try {
   }
 
   const model = options.model
-    ? createOpenAICompatible({
-        baseURL: `${hubUrl}/rooms/${roomCode}/v1`,
+    ? createOpenResponses({
+        url: `${hubUrl}/rooms/${roomCode}/v1/responses`,
         name: "gambi",
       })(`model:${options.model}`)
     : mockModel();
