@@ -24,8 +24,39 @@
   "linter": {
     "rules": {
       "performance": {
-        "noBarrelFile": "off"
+        "noBarrelFile": "off",
+        // board-web runs without the React Compiler and has no memoized
+        // children that depend on stable handler identity; wrapping every
+        // inline handler in useCallback would be churn with no gain.
+        "noJsxPropsBind": "off"
+      },
+      "style": {
+        // apps/board-web/src/index.css is organized by component; reordering
+        // selectors to satisfy this rule changes the cascade and risks visual
+        // regressions.
+        "noDescendingSpecificity": "off"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      // Copied verbatim from the shadcn registry and kept identical to
+      // upstream so `shadcn add --overwrite` stays a clean update. An override
+      // survives that overwrite; inline biome-ignore comments would not.
+      "includes": [
+        "packages/ui/src/components/input-group.tsx",
+        "packages/ui/src/components/label.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off",
+            "noNoninteractiveElementInteractions": "off",
+            "useKeyWithClickEvents": "off",
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    }
+  ]
 }
