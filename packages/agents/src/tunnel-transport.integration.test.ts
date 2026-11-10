@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 import {
   createClient,
   createFakeHarnessAdapter,
@@ -45,7 +45,7 @@ function modelResult() {
       outputTokens: { total: 1, text: 1, reasoning: 0 },
     },
     warnings: [],
-  } as Awaited<ReturnType<MockLanguageModelV3["doGenerate"]>>;
+  } as Awaited<ReturnType<MockLanguageModelV4["doGenerate"]>>;
 }
 
 async function nextMatchingEvent(
@@ -122,7 +122,7 @@ describe("TunnelHarnessTransport integration", () => {
       },
     });
     const orchestrator = new Orchestrator({
-      model: new MockLanguageModelV3({ doGenerate: modelResult() }),
+      model: new MockLanguageModelV4({ doGenerate: modelResult() }),
       squads: [
         {
           id: "alpha",

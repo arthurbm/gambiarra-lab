@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 import { MemoryHarnessTransport } from "./memory-transport.ts";
 import { Orchestrator } from "./orchestrator.ts";
 import type { DomainEvent, Round, Squad } from "./types.ts";
@@ -66,14 +66,14 @@ function toolResult(toolName: string, input: unknown) {
 
 function createFixture(options?: {
   maxReturns?: number;
-  model?: MockLanguageModelV3;
+  model?: MockLanguageModelV4;
 }) {
   const alphaTransport = new MemoryHarnessTransport();
   const betaTransport = new MemoryHarnessTransport();
   let id = 0;
   const model =
     options?.model ??
-    new MockLanguageModelV3({
+    new MockLanguageModelV4({
       doGenerate: textResult(),
     });
   const orchestrator = new Orchestrator({
@@ -196,7 +196,7 @@ describe("Orchestrator", () => {
   });
 
   test("suspends at maxReturns through askHuman and re-enters the loop with its answer", async () => {
-    const model = new MockLanguageModelV3({ doGenerate: textResult() });
+    const model = new MockLanguageModelV4({ doGenerate: textResult() });
     const { alphaTransport, orchestrator } = createFixture({
       maxReturns: 2,
       model,
@@ -268,7 +268,7 @@ describe("Orchestrator", () => {
       }),
       textResult("Human steering applied"),
     ];
-    const model = new MockLanguageModelV3({
+    const model = new MockLanguageModelV4({
       doGenerate: async () => responses.shift() ?? textResult(),
     });
     const { orchestrator } = createFixture({ model });
@@ -295,7 +295,7 @@ describe("Orchestrator", () => {
     );
   });
 
-  test("finish records 2-3 proposals per squad from a MockLanguageModelV3", async () => {
+  test("finish records 2-3 proposals per squad from a MockLanguageModelV4", async () => {
     const responses = [
       toolResult("finish", {
         summary: "Challenges proposed",
@@ -312,7 +312,7 @@ describe("Orchestrator", () => {
       }),
       textResult("Challenges ready for human editing"),
     ];
-    const model = new MockLanguageModelV3({
+    const model = new MockLanguageModelV4({
       doGenerate: async () => responses.shift() ?? textResult(),
     });
     const { orchestrator } = createFixture({ model });
@@ -342,7 +342,7 @@ describe("Orchestrator", () => {
       }),
       textResult("Ready"),
     ];
-    const model = new MockLanguageModelV3({
+    const model = new MockLanguageModelV4({
       doGenerate: async () => responses.shift() ?? textResult(),
     });
     const { orchestrator } = createFixture({ model });
@@ -363,11 +363,11 @@ describe("Orchestrator", () => {
   });
 
   test("swapModel hands off current state without replaying prior prompts", async () => {
-    const oldModel = new MockLanguageModelV3({
+    const oldModel = new MockLanguageModelV4({
       modelId: "old-model",
       doGenerate: textResult(),
     });
-    const nextModel = new MockLanguageModelV3({
+    const nextModel = new MockLanguageModelV4({
       modelId: "next-model",
       doGenerate: textResult(),
     });
@@ -410,7 +410,7 @@ describe("Orchestrator", () => {
     orchestrator.answerHuman(escalation?.id ?? "", "Proceed with less scope");
     await reviewPromise;
     orchestrator.swapModel(
-      new MockLanguageModelV3({
+      new MockLanguageModelV4({
         modelId: "replacement",
         doGenerate: textResult(),
       })
@@ -445,7 +445,7 @@ describe("Orchestrator", () => {
     const restoredTransport = new MemoryHarnessTransport();
     await restoredTransport.open({ squadId: "alpha" });
     const restored = new Orchestrator({
-      model: new MockLanguageModelV3({ doGenerate: textResult() }),
+      model: new MockLanguageModelV4({ doGenerate: textResult() }),
       squads,
       rounds,
       transports: {
@@ -468,7 +468,7 @@ describe("Orchestrator", () => {
   });
 
   test("delivers a persisted handoff on the first run after restart", async () => {
-    const model = new MockLanguageModelV3({
+    const model = new MockLanguageModelV4({
       modelId: "restored-model",
       doGenerate: textResult(),
     });
