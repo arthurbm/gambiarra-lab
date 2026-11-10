@@ -58,7 +58,8 @@ async function nextMatchingEvent(
       4000
     );
   });
-  while (true) {
+  for (;;) {
+    // biome-ignore lint/performance/noAwaitInLoops: consumes the event stream one event at a time until the predicate matches.
     const result = await Promise.race([iterator.next(), timeout]);
     if (result.done) {
       throw new Error("Domain event stream closed early.");
@@ -75,15 +76,17 @@ describe("TunnelHarnessTransport integration", () => {
   const temporaryDirectories: string[] = [];
 
   afterEach(async () => {
-    for (const session of harnessSessions.splice(0)) {
-      await session.close();
-    }
+    await Promise.all(
+      harnessSessions.splice(0).map((session) => session.close())
+    );
     for (const hub of hubs.splice(0)) {
       hub.close();
     }
-    for (const directory of temporaryDirectories.splice(0)) {
-      await rm(directory, { recursive: true, force: true });
-    }
+    await Promise.all(
+      temporaryDirectories
+        .splice(0)
+        .map((directory) => rm(directory, { recursive: true, force: true }))
+    );
   });
 
   test("dispatches through a real hub, returns in-session, and recovers explicitly", async () => {

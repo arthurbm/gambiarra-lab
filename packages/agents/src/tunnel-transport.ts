@@ -56,11 +56,11 @@ export interface HarnessAttachChannel {
 
 export interface HarnessAttachClient {
   harness: {
-    attach(options: {
+    attach: (options: {
       participantId: string;
       roomCode: string;
       signal?: AbortSignal;
-    }): Promise<HarnessAttachChannel>;
+    }) => Promise<HarnessAttachChannel>;
   };
 }
 

@@ -366,11 +366,10 @@ export class Orchestrator {
     let sessionId = this.#sessions.get(challenge.squadId);
     if (!sessionId) {
       const squad = this.requireSquad(challenge.squadId);
-      const session = await transport.open({
+      ({ sessionId } = await transport.open({
         squadId: squad.id,
         participantId: squad.harnessParticipantId,
-      });
-      sessionId = session.sessionId;
+      }));
       this.#sessions.set(squad.id, sessionId);
     }
 
@@ -490,7 +489,7 @@ export class Orchestrator {
 
   answerHuman(escalationId: string, response: string): void {
     const escalation = this.#escalations.get(escalationId);
-    if (!escalation || escalation.status !== "pending") {
+    if (escalation?.status !== "pending") {
       throw new Error(`No pending human question ${escalationId}.`);
     }
     const pending = this.#pendingHumanAnswers.get(escalationId);
@@ -598,6 +597,7 @@ export class Orchestrator {
   ): Promise<void> {
     try {
       for await (const event of transport.events) {
+        // biome-ignore lint/suspicious/noUnnecessaryConditions: close() flips #closed at runtime; Biome narrows the field to its `false` initializer.
         if (this.#closed) {
           return;
         }

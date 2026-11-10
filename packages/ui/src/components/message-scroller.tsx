@@ -2,12 +2,7 @@
 
 import { Button } from "@gambiarra-lab/ui/components/button";
 import { cn } from "@gambiarra-lab/ui/lib/utils";
-import {
-  MessageScroller as MessageScrollerPrimitive,
-  useMessageScroller,
-  useMessageScrollerScrollable,
-  useMessageScrollerVisibility,
-} from "@shadcn/react/message-scroller";
+import { MessageScroller as MessageScrollerPrimitive } from "@shadcn/react/message-scroller";
 import { ArrowDownIcon } from "lucide-react";
 import type * as React from "react";
 
@@ -120,13 +115,15 @@ function MessageScrollerButton({
 }
 
 export {
+  useMessageScroller,
+  useMessageScrollerScrollable,
+  useMessageScrollerVisibility,
+} from "@shadcn/react/message-scroller";
+export {
   MessageScroller,
   MessageScrollerButton,
   MessageScrollerContent,
   MessageScrollerItem,
   MessageScrollerProvider,
   MessageScrollerViewport,
-  useMessageScroller,
-  useMessageScrollerScrollable,
-  useMessageScrollerVisibility,
 };

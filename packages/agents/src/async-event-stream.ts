@@ -9,6 +9,7 @@ export class AsyncEventStream<T> implements AsyncIterable<T> {
   #closed = false;
 
   emit(value: T): void {
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: close() flips #closed at runtime; Biome narrows the field to its `false` initializer.
     if (this.#closed) {
       return;
     }

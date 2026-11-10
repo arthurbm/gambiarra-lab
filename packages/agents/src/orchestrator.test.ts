@@ -228,10 +228,11 @@ describe("Orchestrator", () => {
         return result;
       });
     while (orchestrator.world.escalations.length === 0) {
+      // biome-ignore lint/performance/noAwaitInLoops: yields one microtask per turn until the orchestrator records the escalation; each wait depends on the previous one.
       await Promise.resolve();
     }
     expect(alphaTransport.prompts).toHaveLength(2);
-    const escalation = orchestrator.world.escalations[0];
+    const [escalation] = orchestrator.world.escalations;
     expect(escalation).toMatchObject({
       squadId: "alpha",
       roundId: "round-1",
@@ -281,11 +282,12 @@ describe("Orchestrator", () => {
         return result;
       });
     while (orchestrator.world.escalations.length === 0) {
+      // biome-ignore lint/performance/noAwaitInLoops: yields one microtask per turn until the orchestrator records the escalation; each wait depends on the previous one.
       await Promise.resolve();
     }
 
     expect(settled).toBe(false);
-    const escalation = orchestrator.world.escalations[0];
+    const [escalation] = orchestrator.world.escalations;
     orchestrator.answerHuman(escalation?.id ?? "", "Accessibility wins");
     await run;
 
@@ -404,9 +406,10 @@ describe("Orchestrator", () => {
       reviewerName: "Ana",
     });
     while (orchestrator.world.escalations.length === 0) {
+      // biome-ignore lint/performance/noAwaitInLoops: yields one microtask per turn until the orchestrator records the escalation; each wait depends on the previous one.
       await Promise.resolve();
     }
-    const escalation = orchestrator.world.escalations[0];
+    const [escalation] = orchestrator.world.escalations;
     orchestrator.answerHuman(escalation?.id ?? "", "Proceed with less scope");
     await reviewPromise;
     orchestrator.swapModel(
