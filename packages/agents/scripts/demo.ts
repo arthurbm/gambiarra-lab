@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { MockLanguageModelV3 } from "ai/test";
 import {
   createClient,
+  createFakeHarnessAdapter,
   createGambi,
   createHarnessParticipantSession,
   hub as gambiHub,
@@ -14,6 +15,11 @@ import {
 import { Orchestrator } from "../src/orchestrator.ts";
 import { TunnelHarnessTransport } from "../src/tunnel-transport.ts";
 import type { DomainEvent, Squad } from "../src/types.ts";
+
+const fakeHarness = createFakeHarnessAdapter({
+  command: process.execPath,
+  args: [resolve(import.meta.dir, "../../../scripts/fake-acp-agent.ts")],
+});
 
 interface DemoOptions {
   hubUrl?: string;
@@ -153,6 +159,7 @@ try {
         participantId: squad.harnessParticipantId ?? squad.id,
         nickname: `${squad.name} fake harness`,
         harnessId: "fake",
+        adapter: fakeHarness,
         model: "deterministic-fixture",
         gambiHome,
         artifactDebounceMs: 50,

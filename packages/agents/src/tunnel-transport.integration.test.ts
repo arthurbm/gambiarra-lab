@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { MockLanguageModelV3 } from "ai/test";
 import {
   createClient,
+  createFakeHarnessAdapter,
   createHarnessParticipantSession,
   hub as gambiHub,
   type HarnessParticipantSession,
@@ -13,6 +14,11 @@ import {
 import { Orchestrator } from "./orchestrator.ts";
 import { TunnelHarnessTransport } from "./tunnel-transport.ts";
 import type { DomainEvent } from "./types.ts";
+
+const fakeHarness = createFakeHarnessAdapter({
+  command: process.execPath,
+  args: [resolve(import.meta.dir, "../../../scripts/fake-acp-agent.ts")],
+});
 
 function randomPort(): number {
   return 30_000 + Math.floor(Math.random() * 20_000);
@@ -97,6 +103,7 @@ describe("TunnelHarnessTransport integration", () => {
       participantId: "fake-alpha",
       nickname: "Fake Alpha",
       harnessId: "fake",
+      adapter: fakeHarness,
       model: "deterministic-fixture",
       gambiHome,
       artifactDebounceMs: 30,
@@ -235,6 +242,7 @@ describe("TunnelHarnessTransport integration", () => {
       participantId: "fake-alpha",
       nickname: "Fake Alpha reconnected",
       harnessId: "fake",
+      adapter: fakeHarness,
       model: "deterministic-fixture",
       gambiHome,
       artifactDebounceMs: 30,

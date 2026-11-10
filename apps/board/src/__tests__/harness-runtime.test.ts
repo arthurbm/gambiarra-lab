@@ -2,13 +2,31 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { GambiClient, HarnessParticipantSession } from "gambi-sdk";
+import type {
+  GambiClient,
+  HarnessParticipantSession,
+  HarnessParticipantSessionOptions,
+} from "gambi-sdk";
 
 import { createBoardApp } from "../app";
 import type { BoardHarnessRuntime } from "../harness-runtime";
 
-interface FakeSession extends HarnessParticipantSession {
+const FAKE_AGENT_SCRIPT = /scripts\/fake-acp-agent\.ts$/;
+
+// gambi-sdk@0.7.0 ships declarations that import the unpublished
+// `@gambi/core`, so HarnessParticipantSession cannot be extended here.
+// Spell out the shape the runtime uses.
+interface FakeSession {
+  close: HarnessParticipantSession["close"];
   disconnect: () => void;
+  harnessExited: HarnessParticipantSession["harnessExited"];
+  participant: HarnessParticipantSession["participant"];
+  processPid: number;
+  roomId: string;
+  sessionId: string;
+  tunnel: HarnessParticipantSession["tunnel"];
+  waitUntilClosed: HarnessParticipantSession["waitUntilClosed"];
+  workspacePath: string;
 }
 
 function createFakeSession(participantId: string): FakeSession {
@@ -59,7 +77,9 @@ test("spawns, recreates, restores, and cleans up hosted harness sessions", async
   const directory = await mkdtemp(join(tmpdir(), "gambi-board-harness-"));
   const databaseUrl = `file:${join(directory, "board.db")}`;
   const created: FakeSession[] = [];
-  const createHostedSession = (options: { participantId: string }) => {
+  const requested: HarnessParticipantSessionOptions[] = [];
+  const createHostedSession = (options: HarnessParticipantSessionOptions) => {
+    requested.push(options);
     const session = createFakeSession(options.participantId);
     created.push(session);
     return Promise.resolve(session);
@@ -88,6 +108,12 @@ test("spawns, recreates, restores, and cleans up hosted harness sessions", async
       "session-board-hosted-01",
       "session-board-hosted-02",
     ]);
+    expect(requested[0]?.adapter).toMatchObject({
+      id: "fake",
+      command: process.execPath,
+      args: [expect.stringMatching(FAKE_AGENT_SCRIPT)],
+    });
+    expect(requested[0]?.workspace).toBeDefined();
 
     created[0]?.disconnect();
     await Bun.sleep(1100);
@@ -139,9 +165,12 @@ test("routes orchestrator dispatches through the assigned board harness", async 
     reconcileHosted: () => Promise.resolve(),
     subscribeArtifacts: () => () => undefined,
   };
+  // A file database: ":memory:" is one shared-cache database per process, and
+  // the hosted harness claimed here would leak into routes.test.ts.
+  const directory = await mkdtemp(join(tmpdir(), "gambi-board-dispatch-"));
   const runtime = await createBoardApp({
     adminToken: "test-admin-token",
-    databaseUrl: ":memory:",
+    databaseUrl: `file:${join(directory, "board.db")}`,
     harness: {
       hostedHarnessId: "fake",
       hubUrl: "http://hub.test",
@@ -214,5 +243,6 @@ test("routes orchestrator dispatches through the assigned board harness", async 
     });
   } finally {
     await runtime.close();
+    await rm(directory, { force: true, recursive: true });
   }
 });

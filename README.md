@@ -2,7 +2,7 @@
 
 Experiências do [Gambiarra Club](https://gambiarra.club) construídas sobre o [Gambi](https://github.com/arthurbm/gambi): salas onde pessoas, os modelos delas e os harnesses delas (OpenCode, Claude Code, Codex) trabalham juntos.
 
-> **Status:** em migração. O código saiu do gambi antes de a camada de harness ser publicada, então até o `gambi@0.7.0` sair o lab roda contra um checkout local do gambi. Veja [Rodando](#rodando).
+> **Status:** roda contra o `gambi@0.7.0` publicado. O que falta está em [`docs/next-steps.md`](docs/next-steps.md).
 
 ## Gambi embaixo, experiências em cima
 
@@ -43,19 +43,18 @@ Nenhum pacote vai para o npm enquanto tiver um consumidor só.
 
 ## Rodando
 
-Precisa de [Bun](https://bun.sh) e do gambi clonado ao lado deste repositório, em `../gambi`, na branch do [PR #81](https://github.com/arthurbm/gambi/pull/81) até ela ser mergeada. Para usar outro caminho, defina `GAMBI_DIR`.
+Precisa de [Bun](https://bun.sh). O `gambi` CLI e o `gambi-sdk` vêm do npm (`^0.7.0`).
 
 ```bash
-(cd ../gambi && bun install)
 bun install
-bun run link:gambi   # builda o gambi-sdk local e aponta o SDK e o CLI `gambi` para ele
 bun run check-types
 bun test apps/board/src
+bun test packages/agents
 ```
 
-O `bun install` desfaz os links. Depois de cada install, rode `bun run link:gambi` de novo.
+O `gambi` está em `trustedDependencies` porque o postinstall dele prepara o binário da plataforma. Sem isso o `bun install` bloqueia o script e o `gambi` falha com `EACCES`.
 
-`bun run board:e2e` roda o evento completo com harnesses falsos e banco efêmero, sem chamar modelo. Ele volta a funcionar depois do item 2 de [`docs/next-steps.md`](docs/next-steps.md), que lista em ordem o que falta. `bun run event` é a versão com OpenCode de verdade.
+`bun run board:e2e` roda o evento completo com harnesses falsos e banco efêmero, sem chamar modelo. Os harnesses `fake` rodam `scripts/fake-acp-agent.ts`, que chama o `runFakeAcpAgent()` do `gambi-sdk`. `bun run event` é a versão com OpenCode de verdade.
 
 Antes de commitar, rode `bun x ultracite fix`.
 

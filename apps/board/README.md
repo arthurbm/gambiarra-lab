@@ -93,6 +93,14 @@ after a tunnel or ACP exit. `BoardRuntime.close()` waits for every child to
 stop. Reducing the count fails while one of the removed ordinals is claimed or
 assigned.
 
+Each hosted harness runs in a `gambi-sdk` local directory workspace
+(`~/.gambi/workspaces/<room>/<participant>/`) wrapped by
+`createCityTileWorkspace()`, which writes the city tile starter (`index.html`,
+`README.md`, `manifest.json`) before the harness starts and never overwrites a
+file that is already there. A `fake` hosted harness runs
+`scripts/fake-acp-agent.ts` through `createFakeHarnessAdapter()`, because the
+bundled SDK cannot locate its own copy of the fake agent.
+
 ## Harness runtime
 
 The board does not create hub rooms. Create one once, then give the board its
