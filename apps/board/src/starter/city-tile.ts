@@ -1,8 +1,14 @@
 // Moved from gambi packages/core/src/harness-workspace.ts (gambi@9980c2b).
-// The gambi core no longer seeds this starter; the board owns it and will
-// apply it through a StarterWorkspace once gambi-sdk exposes the Workspace seam.
+// The gambi core no longer seeds this starter; the board owns it and applies
+// it to hosted harnesses through createCityTileWorkspace().
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import {
+  createLocalDirectoryWorkspace,
+  type PreparedWorkspace,
+  type Workspace,
+  type WorkspaceContext,
+} from "gambi-sdk";
 
 export interface HarnessTilePalette {
   accent: string;
@@ -177,4 +183,23 @@ export async function seedCityTileStarter(
       starterManifest(palette)
     ),
   ]);
+}
+
+/**
+ * A gambi-sdk Workspace that seeds the city tile starter before the harness
+ * starts. It wraps `base` (a local directory workspace by default).
+ */
+export function createCityTileWorkspace(
+  base: Workspace = createLocalDirectoryWorkspace()
+): Workspace {
+  return {
+    async prepare(context: WorkspaceContext): Promise<PreparedWorkspace> {
+      const prepared: PreparedWorkspace = await base.prepare(context);
+      await seedCityTileStarter(prepared.path, {
+        harness: context.harness,
+        model: context.model,
+      });
+      return prepared;
+    },
+  };
 }

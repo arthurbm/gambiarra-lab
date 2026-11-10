@@ -32,8 +32,7 @@
     "dev:cli": "gambi",
     "dev:hub": "gambi hub serve",
     "event": "bun scripts/event.ts",
-    "fix": "ultracite fix",
-    "link:gambi": "bun scripts/link-local-gambi.ts"
+    "fix": "ultracite fix"
   },
   "dependencies": {
     "zod": "catalog:"
@@ -42,11 +41,14 @@
     "@biomejs/biome": "2.5.15",
     "@gambiarra-lab/config": "workspace:*",
     "@types/bun": "catalog:",
-    "gambi": "^0.6.0",
-    "gambi-sdk": "^0.6.0",
+    "gambi": "^0.7.0",
+    "gambi-sdk": "^0.7.0",
     "turbo": "^2.11.7",
     "typescript": "catalog:",
     "ultracite": "8.0.0"
   },
-  "packageManager": "bun@1.4.3"
+  "packageManager": "bun@1.4.3",
+  "trustedDependencies": [
+    "gambi"
+  ]
 }

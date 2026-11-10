@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import type { HarnessEvent } from "@gambiarra-lab/agents";
 import {
   HarnessTransportError,
@@ -5,6 +6,7 @@ import {
 } from "@gambiarra-lab/agents/tunnel";
 import {
   createClient,
+  createFakeHarnessAdapter,
   createHarnessParticipantSession,
   type GambiClient,
   type HarnessParticipantSession,
@@ -13,9 +15,14 @@ import {
 
 import type { BoardRepository, HubHarnessParticipant } from "./db/repository";
 import type { BoardEventBus } from "./sse";
+import { createCityTileWorkspace } from "./starter/city-tile";
 
 const RECONCILE_INTERVAL_MS = 3000;
 const RETRY_MAX_MS = 15_000;
+const FAKE_ACP_AGENT_PATH = resolve(
+  import.meta.dir,
+  "../../../scripts/fake-acp-agent.ts"
+);
 
 function isExpectedWatchDisconnect(error: unknown) {
   return (
@@ -351,6 +358,7 @@ class HostedHarnessSupervisor {
   readonly #repository: BoardRepository;
   readonly #roomCode: string;
   readonly #sessions = new Map<number, HarnessParticipantSession>();
+  readonly #workspace = createCityTileWorkspace();
   #closed = false;
   #desired = 0;
 
@@ -409,6 +417,13 @@ class HostedHarnessSupervisor {
     try {
       const suffix = String(ordinal).padStart(2, "0");
       const session = await this.#createSession({
+        adapter:
+          this.#id === "fake"
+            ? createFakeHarnessAdapter({
+                command: process.execPath,
+                args: [FAKE_ACP_AGENT_PATH],
+              })
+            : undefined,
         harnessId: this.#id,
         hosted: true,
         hubUrl: this.#hubUrl,
@@ -416,6 +431,7 @@ class HostedHarnessSupervisor {
         nickname: `Hospedado ${suffix}`,
         participantId: `board-hosted-${suffix}`,
         roomCode: this.#roomCode,
+        workspace: this.#workspace,
       });
       if (this.#closed || ordinal > this.#desired) {
         await session.close();

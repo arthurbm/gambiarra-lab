@@ -17,7 +17,6 @@ Gambiarra Lab is where the Gambiarra Club builds social experiences on top of [G
 
 ```bash
 bun install
-bun run link:gambi           # until gambi 0.7.0: local gambi-sdk and CLI (rerun after every install)
 bun run dev:hub              # gambi hub serve (published CLI)
 bun run dev:board            # board server
 bun run dev:board-web        # board web
@@ -33,7 +32,7 @@ bun x ultracite fix          # format before committing
 | Glossary (orchestration, experience, starter) | `CONTEXT.md` |
 | Harness, Workspace, tunnel, hub vocabulary | [gambi `CONTEXT.md`](https://github.com/arthurbm/gambi/blob/main/CONTEXT.md) |
 | Why this repo exists (decision record) | [gambi ADR-0006, revisão 2026-10-24](https://github.com/arthurbm/gambi/blob/main/docs/adr/0006-harness-participants-over-acp.md) |
-| What is left to make the board run again | `docs/next-steps.md` |
+| What is left after the split | `docs/next-steps.md` |
 | The 2026-08-23 event (notes, runbook, later, evidence) | `docs/gambiarra-2026-08-23/` |
 | Conceptual notes on the book | `docs/tres-inteligencias-revisitadas-notas.md` |
 | Orchestration library | `packages/agents/README.md` |
