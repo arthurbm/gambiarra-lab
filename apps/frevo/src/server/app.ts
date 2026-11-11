@@ -28,6 +28,7 @@ import {
 } from "../sim/world";
 import { createAdminApi } from "./admin";
 import { createSimulatedHumans } from "./simulated";
+import { sseHeaders } from "./sse";
 import {
   type PhoneEvent,
   phoneView,
@@ -87,15 +88,6 @@ const encoder = new TextEncoder();
 const SESSION_ID = /^[A-Za-z0-9_-]{8,64}$/;
 /** How often the admin gets the host's state. */
 const ADMIN_PUBLISH_MS = 500;
-
-function sseHeaders() {
-  return {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-    "X-Accel-Buffering": "no",
-  };
-}
 
 async function jsonBody(
   request: Request

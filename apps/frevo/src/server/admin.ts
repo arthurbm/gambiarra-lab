@@ -20,6 +20,7 @@ import {
 } from "../sim/phases";
 import type { World } from "../sim/world";
 import type { SimulatedHumans } from "./simulated";
+import { sseHeaders } from "./sse";
 import { type AdminState, adminState, type Spending } from "./views";
 
 export interface AdminContext {
@@ -48,7 +49,7 @@ export interface AdminContext {
   /** The scheduler's estimate; null while it reports none. */
   spending: () => Spending | null;
   /** Counts an open state stream as someone watching; returns how it leaves. */
-  watch?: () => () => void;
+  watch: () => () => void;
   world: () => World;
 }
 
@@ -140,7 +141,7 @@ export function createAdminApi(context: AdminContext): AdminApi {
 
   function stream(request: Request): Response {
     let self: ReadableStreamDefaultController<Uint8Array> | undefined;
-    const unwatch = context.watch?.() ?? (() => undefined);
+    const unwatch = context.watch();
     const leave = () => {
       unwatch();
       if (self) {
@@ -158,14 +159,7 @@ export function createAdminApi(context: AdminContext): AdminApi {
         },
         cancel: leave,
       }),
-      {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-          "X-Accel-Buffering": "no",
-        },
-      }
+      { headers: sseHeaders() }
     );
   }
 
