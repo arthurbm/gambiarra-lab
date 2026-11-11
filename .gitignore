@@ -63,3 +63,8 @@ apps/board/data/*
 
 # Turbo
 .turbo
+
+# Local artifacts of the experiences (videos, audio, screenshots, reports,
+# the video gallery's source). They live here to stay next to the code, and are
+# never committed. See docs/bloco-de-frevo/onde-esta-cada-coisa.md.
+artifacts/
