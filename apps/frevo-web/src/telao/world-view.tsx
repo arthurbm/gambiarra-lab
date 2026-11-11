@@ -19,6 +19,7 @@ import {
 } from "./painter";
 import { fitWorld, type WorldFit } from "./scale";
 import { PX_PER_UNIT, WORLD_HEIGHT, WORLD_WIDTH } from "./scene";
+import { spreadOut } from "./spread";
 
 /** The look and costume arrive with the entrance; until then they may be missing. */
 export type ArtBoneco = PublicBoneco & {
@@ -32,6 +33,9 @@ const FOLLOW = {
   teleportDistance: (4 * 16) / PX_PER_UNIT,
 };
 const LAYOUT_MS = 250;
+/** Art pixels kept between bonecos that stand on the same point. */
+const CROWD_DISTANCE = 13;
+const SHIFT_EASE_MS = 180;
 const MAX_BALLOONS = 5;
 
 interface Speech {
@@ -129,6 +133,8 @@ export function WorldView({ snapshot }: { snapshot: PublicSnapshot }) {
     canvas.height = fit.canvasHeight;
     const ground = paintGround(art, fit);
     const drawn = new Map<string, Drawn>();
+    const shifts = new Map<string, { x: number; y: number }>();
+    const shown = new Map<string, Drawn>();
     const css = fit.cssPerDevicePixel;
     const toCss = (x: number, y: number) => ({
       x: (fit.originX + x * fit.scale) * css,
@@ -162,17 +168,39 @@ export function WorldView({ snapshot }: { snapshot: PublicSnapshot }) {
           }
         );
         drawn.set(boneco.id, next);
-        return { boneco, at: next };
+        return { boneco, walked: next };
       });
-      for (const id of drawn.keys()) {
+      for (const id of [...drawn.keys()]) {
         if (!live.has(id)) {
           drawn.delete(id);
+          shifts.delete(id);
+          shown.delete(id);
         }
       }
+      // Bonecos on the same point fan out; the shift eases in, never jumps.
+      const wanted = spreadOut(
+        positions.map(({ boneco, walked }) => ({
+          id: boneco.id,
+          x: walked.x,
+          y: walked.y,
+        })),
+        CROWD_DISTANCE
+      );
+      const ease = 1 - Math.exp(-Math.min(elapsed, 100) / SHIFT_EASE_MS);
+      const placed = positions.map(({ boneco, walked }) => {
+        const target = wanted.get(boneco.id) ?? { x: 0, y: 0 };
+        const shift = shifts.get(boneco.id) ?? { ...target };
+        shift.x += (target.x - shift.x) * ease;
+        shift.y += (target.y - shift.y) * ease;
+        shifts.set(boneco.id, shift);
+        const at = { ...walked, x: walked.x + shift.x, y: walked.y + shift.y };
+        shown.set(boneco.id, at);
+        return { boneco, at };
+      });
 
       if (now - lastLayout >= LAYOUT_MS) {
         lastLayout = now;
-        const speakers: Speaker[] = positions.flatMap(({ boneco, at }) => {
+        const speakers: Speaker[] = placed.flatMap(({ boneco, at }) => {
           const speech = speechRef.current.get(boneco.id);
           if (!speech) {
             return [];
@@ -218,7 +246,7 @@ export function WorldView({ snapshot }: { snapshot: PublicSnapshot }) {
         );
       }
 
-      const figures: Figure[] = positions.map(({ boneco, at }) => ({
+      const figures: Figure[] = placed.map(({ boneco, at }) => ({
         id: boneco.id,
         name: boneco.name,
         look: lookOf(boneco),
@@ -233,7 +261,7 @@ export function WorldView({ snapshot }: { snapshot: PublicSnapshot }) {
 
       for (const balloon of layoutRef.current) {
         const element = balloonElements.current.get(balloon.id);
-        const at = drawn.get(balloon.id);
+        const at = shown.get(balloon.id);
         if (element && at) {
           const head = toCss(at.x, at.y - FRAME);
           const width = WORLD_WIDTH * fit.scale * css;

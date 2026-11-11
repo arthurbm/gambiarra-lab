@@ -398,20 +398,25 @@ export function paintFrame(
   drawNames(ctx, fit, figures, fontPx);
 
   const thinkFrame = 1 + (Math.floor((timeMs * THINK_FPS) / 1000) % 3);
+  const bubbleScale = Math.max(2, Math.round(fit.scale * 0.6));
   for (const figure of figures) {
     const x = Math.round(figure.x);
     const head = Math.round(figure.y) - FRAME;
     if (figure.thinking) {
-      blit(
-        ctx,
-        fit,
+      // Smaller than the world, still whole pixels: a crowd thinking at once
+      // must not hide itself.
+      const w = (THINK_W + 2) * bubbleScale;
+      const h = (THINK_H + 2) * bubbleScale;
+      ctx.drawImage(
         art.thinking,
         thinkFrame * (THINK_W + 2),
         0,
         THINK_W + 2,
         THINK_H + 2,
-        x - 11,
-        head - 15
+        Math.round(fit.originX + x * fit.scale - w / 2),
+        Math.round(fit.originY + (head + 2) * fit.scale - h),
+        w,
+        h
       );
     }
   }
