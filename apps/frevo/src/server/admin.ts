@@ -57,7 +57,6 @@ export interface AdminApi {
 }
 
 const encoder = new TextEncoder();
-const MAX_SIMULATED_TOTAL = 60;
 const TIMED: TimedPhase[] = ["formar", "compor", "desfile"];
 
 function refused() {
@@ -226,10 +225,13 @@ export function createAdminApi(context: AdminContext): AdminApi {
     return durations;
   }
 
-  function totalOf(input: Record<string, unknown>) {
-    return typeof input.total === "number" && Number.isInteger(input.total)
-      ? Math.min(MAX_SIMULATED_TOTAL, Math.max(0, input.total))
-      : 25;
+  /** The square's ceiling holds for simulated people too. */
+  function totalOf(world: World, input: Record<string, unknown>) {
+    const total =
+      typeof input.total === "number" && Number.isInteger(input.total)
+        ? Math.max(0, input.total)
+        : 25;
+    return Math.min(world.rules.maxBonecos, total);
   }
 
   /** Each action by route, with the JSON body (empty when there is none). */
@@ -258,7 +260,7 @@ export function createAdminApi(context: AdminContext): AdminApi {
       return response;
     },
     simulados: (world, input) => {
-      const filled = context.simulated.fill(world, totalOf(input));
+      const filled = context.simulated.fill(world, totalOf(world, input));
       return change(filled.world, `${filled.added} simulated people joined`);
     },
     "simulados/remover": (world) => {

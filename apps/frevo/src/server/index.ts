@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // The world server as a process. PORT, HOST, GAMBI_HUB_URL, FREVO_ROOM_NAME,
-// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL, FREVO_WEB_DIST,
-// FREVO_ADMIN_SECRET and FREVO_BUDGET_USD configure it.
+// FREVO_BONECOS, FREVO_MAX_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL,
+// FREVO_WEB_DIST, FREVO_ADMIN_SECRET and FREVO_BUDGET_USD configure it.
 import { randomBytes } from "node:crypto";
 import { exists } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -44,6 +44,7 @@ const server = startWorldServer({
   port: integer("PORT", 3200, 0),
   bonecos: integer("FREVO_BONECOS", 1, 0),
   rules: {
+    maxBonecos: integer("FREVO_MAX_BONECOS", DEFAULT_RULES.maxBonecos, 1),
     decisionTimeoutMs: integer(
       "FREVO_DECISION_TIMEOUT_MS",
       DEFAULT_RULES.decisionTimeoutMs,

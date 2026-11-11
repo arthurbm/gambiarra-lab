@@ -439,6 +439,16 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       );
     }
     const joined = join(world, { sessionId });
+    if (joined.full) {
+      return Response.json(
+        {
+          ok: false,
+          lotado: true,
+          erro: "A praça lotou. Acompanhe pelo telão.",
+        },
+        { status: 409 }
+      );
+    }
     ({ world } = joined);
     if (joined.created) {
       log(`${joined.bonecoId} arrived`);

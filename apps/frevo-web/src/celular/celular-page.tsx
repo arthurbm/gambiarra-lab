@@ -312,7 +312,7 @@ function Personality({ boneco }: { boneco: PrivateView["boneco"] }) {
 }
 
 export function CelularPage() {
-  const { view, status, reply, receivedAt, expelled } = useCelular();
+  const { view, status, reply, receivedAt, expelled, full } = useCelular();
   useTick(250);
 
   if (expelled) {
@@ -320,6 +320,15 @@ export function CelularPage() {
       <main className="celular celular-waiting">
         <h1>Bloco de frevo</h1>
         <p>O host tirou seu boneco da praça.</p>
+      </main>
+    );
+  }
+
+  if (full && !view) {
+    return (
+      <main className="celular celular-waiting">
+        <h1>Bloco de frevo</h1>
+        <p>A praça lotou. Acompanhe pelo telão.</p>
       </main>
     );
   }

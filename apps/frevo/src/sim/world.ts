@@ -324,6 +324,8 @@ export interface WorldRules {
   interviewThinkMs: number;
   /** How long the maestro may think before the square groups by distance. */
   maestroMs: number;
+  /** Bonecos the square holds; a person arriving when it is full is turned away. */
+  maxBonecos: number;
   /** The same two bonecos meet again only after this long. */
   meetCooldownMs: number;
   /** Two bonecos this close (in map units) meet. */
@@ -461,6 +463,7 @@ export const DEFAULT_RULES: WorldRules = {
   eventsKept: 12,
   interviewThinkMs: 8000,
   maestroMs: 10_000,
+  maxBonecos: 30,
   meetCooldownMs: 30_000,
   meetRadius: 8,
   restMs: 1500,
@@ -656,24 +659,33 @@ export function createWorld(options: {
   return world;
 }
 
+export type JoinResult =
+  | { bonecoId: string; created: boolean; full: false; world: World }
+  | { bonecoId: null; created: false; full: true; world: World };
+
+/** The square holds `rules.maxBonecos`; nobody new joins once it does. */
+export function squareFull(world: World): boolean {
+  return world.bonecos.length >= world.rules.maxBonecos;
+}
+
 /**
  * A person arriving from the phone. The same session always gets the same
- * boneco back, so a reload resumes where it was.
+ * boneco back, so a reload resumes where it was, even with the square full.
  */
-export function join(
-  world: World,
-  input: { sessionId: string }
-): { bonecoId: string; created: boolean; world: World } {
+export function join(world: World, input: { sessionId: string }): JoinResult {
   const known = world.bonecos.find(
     (other) => other.sessionId === input.sessionId
   );
   if (known) {
-    return { world, bonecoId: known.id, created: false };
+    return { world, bonecoId: known.id, created: false, full: false };
+  }
+  if (squareFull(world)) {
+    return { world, bonecoId: null, created: false, full: true };
   }
   const next: World = { ...world, bonecos: [...world.bonecos] };
   const boneco = newBoneco(next, nextBonecoId(next), input.sessionId);
   next.bonecos.push(boneco);
-  return { world: next, bonecoId: boneco.id, created: true };
+  return { world: next, bonecoId: boneco.id, created: true, full: false };
 }
 
 export function think(
