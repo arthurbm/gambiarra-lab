@@ -44,7 +44,7 @@ describe("the music", () => {
 describe("the jukebox", () => {
   test("preparing a bloco asks the generator once, with the frevo style", async () => {
     const fake = manual();
-    const jukebox = createJukebox({ generator: fake.generator });
+    const jukebox = createJukebox({ generator: fake.generator, now: () => 0 });
     jukebox.prepare(BLOCO);
     jukebox.prepare(BLOCO);
     expect(fake.calls).toHaveLength(1);
@@ -54,7 +54,13 @@ describe("the jukebox", () => {
     });
     expect(fake.calls[0]?.style).toContain("150 BPM");
     expect(jukebox.tracks()).toEqual({
-      "bloco-1": { state: "gerando", url: null, reason: null },
+      "bloco-1": {
+        state: "gerando",
+        url: null,
+        reason: null,
+        generator: null,
+        runningMs: 0,
+      },
     });
     fake.resolve("https://musica/1.mp3");
     await Bun.sleep(0);
@@ -62,6 +68,39 @@ describe("the jukebox", () => {
       state: "pronta",
       url: "https://musica/1.mp3",
       reason: null,
+      generator: null,
+      runningMs: null,
+    });
+  });
+
+  test("while it is made, the admin sees which generator runs and for how long", async () => {
+    let now = 1000;
+    const fake = manual();
+    const jukebox = createJukebox({
+      generator: fake.generator,
+      now: () => now,
+    });
+    jukebox.prepare(BLOCO);
+    fake.calls[0]?.onStep?.("MiniMax");
+    now = 41_000;
+    expect(jukebox.tracks()["bloco-1"]).toMatchObject({
+      state: "gerando",
+      generator: "MiniMax",
+      runningMs: 40_000,
+    });
+    fake.calls[0]?.onStep?.("ElevenLabs");
+    now = 46_000;
+    expect(jukebox.tracks()["bloco-1"]).toMatchObject({
+      generator: "ElevenLabs",
+      runningMs: 5000,
+    });
+    fake.resolve("/api/musica/1.mp3");
+    await Bun.sleep(0);
+    fake.calls[0]?.onStep?.("MiniMax");
+    expect(jukebox.tracks()["bloco-1"]).toMatchObject({
+      state: "pronta",
+      generator: null,
+      runningMs: null,
     });
   });
 
@@ -108,6 +147,8 @@ describe("the jukebox", () => {
       state: "reserva",
       url: EMBEDDED_TRACK,
       reason: "fal 504",
+      generator: null,
+      runningMs: null,
     });
 
     const slow = manual();

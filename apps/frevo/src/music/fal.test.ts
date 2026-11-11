@@ -107,6 +107,16 @@ describe("when MiniMax does not deliver", () => {
     expect(music.generations()).toEqual({ used: 2, max: 6 });
   });
 
+  test("each generator says when it starts, for the admin", async () => {
+    const { music } = setup({
+      minimax: { kind: "error", status: 504 },
+      elevenlabs: { kind: "ok" },
+    });
+    const steps: string[] = [];
+    await music.generate({ ...INPUT, onStep: (step) => steps.push(step) });
+    expect(steps).toEqual(["MiniMax", "ElevenLabs"]);
+  });
+
   test("a MiniMax past its limit is cancelled and ElevenLabs takes over", async () => {
     const { fake, music } = setup(
       { minimax: { kind: "slow" }, elevenlabs: { kind: "ok" } },

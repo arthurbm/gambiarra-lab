@@ -1,18 +1,13 @@
 // The jury, on the host's phone: the bloco on stage with previous and next,
 // marking and unmarking up to three blocos, and playing (and playing again)
 // each chosen bloco's music on the telão, with the telão's sound shown.
-import type { AdminState, TrackStatus } from "@gambiarra-lab/frevo/views";
+import type { AdminState } from "@gambiarra-lab/frevo/views";
 import type { CSSProperties } from "react";
 import { clockText } from "../phase/phase-text";
 import { blocoColor } from "../telao/bloco-mark";
+import { trackText } from "./track-text";
 
 type Act = (route: string, body?: Record<string, unknown>) => Promise<boolean>;
-
-const TRACK_TEXT: Record<TrackStatus["state"], string> = {
-  gerando: "música sendo feita…",
-  pronta: "música pronta",
-  reserva: "música de reserva",
-};
 
 function SoundLine({ jury }: { jury: AdminState["jury"] }) {
   const { generations } = jury;
@@ -109,7 +104,7 @@ export function AdminJury({ state, act }: { act: Act; state: AdminState }) {
                     `${bloco.members.length} bonecos`,
                     desfile.current === index ? "no telão" : null,
                     bloco.chosen ? "escolhido" : null,
-                    bloco.chosen && track ? TRACK_TEXT[track.state] : null,
+                    bloco.chosen && track ? trackText(track) : null,
                     playing ? "tocando" : null,
                   ]
                     .filter(Boolean)

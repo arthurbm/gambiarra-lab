@@ -5,6 +5,8 @@
 
 export type MusicGenerator = (input: {
   blocoName: string;
+  /** Called as each generator starts (for example "MiniMax"), for the admin. */
+  onStep?: (generator: string) => void;
   refrain: string[];
   style: string;
 }) => Promise<{ url: string }>;

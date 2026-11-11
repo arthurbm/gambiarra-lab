@@ -377,6 +377,7 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
       // Counted before the request, so blocos made at the same time never pass the ceiling.
       used += 1;
       const startedAt = Date.now();
+      music.onStep?.(step.label);
       try {
         // biome-ignore lint/performance/noAwaitInLoops: the next generator runs only if this one fails.
         const file = await run(step, music);

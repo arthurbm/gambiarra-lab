@@ -11,13 +11,20 @@ import {
 } from "./generator";
 
 export interface TrackStatus {
+  /** The generator running now (for example "MiniMax"), while it is made; null otherwise. */
+  generator: string | null;
   /** Why it fell back to the embedded track, for the admin; null otherwise. */
   reason: string | null;
+  /** How long the generator running now has run (since marking, before one starts); null when not made. */
+  runningMs: number | null;
   /** "reserva": the generator failed or was late; the embedded track plays. */
   state: "gerando" | "pronta" | "reserva";
   /** Null while it is being made. */
   url: string | null;
 }
+
+/** A track's state without the generator's progress, which is read at the time. */
+type Settled = Omit<TrackStatus, "generator" | "runningMs">;
 
 /** What the telão plays now; a command with no url stops the sound. */
 export interface PlayCommand {
@@ -83,7 +90,12 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
   const now = options.now ?? Date.now;
   const log = options.log ?? (() => undefined);
 
-  let tracks = new Map<string, TrackStatus>();
+  let tracks = new Map<string, Settled>();
+  /** The generator running for each bloco being made, and since when. */
+  let running = new Map<
+    string,
+    { generator: string | null; sinceMs: number }
+  >();
   let command: PlayCommand | null = null;
   let commands = 0;
   /** Grows on reset, so answers from before it are dropped. */
@@ -93,10 +105,24 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
     { atMs: number; enabled: boolean; playing: string | null }
   >();
 
-  function settle(blocoId: string, from: number, status: TrackStatus) {
-    if (from === epoch && tracks.get(blocoId)?.state === "gerando") {
+  function making(blocoId: string, from: number): boolean {
+    return from === epoch && tracks.get(blocoId)?.state === "gerando";
+  }
+
+  function settle(blocoId: string, from: number, status: Settled) {
+    if (making(blocoId, from)) {
       tracks.set(blocoId, status);
+      running.delete(blocoId);
     }
+  }
+
+  function statusOf(blocoId: string, track: Settled): TrackStatus {
+    const step = track.state === "gerando" ? running.get(blocoId) : undefined;
+    return {
+      ...track,
+      generator: step?.generator ?? null,
+      runningMs: step ? Math.max(0, now() - step.sinceMs) : null,
+    };
   }
 
   function prepare(bloco: BlocoMusic) {
@@ -105,6 +131,7 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
     }
     const from = epoch;
     tracks.set(bloco.blocoId, { state: "gerando", url: null, reason: null });
+    running.set(bloco.blocoId, { generator: null, sinceMs: now() });
     const timer = setTimeout(() => {
       log(`Music for ${bloco.blocoId} is late: the embedded track plays`);
       settle(bloco.blocoId, from, {
@@ -119,6 +146,11 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
         blocoName: bloco.blocoName,
         refrain: bloco.refrain,
         style: FREVO_STYLE,
+        onStep: (generator) => {
+          if (making(bloco.blocoId, from)) {
+            running.set(bloco.blocoId, { generator, sinceMs: now() });
+          }
+        },
       });
     } catch (error) {
       made = Promise.reject(error);
@@ -159,7 +191,13 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
     },
     stop: () => issue(null, null),
     current: () => command,
-    tracks: () => Object.fromEntries(tracks),
+    tracks: () =>
+      Object.fromEntries(
+        [...tracks].map(([blocoId, track]) => [
+          blocoId,
+          statusOf(blocoId, track),
+        ])
+      ),
     report(telaoId, input) {
       // Map order is report order: the first key reported longest ago.
       reports.delete(telaoId);
@@ -184,6 +222,7 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
     reset() {
       epoch += 1;
       tracks = new Map();
+      running = new Map();
       command = null;
     },
   };
