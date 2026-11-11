@@ -9,7 +9,7 @@ export function ComporPanel({ compor }: { compor: ComposeView }) {
     <section aria-live="polite" className="celular-compor">
       <h2>{roundTitle(compor)}</h2>
       {compor.name ? (
-        <p className="celular-compor-name">
+        <p>
           Nome: <strong>{compor.name}</strong>
         </p>
       ) : null}
