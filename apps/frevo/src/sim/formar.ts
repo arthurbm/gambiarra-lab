@@ -164,6 +164,7 @@ export function closeFormar(world: World): World {
   const sizes = sizesFor(leftovers.length);
   if (leftovers.length === 0 || sizes.length === 1) {
     if (leftovers.length > 1 || draft.blocos.length === 0) {
+      note(draft, "Acabou a roda. Quem ficou sem bloco forma um juntos.");
       formBloco(
         draft,
         leftovers.map((boneco) => boneco.id),
