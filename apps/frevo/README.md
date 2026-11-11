@@ -18,7 +18,10 @@ From the repository root:
 bun install
 bun run frevo:dev             # hub + world + model host + web, fake models
 bun run frevo:dev -- --real   # same, with models from OpenRouter (spends money)
+bun run frevo:stop            # stops the frevo:dev of this worktree, from another shell
 ```
+
+`frevo:dev` writes `.frevo-dev.json` at the worktree root (its pid, its command and its children's process groups) and refuses to start while that run is alive. `frevo:stop` sends SIGTERM to that pid, so the run stops its children in order, and kills what is left after 15 s. A pidfile whose process is gone signals nothing: it is removed and any recorded group still alive is only reported. Matching processes by name would also stop another worktree's run.
 
 The telão is at `http://localhost:3201/telao` and the phone at `http://localhost:3201/`. The QR on the telão points at `FREVO_PUBLIC_URL`, or at the telão's own address; to scan it from a real phone in development, open the telão by the Network address Vite prints. `PORT` (world, 3200), `FREVO_WEB_PORT` (web, 3201) and `FREVO_HUB_PORT` (hub, 3210) move the ports; 0 asks the OS for a free one. `--no-web` skips Vite; the world then serves `apps/frevo-web/dist` when it was built.
 

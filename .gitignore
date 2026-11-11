@@ -68,3 +68,6 @@ apps/board/data/*
 # the video gallery's source). They live here to stay next to the code, and are
 # never committed. See docs/bloco-de-frevo/onde-esta-cada-coisa.md.
 artifacts/
+
+# frevo:dev pidfile, one per worktree (frevo:stop reads it)
+.frevo-dev.json

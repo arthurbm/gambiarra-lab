@@ -19,6 +19,7 @@ The scripts are in `package.json`; what their names do not say:
 
 ```bash
 bun run frevo:dev -- --real   # OpenRouter models instead of fake ones (spends money)
+bun run frevo:stop            # stops this worktree's frevo:dev by its pidfile; never pkill by name
 bun run board:e2e             # fake harnesses, ephemeral DB; runs until SIGINT
 bun run board:smoke           # boots hub, fixtures, board and web on free ports; exits 0/1
 bun run frevo:smoke           # same for the frevo with a fake model; also kills the model host and restarts the hub

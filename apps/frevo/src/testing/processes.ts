@@ -147,6 +147,8 @@ export function spawnProcess(input: SpawnInput): RunningProcess {
 }
 
 export interface RunningHub {
+  /** The hub's process group leader (it changes on restart). */
+  pid: () => number;
   port: number;
   /** Stops the hub and starts a new one on the same port; every Room is gone. */
   restart: () => Promise<void>;
@@ -206,6 +208,7 @@ export async function startHub(
 
   let current = child;
   return {
+    pid: () => current.pid,
     port,
     url: `http://127.0.0.1:${port}`,
     async restart() {
