@@ -1,6 +1,8 @@
 // Pixel art stays sharp only when every art pixel becomes a whole number of
-// screen pixels. The canvas covers the whole stage; the world sits centred in
-// it at the largest whole scale that fits, and the rest is scenery.
+// screen pixels. The canvas covers the whole stage; the world sits in it at
+// the largest whole scale that fits, and the rest is scenery. It sits centred,
+// unless the scenery above it (the reef, the tower) would be cut: then it
+// moves down as far as it takes, while there is stage below it.
 
 export interface WorldFit {
   canvasHeight: number;
@@ -16,6 +18,8 @@ export interface WorldFit {
 }
 
 export function fitWorld(options: {
+  /** Art pixels of scenery above the world to keep in view when there is room. */
+  above?: number;
   devicePixelRatio?: number;
   /** Stage size in CSS pixels. */
   stageHeight: number;
@@ -33,12 +37,14 @@ export function fitWorld(options: {
       Math.min(canvasWidth / options.width, canvasHeight / options.height)
     )
   );
+  const spare = canvasHeight - options.height * scale;
+  const centred = Math.floor(spare / 2);
   return {
     scale,
     canvasWidth,
     canvasHeight,
     originX: Math.floor((canvasWidth - options.width * scale) / 2),
-    originY: Math.floor((canvasHeight - options.height * scale) / 2),
+    originY: Math.max(centred, Math.min((options.above ?? 0) * scale, spare)),
     cssPerDevicePixel: 1 / ratio,
   };
 }

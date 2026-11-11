@@ -229,7 +229,9 @@ The subscription goes on until it is cancelled in Railway's dashboard.
 
 ## Art
 
-The telão draws the square on a canvas at a whole scale (`apps/frevo-web/src/telao/scale.ts`): every art pixel becomes 3 device pixels on a 720p projector and 4 on a 1080p one, the world centred and the rest of the stage filled with scenery. Bonecos chase their latest position at a capped speed between snapshots (`telao/motion.ts`), walk in four directions and are sorted by depth with the props. Speech balloons are DOM: at most five, the newest speech first, each in the first spot around its boneco that covers no other (`telao/balloons.ts`).
+The square is the Marco Zero of Recife at carnival, north up: the compass rose on the floor at the "marco-zero" place, the stone quay along the top, and across a channel the reef with the Parque das Esculturas (the Torre de Cristal of Francisco Brennand in line with the compass rose, as in the city), the Galo da Madrugada and the city's name, with the open sea and jangadas behind. Sobrados close the corners and line the streets beside the square; lamp posts in frevo sombrinhas, bandeirinhas, giant puppets and confetti are the carnival. The simulation's places and meeting spots did not move: only what is drawn around them did.
+
+The telão draws the square on a canvas at a whole scale (`apps/frevo-web/src/telao/scale.ts`): every art pixel becomes 3 device pixels on a 720p projector and 4 on a 1080p one, and the rest of the stage is filled with scenery. The world sits centred, or lower when centring would cut the scenery above it (`SCENERY_ABOVE`, the tower on the reef) and the stage has room below. Bonecos chase their latest position at a capped speed between snapshots (`telao/motion.ts`), walk in four directions and are sorted by depth with the props. Speech balloons are DOM: at most five, the newest speech first, each in the first spot around its boneco that covers no other (`telao/balloons.ts`).
 
 | File | What it is |
 |---|---|
@@ -238,7 +240,9 @@ The telão draws the square on a canvas at a whole scale (`apps/frevo-web/src/te
 | `apps/frevo-web/src/art/boneco-sprite.tsx` | One boneco as a CSS sprite with its costume, standing or walking, for the phone |
 | `apps/frevo-web/src/art/instrument-icons.ts` | The eight 16 x 16 instrument icons, drawn for this experience |
 | `apps/frevo-web/src/art/credits.ts` | The credit lines, for the final screen |
-| `apps/frevo-web/src/telao/scene.ts` | The square's tiles and props, built on `PRACA` and the meeting spots |
+| `apps/frevo-web/src/telao/scene.ts` | The square's ground and props, built on `PRACA` and the meeting spots: pack tiles and the drawings of `recife.ts` |
+| `apps/frevo-web/src/telao/recife.ts` | What the pack does not have, drawn by code in its colours: tower, sculptures, Galo, sobrados, compass rose, sea, reef and quay tiles, carnival decoration |
+| `apps/frevo-web/src/telao/pixels.ts` | The grid of art pixels those drawings are made on (rows of letters, shapes, the dark outline) |
 | `src/sim/meeting-spots.ts` | Where blocos gather, in map units (`@gambiarra-lab/frevo/meeting-spots`) |
 
 `/telao/demo` (Vite's dev server only; the production build leaves it out) runs the simulation in the browser with 30 bonecos and a fake brain, to check the art at full load without a hub (`?blocos` sends them to the meeting spots).
@@ -246,5 +250,5 @@ The telão draws the square on a canvas at a whole scale (`apps/frevo-web/src/te
 ## Credits
 
 - **Art:** [Ninja Adventure - Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack), by Pixel-Boy and AAA, under Creative Commons Zero (CC0 1.0). The pack's page on itch.io says: "They are released under the Creative Commons Zero (CC0) license." (checked on 2026-11-11). The author's GitHub repository ([pixel-boy/NinjaAdventure](https://github.com/pixel-boy/NinjaAdventure)) has no license file; the reference is the itch.io page and the `LICENSE.txt` inside the zip, copied as `apps/frevo-web/public/art/NINJA-ADVENTURE-LICENSE.txt`. The pack's files are unchanged.
-- **Frevo instrument icons:** drawn for this experience; not part of the pack.
+- **Frevo instrument icons and the Recife scenery** (`telao/recife.ts`): drawn for this experience; not part of the pack. The tower, the Galo and the compass rose are pixel drawings after the Torre de Cristal (Francisco Brennand), the Galo da Madrugada and the Rosa dos Ventos of the Marco Zero (Cícero Dias), not copies of images of them.
 - **Inspiration:** the square is inspired by the World of Filipe Calegario in [`gambiarraclub/gambiarra-arena`](https://github.com/gambiarraclub/gambiarra-arena) (MIT, © 2025 Gambiarra LLM Club), and written from scratch here.

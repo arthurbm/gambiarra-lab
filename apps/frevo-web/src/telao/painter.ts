@@ -11,15 +11,17 @@ import {
   type Instrument,
 } from "../art/characters";
 import { ICON_SIZE, iconPixels } from "../art/instrument-icons";
+import type { Drawing } from "./pixels";
 import type { WorldFit } from "./scale";
 import {
+  CONFETTI,
   DECALS,
   groundAt,
+  isDrawing,
+  type Piece,
   PROPS,
   type Prop,
-  type Region,
   SHEETS,
-  type Sheet,
   SPOTS,
   TILE,
 } from "./scene";
@@ -175,24 +177,50 @@ function blit(
   );
 }
 
-function blitRegion(
+const drawings = new WeakMap<Drawing, HTMLCanvasElement>();
+
+/** A drawing made by code as a canvas, one art pixel per pixel; painted once. */
+function drawingCanvas(drawing: Drawing) {
+  const known = drawings.get(drawing);
+  if (known) {
+    return known;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = drawing.w;
+  canvas.height = drawing.h;
+  const ctx = canvas.getContext("2d");
+  for (const [index, color] of drawing.cells.entries()) {
+    if (ctx && color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(index % drawing.w, Math.floor(index / drawing.w), 1, 1);
+    }
+  }
+  drawings.set(drawing, canvas);
+  return canvas;
+}
+
+function blitPiece(
   ctx: CanvasRenderingContext2D,
   fit: WorldFit,
   art: Art,
-  r: Region,
+  piece: Piece,
   x: number,
   y: number,
   frame = 0
 ) {
-  const w = r.w * TILE;
+  if (isDrawing(piece)) {
+    blit(ctx, fit, drawingCanvas(piece), 0, 0, piece.w, piece.h, x, y);
+    return;
+  }
+  const w = piece.w * TILE;
   blit(
     ctx,
     fit,
-    art.images.get(SHEETS[r.sheet as Sheet]),
-    r.col * TILE + frame * w,
-    r.row * TILE,
+    art.images.get(SHEETS[piece.sheet]),
+    piece.col * TILE + frame * w,
+    piece.row * TILE,
     w,
-    r.h * TILE,
+    piece.h * TILE,
     x,
     y
   );
@@ -219,11 +247,20 @@ export function paintGround(art: Art, fit: WorldFit): HTMLCanvasElement {
   const row1 = Math.ceil((fit.canvasHeight - fit.originY) / span);
   for (let row = row0; row <= row1; row += 1) {
     for (let col = col0; col <= col1; col += 1) {
-      blitRegion(ctx, fit, art, groundAt(col, row), col * TILE, row * TILE);
+      blitPiece(ctx, fit, art, groundAt(col, row), col * TILE, row * TILE);
     }
   }
+  for (const piece of CONFETTI) {
+    ctx.fillStyle = piece.color;
+    ctx.fillRect(
+      fit.originX + piece.x * fit.scale,
+      fit.originY + piece.y * fit.scale,
+      fit.scale,
+      fit.scale
+    );
+  }
   for (const decal of DECALS) {
-    blitRegion(ctx, fit, art, decal.region, decal.x, decal.y);
+    blitPiece(ctx, fit, art, decal.piece, decal.x, decal.y);
   }
   ctx.fillStyle = SPOT_RING;
   for (const spot of SPOTS) {
@@ -258,6 +295,8 @@ function ellipse(rx: number, ry: number) {
 
 const FLAG_FPS = 6;
 const THINK_FPS = 3;
+/** How long a floating prop stays up, then down. */
+const SWELL_MS = 900;
 
 function drawProp(
   ctx: CanvasRenderingContext2D,
@@ -269,7 +308,8 @@ function drawProp(
   const frame = prop.frames
     ? Math.floor((timeMs * FLAG_FPS) / 1000) % prop.frames
     : 0;
-  blitRegion(ctx, fit, art, prop.region, prop.x, prop.y, frame);
+  const swell = prop.floats ? Math.floor(timeMs / SWELL_MS) % 2 : 0;
+  blitPiece(ctx, fit, art, prop.piece, prop.x, prop.y + swell, frame);
 }
 
 function drawFigure(
