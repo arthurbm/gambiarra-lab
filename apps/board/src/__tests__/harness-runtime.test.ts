@@ -1,7 +1,4 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import type {
   GambiClient,
   HarnessParticipantSession,
@@ -10,6 +7,7 @@ import type {
 
 import { createBoardApp } from "../app";
 import type { BoardHarnessRuntime } from "../harness-runtime";
+import { createTestDatabase } from "./test-database";
 
 const FAKE_AGENT_SCRIPT = /scripts\/fake-acp-agent\.ts$/;
 
@@ -62,8 +60,7 @@ function fakeClient(): GambiClient {
 }
 
 test("spawns, recreates, restores, and cleans up hosted harness sessions", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "gambi-board-harness-"));
-  const databaseUrl = `file:${join(directory, "board.db")}`;
+  const database = await createTestDatabase();
   const created: FakeSession[] = [];
   const requested: HarnessParticipantSessionOptions[] = [];
   const createHostedSession = (options: HarnessParticipantSessionOptions) => {
@@ -76,7 +73,7 @@ test("spawns, recreates, restores, and cleans up hosted harness sessions", async
   try {
     const first = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       harness: {
         client: fakeClient(),
         createHostedSession,
@@ -120,7 +117,7 @@ test("spawns, recreates, restores, and cleans up hosted harness sessions", async
     const restored: FakeSession[] = [];
     const second = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       harness: {
         client: fakeClient(),
         createHostedSession: (options) => {
@@ -137,7 +134,7 @@ test("spawns, recreates, restores, and cleans up hosted harness sessions", async
     expect(restored).toHaveLength(2);
     await second.close();
   } finally {
-    await rm(directory, { force: true, recursive: true });
+    await database.cleanup();
   }
 });
 
@@ -153,12 +150,10 @@ test("routes orchestrator dispatches through the assigned board harness", async 
     reconcileHosted: () => Promise.resolve(),
     subscribeArtifacts: () => () => undefined,
   };
-  // A file database: ":memory:" is one shared-cache database per process, and
-  // the hosted harness claimed here would leak into routes.test.ts.
-  const directory = await mkdtemp(join(tmpdir(), "gambi-board-dispatch-"));
+  const database = await createTestDatabase();
   const runtime = await createBoardApp({
     adminToken: "test-admin-token",
-    databaseUrl: `file:${join(directory, "board.db")}`,
+    databaseUrl: database.url,
     harness: {
       hostedHarnessId: "fake",
       hubUrl: "http://hub.test",
@@ -231,6 +226,6 @@ test("routes orchestrator dispatches through the assigned board harness", async 
     });
   } finally {
     await runtime.close();
-    await rm(directory, { force: true, recursive: true });
+    await database.cleanup();
   }
 });

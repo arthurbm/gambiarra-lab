@@ -1,16 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
 import { type BoardRuntime, createBoardApp } from "../app";
 import type { BoardHarnessRuntime } from "../harness-runtime";
 import type { AppRouterClient } from "../orpc/routers";
+import { createTestDatabase, type TestDatabase } from "./test-database";
 
 const runtimes: BoardRuntime[] = [];
-const directories: string[] = [];
+const databases: TestDatabase[] = [];
 const servers: Bun.Server<unknown>[] = [];
 const TRAILING_SLASH = /\/$/;
 
@@ -19,11 +17,7 @@ afterEach(async () => {
   for (const server of servers.splice(0)) {
     server.stop(true);
   }
-  await Promise.all(
-    directories
-      .splice(0)
-      .map((directory) => rm(directory, { force: true, recursive: true }))
-  );
+  await Promise.all(databases.splice(0).map((database) => database.cleanup()));
 });
 
 function rpcClient(runtime: BoardRuntime, admin = false): AppRouterClient {
@@ -125,13 +119,12 @@ async function prepareRoundSquad(runtime: BoardRuntime) {
 
 describe("rounds 4 to 6 and finale", () => {
   test("persists the crisis ring, typed dispatch, metro tile, and finale aggregates", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "gambi-coordination-"));
-    directories.push(directory);
-    const databaseUrl = `file:${join(directory, "board.db")}`;
+    const database = await createTestDatabase();
+    databases.push(database);
     const prompts: string[] = [];
     const runtime = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       harness: false,
       harnessRuntime: fakeHarness(prompts),
       onError: () => undefined,
@@ -258,7 +251,7 @@ describe("rounds 4 to 6 and finale", () => {
     runtimes.splice(runtimes.indexOf(runtime), 1);
     const restarted = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       harness: false,
       harnessRuntime: fakeHarness(),
       onError: () => undefined,
@@ -305,14 +298,13 @@ describe("rounds 4 to 6 and finale", () => {
       },
     });
     servers.push(server);
-    const directory = await mkdtemp(join(tmpdir(), "gambi-model-swap-"));
-    directories.push(directory);
-    const databaseUrl = `file:${join(directory, "board.db")}`;
+    const database = await createTestDatabase();
+    databases.push(database);
     const sharedFakeHarness = fakeHarness();
     const createRuntime = () =>
       createBoardApp({
         adminToken: "test-admin-token",
-        databaseUrl,
+        databaseUrl: database.url,
         harness: {
           hubUrl: server.url.toString().replace(TRAILING_SLASH, ""),
           roomCode: "FAKE01",
