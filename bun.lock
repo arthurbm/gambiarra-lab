@@ -85,6 +85,19 @@
         "vite": "8.1.5",
       },
     },
+    "apps/frevo": {
+      "name": "@gambiarra-lab/frevo",
+      "version": "0.0.0",
+      "dependencies": {
+        "gambi": "^0.7.2",
+        "gambi-sdk": "^0.7.2",
+      },
+      "devDependencies": {
+        "@gambiarra-lab/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/agents": {
       "name": "@gambiarra-lab/agents",
       "version": "0.0.0",
@@ -329,6 +342,8 @@
     "@gambiarra-lab/board-web": ["@gambiarra-lab/board-web@workspace:apps/board-web"],
 
     "@gambiarra-lab/config": ["@gambiarra-lab/config@workspace:packages/config"],
+
+    "@gambiarra-lab/frevo": ["@gambiarra-lab/frevo@workspace:apps/frevo"],
 
     "@gambiarra-lab/ui": ["@gambiarra-lab/ui@workspace:packages/ui"],
 

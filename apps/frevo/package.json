@@ -1,0 +1,21 @@
+{
+  "name": "@gambiarra-lab/frevo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "dev": "bun run --hot src/server/index.ts",
+    "model-host": "bun run src/model-host/index.ts",
+    "start": "bun run src/server/index.ts"
+  },
+  "dependencies": {
+    "gambi": "^0.7.2",
+    "gambi-sdk": "^0.7.2"
+  },
+  "devDependencies": {
+    "@gambiarra-lab/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}
