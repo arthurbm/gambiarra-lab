@@ -62,7 +62,21 @@ const REAL_MODELS: ModelEntry[] = [
     id: "minimax/minimax-m3",
     label: "MiniMax M3",
     price: { input: 0.3, output: 1.2 },
-    request: { defaults: DECISION_DEFAULTS },
+    request: {
+      defaults: DECISION_DEFAULTS,
+      // Under load OpenRouter routed it to Venice, which reasons until
+      // max_tokens and answers without a tool call (16 of 21 in a burst, and
+      // most of the failures on the 25-phone rehearsals), and once leaked
+      // Chinese with reasoning off. CoreWeave with reasoning off: 21 of 21.
+      overrides: {
+        reasoning: { effort: "none" },
+        provider: {
+          order: ["coreweave", "minimax"],
+          allow_fallbacks: true,
+          require_parameters: true,
+        },
+      },
+    },
   },
   {
     id: "openai/gpt-6-luna",

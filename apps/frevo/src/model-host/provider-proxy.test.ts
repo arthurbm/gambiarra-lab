@@ -115,6 +115,15 @@ describe("a model's request fields", () => {
     });
   });
 
+  test("keep MiniMax M3 off reasoning and on the provider measured without leaks", () => {
+    const sent = requestFor("minimax/minimax-m3", {
+      model: "minimax/minimax-m3",
+      messages: [],
+    });
+    expect(sent.reasoning).toEqual({ effort: "none" });
+    expect(sent.provider).toMatchObject({ order: ["coreweave", "minimax"] });
+  });
+
   test("leave a model outside the catalog alone", () => {
     const body = { model: "outro/modelo", temperature: 0.2, messages: [] };
     expect(requestFor("outro/modelo", body)).toEqual(body);
