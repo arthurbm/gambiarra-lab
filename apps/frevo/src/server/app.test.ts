@@ -136,6 +136,31 @@ describe("the world server", () => {
     );
   }, 20_000);
 
+  test("asks no model for calls it refuses, such as a wrong admin secret", async () => {
+    await until(async () =>
+      (await health(server)).viewers === 0 ? true : undefined
+    );
+    await Bun.sleep(300);
+    const before = answered;
+    const refused = [
+      () =>
+        fetch(`${server.url}/api/admin/models`, {
+          headers: { Authorization: "Bearer errado" },
+        }),
+      () => fetch(`${server.url}/api/nada`),
+      () => fetch(`${server.url}/api/entrar`, { method: "POST", body: "{" }),
+    ];
+    for (let round = 0; round < 10; round += 1) {
+      for (const call of refused) {
+        // biome-ignore lint/performance/noAwaitInLoops: a steady trickle of refusals.
+        const response = await call();
+        expect(response.ok).toBe(false);
+      }
+      await Bun.sleep(100);
+    }
+    expect(answered).toBe(before);
+  }, 20_000);
+
   test("keeps the bonecos walking on autopilot while nobody watches", async () => {
     await until(async () =>
       (await health(server)).viewers === 0 ? true : undefined

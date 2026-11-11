@@ -629,6 +629,17 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     return new Response("Not Found", { status: 404 });
   }
 
+  /**
+   * A phone entering or answering, or the admin's page acting: only a call
+   * the server accepted counts as someone there, never a refused one.
+   */
+  function present(response: Response): Response {
+    if (response.ok) {
+      activeUntil = Date.now() + API_ACTIVITY_MS;
+    }
+    return response;
+  }
+
   const server = Bun.serve({
     // `::` takes IPv6 and IPv4; Railway's private network needs IPv6.
     hostname: options.host ?? "::",
@@ -636,14 +647,12 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     fetch(request, bunServer) {
       const { pathname, searchParams } = new URL(request.url);
       if (pathname.startsWith("/api/")) {
-        // A phone entering or answering, or the admin's page acting.
-        activeUntil = Date.now() + API_ACTIVITY_MS;
         if (pathname.startsWith("/api/admin/")) {
           // The admin's state stream stays open like the others.
           bunServer.timeout(request, 0);
-          return admin.handle(request, pathname);
+          return admin.handle(request, pathname).then(present);
         }
-        return api(request, pathname);
+        return api(request, pathname).then(present);
       }
       if (request.method !== "GET" && request.method !== "HEAD") {
         return new Response("Method Not Allowed", { status: 405 });
