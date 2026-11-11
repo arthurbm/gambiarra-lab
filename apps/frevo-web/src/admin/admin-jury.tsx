@@ -25,7 +25,7 @@ function SoundLine({ jury }: { jury: AdminState["jury"] }) {
       </p>
       <p className="admin-hint">
         {generations
-          ? `Música gerada no fal.ai: restam ${Math.max(0, generations.max - generations.used)} de ${generations.max} gerações.`
+          ? `Música gerada no fal.ai: restam ${Math.max(0, generations.max - generations.used)} de ${generations.max} ${generations.max === 1 ? "geração" : "gerações"}.`
           : "Música gerada desligada (sem FAL_KEY): os escolhidos tocam a faixa de reserva."}
       </p>
     </>
@@ -115,6 +115,11 @@ export function AdminJury({ state, act }: { act: Act; state: AdminState }) {
                     .filter(Boolean)
                     .join(" · ")}
                 </small>
+                {bloco.chosen && track?.reason ? (
+                  <small className="admin-jury-reason">
+                    Motivo: {track.reason}
+                  </small>
+                ) : null}
               </div>
               <div className="admin-jury-actions">
                 {bloco.chosen ? (

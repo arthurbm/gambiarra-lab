@@ -160,7 +160,7 @@ describe("the ceiling", () => {
     );
     await music.generate(INPUT);
     const second = await music.generate(INPUT).catch((error: Error) => error);
-    expect((second as Error).message).toBe("teto de 1 gerações atingido");
+    expect((second as Error).message).toBe("teto de 1 geração atingido");
     expect(fake.requests).toHaveLength(1);
   });
 });

@@ -256,7 +256,9 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
     const reasons: string[] = [];
     for (const step of steps(timeouts)) {
       if (used >= max) {
-        reasons.push(`teto de ${max} gerações atingido`);
+        reasons.push(
+          `teto de ${max} ${max === 1 ? "geração" : "gerações"} atingido`
+        );
         break;
       }
       // Counted before the request, so blocos made at the same time never pass the ceiling.
