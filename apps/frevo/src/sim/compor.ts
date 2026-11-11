@@ -651,8 +651,10 @@ function openBallots(world: World, track: Track, bloco: Bloco) {
       question: QUESTIONS[track.round as ComporRound],
       options,
       defaultChoice: null,
-      durationMs: world.rules.voteMs,
-      // Only a name may be written: a refrain comes from the bonecos.
+      // Only a name may be written, so only its vote gets the minute of an
+      // open answer: a refrain comes from the bonecos.
+      durationMs:
+        track.round === "nome" ? world.rules.openAskMs : world.rules.voteMs,
       textMaxLength: track.round === "nome" ? NAME_MAX_LENGTH : null,
     });
     put(world, asked);

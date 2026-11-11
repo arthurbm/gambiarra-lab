@@ -335,13 +335,16 @@ export interface WorldEvent {
 export interface WorldRules {
   /** Countdown of a question a boneco asks its human, unless it has its own. */
   askMs: number;
-  /** Typing in an open question never stretches its wait past this. */
+  /**
+   * Typing in an open question never stretches its wait past this. At or
+   * below `openAskMs`, typing never stretches an open answer at all.
+   */
   askTypingCapMs: number;
   /** How long a boneco waits for its brain before going on autopilot. */
   decisionTimeoutMs: number;
   /** Events the telão's log keeps. */
   eventsKept: number;
-  /** Countdown of each interview question: people read it on arrival. */
+  /** Countdown of each tap question of the interview: people read it on arrival. */
   interviewAskMs: number;
   /** How long the interview waits for the model before a fixed question. */
   interviewThinkMs: number;
@@ -353,6 +356,11 @@ export interface WorldRules {
   meetCooldownMs: number;
   /** Two bonecos this close (in map units) meet. */
   meetRadius: number;
+  /**
+   * Countdown of a question the person may answer by writing: the interview's
+   * open question and the vote on the bloco's name.
+   */
+  openAskMs: number;
   /** Pause at a place before the next decision. */
   restMs: number;
   speechMaxLength: number;
@@ -360,7 +368,7 @@ export interface WorldRules {
   /** Map units per second. */
   speed: number;
   thoughtsKept: number;
-  /** Countdown of a vote on the bloco's name or refrain. */
+  /** Countdown of a vote with choices only: the refrain and its rework. */
   voteMs: number;
 }
 
@@ -495,6 +503,7 @@ export const DEFAULT_RULES: WorldRules = {
   maxBonecos: 30,
   meetCooldownMs: 30_000,
   meetRadius: 8,
+  openAskMs: 60_000,
   restMs: 1500,
   speechMaxLength: 140,
   speechMs: 6000,
@@ -978,7 +987,8 @@ function askOpenQuestion(boneco: Boneco, world: World): Boneco {
     question: OPEN_QUESTION,
     options: [],
     textMaxLength: OPEN_TEXT_MAX_LENGTH,
-    durationMs: world.rules.interviewAskMs,
+    // Writing takes longer than tapping: a minute.
+    durationMs: world.rules.openAskMs,
   });
 }
 

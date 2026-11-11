@@ -56,6 +56,7 @@ beforeAll(async () => {
       meetRadius: 40,
       askMs: 3000,
       interviewAskMs: 3000,
+      openAskMs: 3000,
       voteMs: 3000,
       maestroMs: 2000,
     },

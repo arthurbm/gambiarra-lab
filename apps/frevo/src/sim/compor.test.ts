@@ -292,7 +292,7 @@ describe("the name round", () => {
   test("with no vote, the first proposal wins", () => {
     const world = composing({ humans: 3 });
     const [first] = names(world) as [string];
-    const { world: after, views } = run(world, 30_000, {
+    const { world: after, views } = run(world, 65_000, {
       human: () => silent,
     });
     expect(bloco(after)?.name).toBe(`Bloco de ${first}`);
@@ -337,7 +337,7 @@ describe("the name round", () => {
       }
       return composer(request);
     };
-    const { world: after, views } = run(world, 30_000, {
+    const { world: after, views } = run(world, 65_000, {
       brain,
       human: () => silent,
     });
@@ -375,13 +375,46 @@ describe("a name a human writes", () => {
     expect(ask?.purpose).toBe("voto");
     expect(ask?.options).toHaveLength(3);
     expect(ask?.textMaxLength).toBe(NAME_MAX_LENGTH);
-    expect(ask?.totalMs).toBe(25_000);
+    // Writing a name is an open answer: a minute.
+    expect(ask?.totalMs).toBe(60_000);
     const [first] = names(world) as [string];
     const { views } = run(world, 40_000, { human: () => votesFor(first) });
     const refrain = views.find(
       (view) => view.ask && view.compor?.round === "refrao"
     );
     expect(refrain?.ask?.textMaxLength).toBeNull();
+    expect(refrain?.ask?.totalMs).toBe(25_000);
+  });
+
+  test("with nobody voting, the minute of the name vote still leaves the refrain its vote", () => {
+    // Default phase (2:30), nobody voting, and every round as slow as it may
+    // be: one model never answers, so each round waits its whole timeout.
+    const world = composing({ humans: 3 });
+    const [first, , third] = names(world) as [string, string, string];
+    const slow: Brain = (request) =>
+      request.boneco.name === third &&
+      (request.kind === "nome" || request.kind === "refrao")
+        ? undefined
+        : composer(request);
+    const { views, world: after } = run(world, 145_000, {
+      brain: slow,
+      human: () => silent,
+    });
+    // The refrain vote ran out on its own, before the phase ended.
+    expect(after.phase).toBe("compor");
+    expect(privateView(after, "pessoa-1")?.compor?.round).toBe("pronto");
+    const name = views.find(
+      (view) => view.ask && view.compor?.round === "nome"
+    )?.ask;
+    expect(name?.totalMs).toBe(60_000);
+    const refrain = views.find(
+      (view) => view.ask && view.compor?.round === "refrao"
+    );
+    expect(refrain?.ask?.totalMs).toBe(25_000);
+    expect(bloco(after)?.refrain).toEqual([
+      `Refrão de ${first}`,
+      "Tapioca no passo do frevo",
+    ]);
   });
 
   test("it joins the options on the other phones, counts as a vote and may win", () => {
@@ -492,7 +525,7 @@ describe("the refrain round", () => {
         lines: lines[request.boneco.name],
       });
     };
-    const after = run(world, 45_000, { brain, human: () => silent }).world;
+    const after = run(world, 90_000, { brain, human: () => silent }).world;
     expect(bloco(after)?.refrain).toEqual([
       "Verso um",
       "Verso dois",
