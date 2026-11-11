@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 // The world server as a process. PORT, HOST, GAMBI_HUB_URL, FREVO_ROOM_NAME,
-// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL, FREVO_WEB_DIST,
-// FREVO_ADMIN_SECRET, FREVO_BUDGET_USD, FAL_KEY and FREVO_MUSIC_MAX_GENERATIONS
-// configure it. Without FAL_KEY the chosen blocos play the embedded track.
+// FREVO_BONECOS, FREVO_MAX_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL,
+// FREVO_WEB_DIST, FREVO_ADMIN_SECRET, FREVO_BUDGET_USD, FAL_KEY and
+// FREVO_MUSIC_MAX_GENERATIONS configure it. Without FAL_KEY the chosen blocos
+// play the embedded track.
 import { randomBytes } from "node:crypto";
 import { exists } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -57,8 +58,11 @@ const server = startWorldServer({
   roomName: process.env.FREVO_ROOM_NAME?.trim() || DEFAULT_ROOM_NAME,
   host,
   port: integer("PORT", 3200, 0),
-  bonecos: integer("FREVO_BONECOS", 1, 0),
+  // A deploy starts with an empty square: a boneco with nobody behind it
+  // would join a bloco and parade. frevo:dev and the smoke ask for theirs.
+  bonecos: integer("FREVO_BONECOS", 0, 0),
   rules: {
+    maxBonecos: integer("FREVO_MAX_BONECOS", DEFAULT_RULES.maxBonecos, 1),
     decisionTimeoutMs: integer(
       "FREVO_DECISION_TIMEOUT_MS",
       DEFAULT_RULES.decisionTimeoutMs,

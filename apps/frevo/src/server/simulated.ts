@@ -11,7 +11,7 @@ import { answerHuman, type HumanAnswer, join, type World } from "../sim/world";
 export interface SimulatedHumans {
   /** Answers the questions that are due; call it after every step. */
   act: (world: World) => World;
-  /** Brings simulated people in until the square has `total` bonecos. */
+  /** Brings simulated people in until the square has `total` bonecos, or is full. */
   fill: (world: World, total: number) => { added: number; world: World };
   isSimulated: (sessionId: string) => boolean;
   removeAll: (world: World) => { removed: number; world: World };
@@ -123,8 +123,12 @@ export function createSimulatedHumans(
       while (next.bonecos.length < total) {
         counter += 1;
         const sessionId = `simulado-${counter}-${Math.floor(random() * 1e9).toString(36)}`;
+        const joined = join(next, { sessionId });
+        if (joined.full) {
+          break;
+        }
         sessions.add(sessionId);
-        ({ world: next } = join(next, { sessionId }));
+        next = joined.world;
         added += 1;
       }
       return { world: next, added };

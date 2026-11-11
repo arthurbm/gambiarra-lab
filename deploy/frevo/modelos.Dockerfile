@@ -1,5 +1,5 @@
 # Model host of the Bloco de frevo: the model participants in the Room. The
-# only service with the provider key. Private network only.
+# only service with the inference provider's key (OpenRouter). Private network only.
 # Build context: the repository root.
 FROM oven/bun:1.4.3-slim
 WORKDIR /repo

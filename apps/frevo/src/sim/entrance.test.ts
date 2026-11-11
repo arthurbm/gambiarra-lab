@@ -29,7 +29,7 @@ describe("the entrance", () => {
     }).world;
     const { world, bonecoId } = joined(start, "sessao-1");
     const [boneco] = publicSnapshot(world).bonecos;
-    expect(boneco?.id).toBe(bonecoId);
+    expect(boneco?.id).toBe(bonecoId as string);
     expect(boneco?.name.length).toBeGreaterThan(0);
     expect(boneco?.look).toBeGreaterThanOrEqual(0);
     expect(boneco?.look).toBeLessThan(30);
@@ -75,6 +75,34 @@ describe("the entrance", () => {
     expect(privateView(later.world, "sessao-1")?.boneco.assignedModel).toBe(
       "modelo-b"
     );
+  });
+
+  test("the square takes up to 30 bonecos; whoever is in still comes back", () => {
+    let world = createWorld({ seed: 1, bonecos: 0 });
+    for (let index = 1; index <= 30; index += 1) {
+      ({ world } = joined(world, `sessao-${index}`));
+    }
+    const full = joined(world, "sessao-31");
+    expect(full.full).toBe(true);
+    expect(full.bonecoId).toBeNull();
+    expect(publicSnapshot(full.world).bonecos).toHaveLength(30);
+    const back = joined(full.world, "sessao-7");
+    expect(back.full).toBe(false);
+    expect(back.created).toBe(false);
+    expect(back.bonecoId).toBe(
+      privateView(world, "sessao-7")?.boneco.id as string
+    );
+  });
+
+  test("the ceiling comes from the rules and counts the bonecos already walking", () => {
+    const world = createWorld({
+      seed: 1,
+      bonecos: 2,
+      rules: { maxBonecos: 3 },
+    });
+    const third = joined(world, "sessao-1");
+    expect(third.created).toBe(true);
+    expect(joined(third.world, "sessao-2").full).toBe(true);
   });
 
   test("an unknown session has no private view", () => {

@@ -29,6 +29,7 @@ import {
 } from "../sim/world";
 import { createAdminApi } from "./admin";
 import { createSimulatedHumans } from "./simulated";
+import { sseHeaders } from "./sse";
 import {
   type PhoneEvent,
   phoneView,
@@ -39,7 +40,7 @@ import {
 export interface WorldServerOptions {
   /** `Authorization: Bearer <secret>` opens /api/admin/*; without it they stay closed. */
   adminSecret?: string;
-  /** Simulated bonecos in the square. */
+  /** Bonecos with no person behind them, walking on their own; 0 by default. */
   bonecos?: number;
   /** Estimated session spending after which every boneco goes on autopilot. */
   ceilingUsd?: number;
@@ -93,15 +94,6 @@ const SESSION_ID = /^[A-Za-z0-9_-]{8,64}$/;
 /** How often the admin gets the host's state. */
 const ADMIN_PUBLISH_MS = 500;
 
-function sseHeaders() {
-  return {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-    "X-Accel-Buffering": "no",
-  };
-}
-
 async function jsonBody(
   request: Request
 ): Promise<Record<string, unknown> | null> {
@@ -134,7 +126,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
 
   let world = createWorld({
     seed: options.seed ?? Date.now(),
-    bonecos: options.bonecos ?? 1,
+    bonecos: options.bonecos ?? 0,
     rules,
   });
   let roomCode: string | null = null;
@@ -275,7 +267,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     string,
     Map<ReadableStreamDefaultController<Uint8Array>, () => void>
   >();
-  /** Sessions the host expelled; they stay out, even after a restart. */
+  /** Sessions the host expelled; they stay out until the admin restarts. */
   const expelled = new Set<string>();
   const simulated = createSimulatedHumans({ seed: options.seed ?? Date.now() });
 
@@ -330,7 +322,14 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       expelled.add(sessionId);
       publishPhones();
     },
-    restarted: publishPhones,
+    // A restart starts the session over (a rehearsal, then the real one):
+    // the expelled come back and the spending ceiling counts from zero.
+    restarted: () => {
+      expelled.clear();
+      scheduler.resetBudget();
+      log("Spending reset to zero");
+      publishPhones();
+    },
     publishNow: () => {
       broadcast(sseEvent("snapshot", telaoSnapshot()));
       publishPhones();
@@ -445,6 +444,16 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       );
     }
     const joined = join(world, { sessionId });
+    if (joined.full) {
+      return Response.json(
+        {
+          ok: false,
+          lotado: true,
+          erro: "A praça lotou. Acompanhe pelo telão.",
+        },
+        { status: 409 }
+      );
+    }
     ({ world } = joined);
     if (joined.created) {
       log(`${joined.bonecoId} arrived`);
@@ -487,14 +496,19 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   async function soundReport(request: Request): Promise<Response> {
     const body = await jsonBody(request);
     const id = body?.telao;
-    if (!(typeof id === "string" && SESSION_ID.test(id))) {
+    const playing = body?.tocando ?? null;
+    if (
+      !(
+        typeof id === "string" &&
+        SESSION_ID.test(id) &&
+        typeof body?.ativo === "boolean" &&
+        (playing === null ||
+          (typeof playing === "string" && playing.length <= 64))
+      )
+    ) {
       return new Response("Telão inválido.", { status: 400 });
     }
-    const playing =
-      typeof body?.tocando === "string" && body.tocando.length <= 64
-        ? body.tocando
-        : null;
-    jukebox.report(id, { enabled: body?.ativo === true, playing });
+    jukebox.report(id, { enabled: body.ativo, playing });
     return Response.json({ ok: true });
   }
 
@@ -638,6 +652,17 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     return new Response("Not Found", { status: 404 });
   }
 
+  /**
+   * A phone entering or answering, or the admin's page acting: only a call
+   * the server accepted counts as someone there, never a refused one.
+   */
+  function present(response: Response): Response {
+    if (response.ok) {
+      activeUntil = Date.now() + API_ACTIVITY_MS;
+    }
+    return response;
+  }
+
   const server = Bun.serve({
     // `::` takes IPv6 and IPv4; Railway's private network needs IPv6.
     hostname: options.host ?? "::",
@@ -645,14 +670,12 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     fetch(request, bunServer) {
       const { pathname, searchParams } = new URL(request.url);
       if (pathname.startsWith("/api/")) {
-        // A phone entering or answering, or the admin's page acting.
-        activeUntil = Date.now() + API_ACTIVITY_MS;
         if (pathname.startsWith("/api/admin/")) {
           // The admin's state stream stays open like the others.
           bunServer.timeout(request, 0);
-          return admin.handle(request, pathname);
+          return admin.handle(request, pathname).then(present);
         }
-        return api(request, pathname);
+        return api(request, pathname).then(present);
       }
       if (request.method !== "GET" && request.method !== "HEAD") {
         return new Response("Method Not Allowed", { status: 405 });

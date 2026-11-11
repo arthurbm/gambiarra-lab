@@ -102,6 +102,8 @@ export default defineRailway(() => {
       FREVO_PUBLIC_URL: "https://${{RAILWAY_PUBLIC_DOMAIN}}",
       // Estimated session spending that puts every boneco on autopilot.
       FREVO_BUDGET_USD: "1",
+      // No boneco without a person: one would join a bloco and parade.
+      FREVO_BONECOS: "0",
       FREVO_ADMIN_SECRET: preserve(),
       FAL_KEY: preserve(),
     },

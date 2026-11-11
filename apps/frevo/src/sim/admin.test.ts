@@ -68,9 +68,9 @@ describe("moderation", () => {
 
   test("an expelled boneco leaves the world and its phone no longer finds it", () => {
     let world = createWorld({ seed: 1, bonecos: 1 });
-    let bonecoId = "";
-    ({ world, bonecoId } = join(world, { sessionId: "sessao-1" }));
-    const result = expel(world, bonecoId);
+    const joined = join(world, { sessionId: "sessao-1" });
+    ({ world } = joined);
+    const result = expel(world, joined.bonecoId as string);
     expect(result.sessionId).toBe("sessao-1");
     ({ world } = result);
     expect(publicSnapshot(world).bonecos.map((boneco) => boneco.id)).toEqual([

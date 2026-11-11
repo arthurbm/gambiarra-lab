@@ -2,7 +2,8 @@
 // private stream and the answers. A reload finds the session in storage and
 // gets the same boneco back; a server that forgot the session (a restart)
 // gets it again on the next arrival, and so does one the host restarted. A
-// person the host expelled is told so and stays out.
+// person the host expelled is told so and stays out, and so is a new person
+// who arrives when the square is full.
 import type { PhoneEvent, PhoneView } from "@gambiarra-lab/frevo/views";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { connectTelaoStream, type StreamStatus } from "../telao/stream";
@@ -26,7 +27,10 @@ function storeSession(session: string) {
   }
 }
 
-async function enter(session: string | null): Promise<string> {
+/** The square is full: the person watches on the telão instead. */
+const FULL = "lotado";
+
+async function enter(session: string | null): Promise<string | typeof FULL> {
   const response = await fetch("/api/entrar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -35,6 +39,14 @@ async function enter(session: string | null): Promise<string> {
   if (response.status === 403 && session) {
     // Expelled: the session's stream tells the phone so.
     return session;
+  }
+  if (response.status === 409) {
+    const body = (await response.json().catch(() => ({}))) as {
+      lotado?: boolean;
+    };
+    if (body.lotado) {
+      return FULL;
+    }
   }
   if (!response.ok) {
     throw new Error(`entrar answered ${response.status}`);
@@ -55,6 +67,7 @@ export function useCelular() {
   const [session, setSession] = useState<string | null>(null);
   const [view, setView] = useState<PhoneView | null>(null);
   const [expelled, setExpelled] = useState(false);
+  const [full, setFull] = useState(false);
   const reentering = useRef(false);
   const [status, setStatus] = useState<StreamStatus>("connecting");
   /** When the view arrived, to run the countdown on this phone's clock. */
@@ -70,6 +83,10 @@ export function useCelular() {
         try {
           // biome-ignore lint/performance/noAwaitInLoops: tries again until the world answers.
           const sessao = await enter(sessionRef.current ?? storedSession());
+          if (sessao === FULL) {
+            setFull(true);
+            return;
+          }
           sessionRef.current = sessao;
           setSession(sessao);
           return;
@@ -103,6 +120,7 @@ export function useCelular() {
           if (reentering.current === false) {
             reentering.current = true;
             enter(session)
+              .then((result) => setFull(result === FULL))
               .catch(() => undefined)
               .finally(() => {
                 reentering.current = false;
@@ -143,5 +161,5 @@ export function useCelular() {
     [session]
   );
 
-  return { view, status, reply, receivedAt, expelled };
+  return { view, status, reply, receivedAt, expelled, full };
 }

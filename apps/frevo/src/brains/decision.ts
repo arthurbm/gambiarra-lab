@@ -494,15 +494,16 @@ function parseMaestro(args: Record<string, unknown>): Action | undefined {
   if (
     !Array.isArray(blocos) ||
     blocos.some(
-      (group) =>
-        !Array.isArray(group) || group.some((name) => typeof name !== "string")
+      (members) =>
+        !Array.isArray(members) ||
+        members.some((name) => typeof name !== "string")
     )
   ) {
     return;
   }
   return {
     type: "maestro",
-    groups: blocos as string[][],
+    blocos: blocos as string[][],
     speech: typeof fala === "string" ? fala : "",
   };
 }

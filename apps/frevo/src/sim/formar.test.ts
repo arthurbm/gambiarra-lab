@@ -333,11 +333,11 @@ function maestroBrain(speech = "Bora, foliões!"): Brain {
       return shy(request);
     }
     const names = request.people.map((person) => person.name);
-    const groups: string[][] = [];
+    const blocos: string[][] = [];
     for (const size of request.sizes) {
-      groups.push(names.splice(0, size));
+      blocos.push(names.splice(0, size));
     }
-    return ok(request, { type: "maestro", groups, speech });
+    return ok(request, { type: "maestro", blocos, speech });
   };
 }
 
@@ -365,7 +365,7 @@ describe("the maestro at the end of the phase", () => {
     const maestro = maestroOf(requests) as MaestroRequest;
     expect(maestro.people).toHaveLength(6);
     expect(maestro.sizes).toEqual([3, 3]);
-    // The blocos are the maestro's groups, in its order.
+    // The blocos are the maestro's, in its order.
     const names = maestro.people.map((person) => person.name);
     const blocos = publicSnapshot(grouped).blocos.map((bloco) =>
       bloco.members.map((id) => nameOf(grouped, id))
@@ -402,7 +402,7 @@ describe("the maestro at the end of the phase", () => {
       request.kind === "maestro"
         ? ok(request, {
             type: "maestro",
-            groups: [request.people.slice(0, 3).map((p) => p.name)],
+            blocos: [request.people.slice(0, 3).map((p) => p.name)],
             speech: "Pronto!",
           })
         : shy(request);
@@ -441,7 +441,7 @@ describe("the maestro at the end of the phase", () => {
       brain: apart,
     });
 
-    function groups(world: World): string[][] {
+    function blocoMembers(world: World): string[][] {
       return publicSnapshot(world)
         .blocos.map((bloco) => [...bloco.members].sort())
         .sort();
@@ -457,7 +457,7 @@ describe("the maestro at the end of the phase", () => {
           ? { ok: false, requestId: request.id, reason: "caiu" }
           : apart(request);
       expect(
-        groups(after(closeFormar(spread), 500, { brain: failing }))
+        blocoMembers(after(closeFormar(spread), 500, { brain: failing }))
       ).toEqual(expected);
     });
 
@@ -469,14 +469,14 @@ describe("the maestro at the end of the phase", () => {
         true
       );
       const late = after(waiting, 6000, { brain: apart });
-      expect(groups(late)).toEqual(expected);
+      expect(blocoMembers(late)).toEqual(expected);
     });
 
     test("no model in the Room", () => {
       const noModels = step(spread, { elapsedMs: TICK_MS, models: [] }).world;
       // A world without models keeps the last list; an empty Room is a new world.
       const empty = { ...noModels, models: [] };
-      expect(groups(after(closeFormar(empty), 200))).toEqual(expected);
+      expect(blocoMembers(after(closeFormar(empty), 200))).toEqual(expected);
     });
   });
 

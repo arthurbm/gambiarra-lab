@@ -136,6 +136,31 @@ describe("the world server", () => {
     );
   }, 20_000);
 
+  test("asks no model for calls it refuses, such as a wrong admin secret", async () => {
+    await until(async () =>
+      (await health(server)).viewers === 0 ? true : undefined
+    );
+    await Bun.sleep(300);
+    const before = answered;
+    const refused = [
+      () =>
+        fetch(`${server.url}/api/admin/models`, {
+          headers: { Authorization: "Bearer errado" },
+        }),
+      () => fetch(`${server.url}/api/nada`),
+      () => fetch(`${server.url}/api/entrar`, { method: "POST", body: "{" }),
+    ];
+    for (let round = 0; round < 10; round += 1) {
+      for (const call of refused) {
+        // biome-ignore lint/performance/noAwaitInLoops: a steady trickle of refusals.
+        const response = await call();
+        expect(response.ok).toBe(false);
+      }
+      await Bun.sleep(100);
+    }
+    expect(answered).toBe(before);
+  }, 20_000);
+
   test("keeps the bonecos walking on autopilot while nobody watches", async () => {
     await until(async () =>
       (await health(server)).viewers === 0 ? true : undefined
@@ -396,6 +421,40 @@ describe("the session's spending ceiling", () => {
         headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
       });
       expect(reset.status).toBe(200);
+    } finally {
+      await thrifty.stop();
+    }
+  }, 40_000);
+
+  test("starts over when the admin restarts the dynamic", async () => {
+    const thrifty = startWorldServer({
+      ...FAST,
+      hubUrl: hub.url,
+      roomName: ROOM_NAME,
+      host: "127.0.0.1",
+      port: 0,
+      bonecos: 2,
+      seed: 5,
+      adminSecret: ADMIN_SECRET,
+      ceilingUsd: 0.000_000_1,
+    });
+    const asAdmin = { Authorization: `Bearer ${ADMIN_SECRET}` };
+    try {
+      await until(async () => {
+        const state = (await (
+          await fetch(`${thrifty.url}/api/admin/models`, { headers: asAdmin })
+        ).json()) as { spending: { exceeded: boolean } };
+        return state.spending.exceeded ? true : undefined;
+      }, 20_000);
+      const restarted = await fetch(`${thrifty.url}/api/admin/reiniciar`, {
+        method: "POST",
+        headers: asAdmin,
+      });
+      expect(restarted.status).toBe(200);
+      const { spending } = (await restarted.json()) as {
+        spending: { exceeded: boolean; spentUsd: number };
+      };
+      expect(spending).toMatchObject({ exceeded: false, spentUsd: 0 });
     } finally {
       await thrifty.stop();
     }
