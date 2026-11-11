@@ -61,3 +61,21 @@ describe("the prompts on the telão", () => {
     expect(user?.content).toContain("sem número");
   });
 });
+
+describe("where to walk", () => {
+  test("the model sees how many bonecos without a bloco are at each place and is asked to spread out", () => {
+    const [, user] = decisionMessages({
+      ...base,
+      id: "w2",
+      placeId: null,
+      places: PRACA.places,
+      crowd: { "marco-zero": 4, coreto: 1, ponte: 0 },
+    });
+    expect(user?.content).toContain("Marco Zero (4 bonecos sem bloco)");
+    expect(user?.content).toContain("Coreto (1 boneco sem bloco)");
+    expect(user?.content).toContain("Ponte (ninguém sem bloco)");
+    expect(user?.content).toContain(
+      "Prefira um lugar com menos gente sem bloco"
+    );
+  });
+});

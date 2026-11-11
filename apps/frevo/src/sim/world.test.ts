@@ -308,3 +308,60 @@ describe("the model a boneco thinks with", () => {
     });
   });
 });
+
+describe("a square that does not pile up in one place", () => {
+  /** Six bonecos: the first one asks, the other five walk to every place but the ponte. */
+  function crowdedBut(placeId: string, rules?: Partial<World["rules"]>) {
+    const start = createWorld({ seed: 3, bonecos: 6, rules });
+    const asked = step(start, { elapsedMs: TICK_MS });
+    const others = asked.world.map.places.filter(
+      (place) => place.id !== placeId
+    );
+    const [first, ...rest] = asked.world.bonecos;
+    if (!first) {
+      throw new Error("the world has no boneco");
+    }
+    const world: World = {
+      ...asked.world,
+      bonecos: [
+        first,
+        ...rest.map((boneco, index) => ({
+          ...boneco,
+          pending: null,
+          target: others[index % others.length] ?? null,
+        })),
+      ],
+    };
+    return { world, first, requests: asked.requests as WalkRequest[] };
+  }
+
+  test("a walk request says how many bonecos without a bloco are at or going to each place", () => {
+    const { world, first } = crowdedBut("ponte");
+    const next = step(
+      {
+        ...world,
+        bonecos: [{ ...first, pending: null }, ...world.bonecos.slice(1)],
+      },
+      { elapsedMs: TICK_MS }
+    );
+    const request = (next.requests as WalkRequest[]).find(
+      (each) => each.boneco.id === first.id
+    );
+    expect(request?.crowd).toEqual({
+      "marco-zero": 1,
+      coreto: 1,
+      fonte: 1,
+      tapioca: 1,
+      palco: 1,
+      ponte: 0,
+    });
+  });
+
+  test("a boneco on autopilot walks to the least crowded place", () => {
+    const { world, first } = crowdedBut("ponte", { decisionTimeoutMs: 1000 });
+    const after = run(world, 1200).world;
+    const boneco = after.bonecos.find((each) => each.id === first.id);
+    expect(boneco?.brain).toBe("autopilot");
+    expect(boneco?.target?.id).toBe("ponte");
+  });
+});
