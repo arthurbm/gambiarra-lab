@@ -24,13 +24,7 @@
 //   `railway variable set --stdin`.
 // - Do not run `railway config ...` behind `timeout`, `env` or `bunx`: the SDK
 //   reads `$_` to find the CLI and fails with "requires Railway CLI 5.42.1".
-import {
-  defineRailway,
-  github,
-  preserve,
-  project,
-  service,
-} from "railway/iac";
+import { defineRailway, github, preserve, project, service } from "railway/iac";
 
 // Virginia: of the four regions, the closest to Recife.
 const REGION = "us-east4-eqdc4a";
