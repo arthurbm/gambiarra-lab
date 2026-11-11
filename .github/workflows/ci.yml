@@ -50,4 +50,21 @@ jobs:
       - name: Build board-web
         run: bun run --cwd apps/board-web build
 
-  # A `smoke` job (`bun run board:smoke`) lands here in a parallel PR.
+  smoke:
+    name: Board smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      # Boots hub, model fixtures, board and web on free ports, runs the event
+      # script (hosted and brought harnesses, tiles, orchestrator), and exits 0/1.
+      - name: Smoke
+        run: bun run board:smoke
