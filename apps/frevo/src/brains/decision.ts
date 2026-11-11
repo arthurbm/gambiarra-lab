@@ -494,8 +494,9 @@ function parseMaestro(args: Record<string, unknown>): Action | undefined {
   if (
     !Array.isArray(blocos) ||
     blocos.some(
-      (bloco) =>
-        !Array.isArray(bloco) || bloco.some((name) => typeof name !== "string")
+      (members) =>
+        !Array.isArray(members) ||
+        members.some((name) => typeof name !== "string")
     )
   ) {
     return;
