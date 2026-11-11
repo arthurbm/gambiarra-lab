@@ -57,3 +57,31 @@ Em 2026-11-11, vários agentes em worktrees paralelos rodaram ao mesmo tempo a b
 - Ficam fora da trava, e continuam pedindo cuidado à mão: `docker compose`, o `agent-browser` (Chrome), `ffmpeg`, o build da web rodado direto e `frevo:dev`.
 - Com vários agentes, cada um roda só os testes dos arquivos que tocou; a bateria completa roda uma vez, depois do merge.
 - O T3 Code roda os agentes no slice de usuário `app-t3code-agents.slice`. O teto foi baixado com `systemctl --user set-property app-t3code-agents.slice MemoryHigh=6G MemoryMax=8G`; confira com `systemctl --user show app-t3code-agents.slice -p MemoryHigh -p MemoryMax`. O Docker roda fora desse slice.
+
+## Gravar com som pelo `agent-browser`
+
+O `agent-browser record` (0.42.0) grava só a imagem: não tem opção de áudio, e por isso os vídeos de 2026-11-11 saíram mudos. O Chrome sem janela toca som, porém, e nesta máquina (PipeWire 1.0.5 com a camada do PulseAudio, sem `pactl`) dá para mandar esse som para um sink nulo, gravá-lo à parte e juntar com o vídeo. Testado em 2026-11-11 com `apps/frevo-web/public/audio/reserva-1.mp3` aberto direto no navegador: o áudio gravado tinha volume médio de −20 dB (silêncio dá perto de −91 dB) e o arquivo final saiu com VP8 e Opus. A sincronia entre os dois não foi medida; começar o `pw-record` logo antes do `record start` deixa o áudio adiantado em menos de um segundo, que `-ss` no áudio corrige.
+
+```bash
+# 1. Um sink nulo: o som vai para ele, não para as caixas da sala.
+pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=frevo-rec node.description=frevo-rec media.class=Audio/Sink object.linger=true audio.position=[FL FR] }'
+
+# 2. Grava o que chega ao sink, em segundo plano.
+pw-record -P '{ stream.capture.sink=true }' --target frevo-rec som.wav & REC=$!
+
+# 3. Uma sessão nova do agent-browser, com o som no sink e autoplay liberado.
+#    PULSE_SINK tem de estar no ambiente do primeiro comando da sessão, que sobe o navegador.
+export PULSE_SINK=frevo-rec
+agent-browser --session com-som --args "--no-sandbox,--autoplay-policy=no-user-gesture-required" open http://localhost:3201/telao
+agent-browser --session com-som record start video.webm
+#    ... a cena ...
+agent-browser --session com-som record stop
+agent-browser --session com-som close
+kill -INT $REC
+
+# 4. Junta (para .mp4, troque libopus por aac) e remove o sink.
+ffmpeg -i video.webm -i som.wav -map 0:v -map 1:a -c:v copy -c:a libopus -shortest com-som.webm
+pw-cli destroy "$(pw-cli ls Node | grep -B8 'node.name = "frevo-rec"' | grep -oE 'id [0-9]+' | head -1 | grep -oE '[0-9]+')"
+```
+
+O telão só toca música depois de um toque ("Ativar som"); com `--autoplay-policy=no-user-gesture-required` o navegador deixa tocar, mas o botão da página ainda pede o clique (`agent-browser click`). Chrome, `ffmpeg` e `pw-record` contam como trabalho pesado e ficam fora da trava de `scripts/heavy.ts`: rode um de cada vez.
