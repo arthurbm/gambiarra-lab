@@ -14,6 +14,7 @@ import {
 import { watchRoomLlmEvents } from "../gambi/room-events";
 import { modelEntry, modelLabel } from "../models/catalog";
 import { modelPanelRows } from "../models/panel";
+import { closeFormar, enterFormar } from "../sim/formar";
 import {
   answerHuman,
   createWorld,
@@ -451,6 +452,18 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       scheduler.setModelEnabled(body.model, body.enabled);
       log(`Model ${body.model} switched ${body.enabled ? "on" : "off"}`);
       return adminState();
+    }
+    // Opening and closing the formar phase by hand, until the phase clock
+    // (#16) calls `enterFormar` and `closeFormar` itself.
+    if (pathname === "/api/admin/formar/abrir" && request.method === "POST") {
+      world = enterFormar(world);
+      log("The formar phase opened");
+      return Response.json({ phase: world.phase });
+    }
+    if (pathname === "/api/admin/formar/fechar" && request.method === "POST") {
+      world = closeFormar(world);
+      log("The formar phase closed; the maestro groups whoever is left");
+      return Response.json({ phase: world.phase });
     }
     if (pathname === "/api/admin/spending/reset" && request.method === "POST") {
       scheduler.resetBudget();
