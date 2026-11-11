@@ -37,7 +37,7 @@ bun test apps/frevo/src apps/frevo-web/src
 | Process | Entry | What it does |
 |---|---|---|
 | hub | `gambi hub serve` | The published Gambi hub. Never exposed to the internet: it has no auth. |
-| model host | `src/model-host/index.ts` | Keeps model participants open in the Room. The only place with the provider key. |
+| model host | `src/model-host/index.ts` | Keeps model participants open in the Room. The only place with the inference provider's key (OpenRouter); the world holds only the admin's secret and the fal.ai key for the music. |
 | world | `src/server/index.ts` | Runs the simulation, asks the Room for decisions, serves SSE and the built web. The only public service. |
 
 The world creates the Room, or reuses the one with the same name (`FREVO_ROOM_NAME`, default `bloco-de-frevo`). Room codes are generated and Rooms do not survive a hub restart, so the name is the key: the model host finds the Room by name and joins again whenever its tunnel closes, and the world creates the Room again when the hub stops knowing it.
