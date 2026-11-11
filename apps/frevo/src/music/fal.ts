@@ -157,7 +157,8 @@ const OCTET_STREAM = /^(application|binary)\/octet-stream/i;
 function looksLikeMp3(bytes: Uint8Array): boolean {
   const [a = 0, b = 0, c = 0] = bytes;
   const id3 = a === 0x49 && b === 0x44 && c === 0x33;
-  return id3 || (a === 0xff && (b & 0xe0) === 0xe0);
+  // A frame sync is eleven set bits: 0xff, then a byte whose top three bits are set.
+  return id3 || (a === 0xff && b >= 0xe0);
 }
 
 /** The body, read until it passes `max` bytes; null when it does. */

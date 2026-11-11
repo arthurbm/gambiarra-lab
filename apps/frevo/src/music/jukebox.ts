@@ -146,9 +146,9 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
         blocoName: bloco.blocoName,
         refrain: bloco.refrain,
         style: FREVO_STYLE,
-        onStep: (generator) => {
+        onStep: (step) => {
           if (making(bloco.blocoId, from)) {
-            running.set(bloco.blocoId, { generator, sinceMs: now() });
+            running.set(bloco.blocoId, { generator: step, sinceMs: now() });
           }
         },
       });

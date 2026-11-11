@@ -62,12 +62,12 @@ function isDone({ behavior, at }: Started): boolean {
 }
 
 function audioAnswer(audio: FakeAudio = {}): Response {
-  const headers = { "Content-Type": audio.type ?? "audio/mpeg" };
-  if (audio.size === undefined) {
+  const { chunked, size, type } = audio;
+  const headers = { "Content-Type": type ?? "audio/mpeg" };
+  if (size === undefined) {
     return new Response(FAKE_AUDIO, { headers });
   }
-  const size = audio.size;
-  if (!audio.chunked) {
+  if (!chunked) {
     return new Response(new Uint8Array(size), { headers });
   }
   const chunk = 64 * 1024;
