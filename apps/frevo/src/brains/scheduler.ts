@@ -67,6 +67,9 @@ export function createBrainScheduler(
   const busy = new Set<string>();
   const queue: Queued[] = [];
   const settled: BrainResult[] = [];
+  /** The order in which each participant was last asked. */
+  const lastAsked = new Map<string, number>();
+  let asked = 0;
 
   function fail(requestId: string, reason: string) {
     settled.push({ requestId, ok: false, reason });
@@ -100,14 +103,19 @@ export function createBrainScheduler(
 
   function dispatch() {
     while (queue.length > 0) {
-      const free = [...participants.values()].find(
-        (participant) => !busy.has(participant.id)
-      );
+      // The free participant that answered longest ago, so models take turns.
+      const [free] = [...participants.values()]
+        .filter((participant) => !busy.has(participant.id))
+        .sort(
+          (a, b) => (lastAsked.get(a.id) ?? 0) - (lastAsked.get(b.id) ?? 0)
+        );
       if (!free) {
         return;
       }
       const queued = queue.shift() as Queued;
       busy.add(free.id);
+      asked += 1;
+      lastAsked.set(free.id, asked);
       decide(free, queued)
         .then((action) => {
           if (!queued.signal.signal.aborted) {

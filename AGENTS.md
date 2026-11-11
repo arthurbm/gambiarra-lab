@@ -2,7 +2,7 @@
 
 > `CLAUDE.md` at the repo root is a symlink to this file. Edit `AGENTS.md` only.
 
-Gambiarra Lab is where the Gambiarra Club builds social experiences on top of [Gambi](https://github.com/arthurbm/gambi): rooms where people, their models and their harnesses work together. Gambi is the substrate (hub, tunnel, harness participants). This repo holds what runs on top of it: the 2026-08-23 city board, the orchestration library, and the next experiences.
+Gambiarra Lab is where the Gambiarra Club builds social experiences on top of [Gambi](https://github.com/arthurbm/gambi): rooms where people, their models and their harnesses work together. Gambi is the substrate (hub, tunnel, harness participants). This repo holds what runs on top of it: the 2026-08-23 city board, the Bloco de frevo, the orchestration library, and the next experiences.
 
 ## Rules
 
@@ -22,6 +22,8 @@ bun run dev:board            # board server
 bun run dev:board-web        # board web
 bun run board:e2e            # full event with fake harnesses, ephemeral DB; runs until SIGINT
 bun run board:smoke          # runtime proof on free ports that exits 0/1 on its own
+bun run frevo:dev            # Bloco de frevo: hub + model host + world + web, fake models (--real for OpenRouter)
+bun run frevo:smoke          # frevo runtime proof with a fake model that exits 0/1 on its own
 bun run check-types
 bun run test
 bun x ultracite fix          # format before committing
@@ -39,6 +41,7 @@ bun x ultracite fix          # format before committing
 | Conceptual notes on the book | `docs/tres-inteligencias-revisitadas-notas.md` |
 | Orchestration library | `packages/agents/README.md` |
 | Board | `apps/board/README.md`, `apps/board-web/DESIGN.md` |
+| Bloco de frevo (world, model host, telão) | `apps/frevo/README.md`, spec in issue #10 |
 
 ## Code style
 

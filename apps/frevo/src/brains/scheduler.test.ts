@@ -214,3 +214,34 @@ describe("the brain scheduler", () => {
     expect(result).toMatchObject({ requestId: "boneco-1#1", ok: false });
   });
 });
+
+describe("the brain scheduler choosing among free participants", () => {
+  test("takes turns instead of always asking the first one", async () => {
+    const asked: string[] = [];
+    const infer: Inference = (participantId, body) => {
+      asked.push(participantId);
+      return Promise.resolve(toolCall(body, { lugar: "ponte", fala: "Opa" }));
+    };
+    const scheduler = createBrainScheduler({ infer });
+    scheduler.setParticipants([
+      { id: "frevo-a-1", model: "modelo-a" },
+      { id: "frevo-b-1", model: "modelo-b" },
+      { id: "frevo-c-1", model: "modelo-c" },
+    ]);
+
+    for (let index = 1; index <= 6; index += 1) {
+      scheduler.submit(request(`boneco-1#${index}`));
+      // biome-ignore lint/performance/noAwaitInLoops: each decision finishes before the next is asked, so every participant is free.
+      await drained(scheduler, 1);
+    }
+
+    expect(asked).toEqual([
+      "frevo-a-1",
+      "frevo-b-1",
+      "frevo-c-1",
+      "frevo-a-1",
+      "frevo-b-1",
+      "frevo-c-1",
+    ]);
+  });
+});
