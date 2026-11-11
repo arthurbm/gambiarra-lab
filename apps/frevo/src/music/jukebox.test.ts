@@ -132,6 +132,24 @@ describe("the jukebox", () => {
     expect(jukebox.sound()).toEqual({ enabled: false, playing: null });
   });
 
+  test("keeps a handful of telões, forgetting the one that reported longest ago", () => {
+    let now = 0;
+    const jukebox = createJukebox({ generator: embeddedMusic, now: () => now });
+    jukebox.report("telao-velho", { enabled: true, playing: "bloco-1" });
+    for (let index = 0; index < 50; index += 1) {
+      now += 1;
+      jukebox.report(`telao-${index}`, { enabled: false, playing: null });
+    }
+    expect(jukebox.sound()).toEqual({ enabled: false, playing: null });
+    // A telão that keeps reporting is the newest, and stays.
+    jukebox.report("telao-49", { enabled: true, playing: "bloco-2" });
+    for (let index = 0; index < 3; index += 1) {
+      now += 1;
+      jukebox.report(`outro-${index}`, { enabled: false, playing: null });
+    }
+    expect(jukebox.sound()).toEqual({ enabled: true, playing: "bloco-2" });
+  });
+
   test("resetting forgets the tracks, the command and late answers", async () => {
     const fake = manual();
     const jukebox = createJukebox({ generator: fake.generator });

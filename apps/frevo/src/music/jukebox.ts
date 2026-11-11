@@ -70,6 +70,8 @@ export interface JukeboxOptions {
 
 /** A telão that has not reported for this long no longer counts. */
 const REPORT_STALE_MS = 12_000;
+/** The route is public: only this many telões are kept, the newest reports. */
+const MAX_TELOES = 8;
 
 export function createJukebox(options: JukeboxOptions = {}): Jukebox {
   const generator = options.generator ?? embeddedMusic;
@@ -144,7 +146,15 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
     current: () => command,
     tracks: () => Object.fromEntries(tracks),
     report(telaoId, input) {
+      // Map order is report order: the first key reported longest ago.
+      reports.delete(telaoId);
       reports.set(telaoId, { ...input, atMs: now() });
+      for (const oldest of reports.keys()) {
+        if (reports.size <= MAX_TELOES) {
+          break;
+        }
+        reports.delete(oldest);
+      }
     },
     sound() {
       const fresh = [...reports.values()]

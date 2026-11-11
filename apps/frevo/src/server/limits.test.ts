@@ -78,6 +78,29 @@ describe("the square's ceiling", () => {
   });
 });
 
+describe("a telão's sound report", () => {
+  test("is refused unless it has the telão's shape", async () => {
+    const bad = [
+      { telao: "telao-de-teste", ativo: "sim" },
+      { telao: "telao-de-teste", ativo: true, tocando: 7 },
+      { telao: "telao-de-teste", ativo: true, tocando: "x".repeat(65) },
+      { telao: "curto", ativo: true },
+      { ativo: true },
+    ];
+    for (const body of bad) {
+      // biome-ignore lint/performance/noAwaitInLoops: one refusal at a time.
+      const response = await post("/api/telao/som", body);
+      expect(response.status).toBe(400);
+    }
+    const good = await post("/api/telao/som", {
+      telao: "telao-de-teste",
+      ativo: true,
+      tocando: null,
+    });
+    expect(good.status).toBe(200);
+  });
+});
+
 describe("the admin's restart", () => {
   test("lets back in whoever was expelled in the rehearsal", async () => {
     await admin("reiniciar");

@@ -498,14 +498,19 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   async function soundReport(request: Request): Promise<Response> {
     const body = await jsonBody(request);
     const id = body?.telao;
-    if (!(typeof id === "string" && SESSION_ID.test(id))) {
+    const playing = body?.tocando ?? null;
+    if (
+      !(
+        typeof id === "string" &&
+        SESSION_ID.test(id) &&
+        typeof body?.ativo === "boolean" &&
+        (playing === null ||
+          (typeof playing === "string" && playing.length <= 64))
+      )
+    ) {
       return new Response("Telão inválido.", { status: 400 });
     }
-    const playing =
-      typeof body?.tocando === "string" && body.tocando.length <= 64
-        ? body.tocando
-        : null;
-    jukebox.report(id, { enabled: body?.ativo === true, playing });
+    jukebox.report(id, { enabled: body.ativo, playing });
     return Response.json({ ok: true });
   }
 
