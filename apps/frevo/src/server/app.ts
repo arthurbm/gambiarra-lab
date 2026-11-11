@@ -13,6 +13,7 @@ import {
 import { watchRoomLlmEvents } from "../gambi/room-events";
 import { modelEntry, modelLabel } from "../models/catalog";
 import { modelPanelRows } from "../models/panel";
+import type { MusicFiles } from "../music/files";
 import type { MusicGenerator } from "../music/generator";
 import { createJukebox } from "../music/jukebox";
 import { tick } from "../sim/phases";
@@ -49,6 +50,10 @@ export interface WorldServerOptions {
   log?: (line: string) => void;
   /** Makes the music of a chosen bloco; the default answers with the embedded track. */
   music?: MusicGenerator;
+  /** The generated music's copies, served at their paths under /api/musica/. */
+  musicFiles?: MusicFiles;
+  /** Generations used and allowed, for the admin; null when generation is off. */
+  musicGenerations?: () => { max: number; used: number } | null;
   /** Music not ready after this long becomes the embedded track. */
   musicTimeoutMs?: number;
   /** 0 asks the OS for a free port. */
@@ -314,6 +319,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     },
     simulated,
     jukebox,
+    musicGenerations: options.musicGenerations,
     // The admin's stream counts as someone watching; simulated people do not.
     watch,
     connected: (sessionId) => (phones.get(sessionId)?.size ?? 0) > 0,
@@ -502,7 +508,27 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       Promise.resolve(Response.json({ publicUrl: options.publicUrl ?? null })),
   };
 
+  /** A generated track, served from the world's own copy. */
+  function musicFile(request: Request, pathname: string): Response {
+    const file =
+      request.method === "GET" || request.method === "HEAD"
+        ? options.musicFiles?.get(pathname)
+        : undefined;
+    if (!file) {
+      return new Response("Not Found", { status: 404 });
+    }
+    return new Response(file.bytes, {
+      headers: {
+        "Content-Type": file.type,
+        "Cache-Control": "public, max-age=86400, immutable",
+      },
+    });
+  }
+
   async function api(request: Request, pathname: string): Promise<Response> {
+    if (pathname.startsWith("/api/musica/")) {
+      return musicFile(request, pathname);
+    }
     const route = routes[`${request.method} ${pathname}`];
     if (!(route && Object.hasOwn(routes, `${request.method} ${pathname}`))) {
       return new Response("Not Found", { status: 404 });
