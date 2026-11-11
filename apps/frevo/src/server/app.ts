@@ -519,6 +519,28 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     });
   }
 
+  function eventStream(
+    request: Request,
+    bunServer: { timeout: (request: Request, seconds: number) => void },
+    pathname: string,
+    searchParams: URLSearchParams
+  ): Response {
+    if (pathname === "/events/telao") {
+      // The stream stays open; Bun's idle timeout must not close it.
+      bunServer.timeout(request, 0);
+      return telaoStream(request);
+    }
+    if (pathname === "/events/celular") {
+      const sessionId = searchParams.get("sessao") ?? "";
+      if (!SESSION_ID.test(sessionId)) {
+        return new Response("Sessão inválida.", { status: 400 });
+      }
+      bunServer.timeout(request, 0);
+      return phoneStream(request, sessionId);
+    }
+    return new Response("Not Found", { status: 404 });
+  }
+
   const server = Bun.serve({
     // `::` takes IPv6 and IPv4; Railway's private network needs IPv6.
     hostname: options.host ?? "::",
@@ -544,21 +566,8 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
           viewers,
         });
       }
-      if (pathname === "/events/telao") {
-        // The stream stays open; Bun's idle timeout must not close it.
-        bunServer.timeout(request, 0);
-        return telaoStream(request);
-      }
-      if (pathname === "/events/celular") {
-        const sessionId = searchParams.get("sessao") ?? "";
-        if (!SESSION_ID.test(sessionId)) {
-          return new Response("Sessão inválida.", { status: 400 });
-        }
-        bunServer.timeout(request, 0);
-        return phoneStream(request, sessionId);
-      }
-      if (pathname.startsWith("/events/") || pathname.startsWith("/api/")) {
-        return new Response("Not Found", { status: 404 });
+      if (pathname.startsWith("/events/")) {
+        return eventStream(request, bunServer, pathname, searchParams);
       }
       return staticFile(pathname);
     },
