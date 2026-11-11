@@ -83,6 +83,7 @@ export async function createBoardApp(
                 process.env.BOARD_HOSTED_HARNESS === "fake"
                   ? "fake"
                   : "opencode",
+              gambiHome: process.env.BOARD_GAMBI_HOME,
             }
           : undefined));
   const harness =

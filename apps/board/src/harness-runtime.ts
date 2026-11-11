@@ -8,9 +8,11 @@ import {
   createClient,
   createFakeHarnessAdapter,
   createHarnessParticipantSession,
+  createLocalDirectoryWorkspace,
   type GambiClient,
   type HarnessParticipantSession,
   type HarnessParticipantSessionOptions,
+  type Workspace,
 } from "gambi-sdk";
 
 import type {
@@ -45,6 +47,11 @@ export interface BoardHarnessRuntimeOptions {
   client?: GambiClient;
   createHostedSession?: CreateHostedSession;
   events: BoardEventBus;
+  /**
+   * Base directory for hosted harness workspaces
+   * (`<gambiHome>/workspaces/<room>/<participant>/`). Defaults to `~/.gambi`.
+   */
+  gambiHome?: string;
   hostedHarnessId?: "fake" | "opencode";
   hubUrl: string;
   onError?: (error: unknown) => void;
@@ -412,7 +419,7 @@ class HostedHarnessSupervisor {
   readonly #repository: BoardRepository;
   readonly #roomCode: string;
   readonly #sessions = new Map<number, HarnessParticipantSession>();
-  readonly #workspace = createCityTileWorkspace();
+  readonly #workspace: Workspace;
   // Widened to boolean: Biome narrows the field to its `false` initializer and
   // misses that close() flips it at runtime.
   #closed = false as boolean;
@@ -420,6 +427,7 @@ class HostedHarnessSupervisor {
 
   constructor(options: {
     createSession: CreateHostedSession;
+    gambiHome?: string;
     harnessId: "fake" | "opencode";
     hubUrl: string;
     onError: (error: unknown) => void;
@@ -432,6 +440,12 @@ class HostedHarnessSupervisor {
     this.#onError = options.onError;
     this.#repository = options.repository;
     this.#roomCode = options.roomCode;
+    this.#workspace = createCityTileWorkspace(
+      // An empty BOARD_GAMBI_HOME means the default `~/.gambi`.
+      createLocalDirectoryWorkspace({
+        gambiHome: options.gambiHome || undefined,
+      })
+    );
   }
 
   async reconcile(desiredCount: number) {
@@ -542,6 +556,7 @@ export async function createBoardHarnessRuntime(
   const supervisor = new HostedHarnessSupervisor({
     createSession:
       options.createHostedSession ?? createHarnessParticipantSession,
+    gambiHome: options.gambiHome,
     harnessId: options.hostedHarnessId ?? "opencode",
     hubUrl: options.hubUrl,
     onError,
