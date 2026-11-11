@@ -23,7 +23,7 @@ function useTick(ms: number) {
   }, [ms]);
 }
 
-function Avatar({
+function BonecoPortrait({
   boneco,
   scale = 3,
 }: {
@@ -31,7 +31,7 @@ function Avatar({
   scale?: number;
 }) {
   return (
-    <span className="celular-avatar">
+    <span className="celular-boneco">
       <BonecoSprite
         instrument={boneco.instrument}
         look={boneco.look}
@@ -243,7 +243,7 @@ function BlocoMates({ bloco }: { bloco: NonNullable<PrivateView["bloco"]> }) {
         <ul>
           {bloco.mates.map((mate) => (
             <li key={mate.id}>
-              <Avatar boneco={mate} />
+              <BonecoPortrait boneco={mate} />
               <span>
                 <strong>{mate.name}</strong>
                 {mate.instrument ? ` · ${mate.instrument}` : ""}
@@ -350,7 +350,7 @@ export function CelularPage() {
   return (
     <main className="celular">
       <header className="celular-header">
-        <Avatar boneco={boneco} scale={4} />
+        <BonecoPortrait boneco={boneco} scale={4} />
         <div>
           <h1>{boneco.name}</h1>
           <p className="celular-model">

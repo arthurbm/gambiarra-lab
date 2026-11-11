@@ -429,7 +429,7 @@ a {
   align-items: center;
 }
 
-.celular-avatar {
+.celular-boneco {
   display: grid;
   flex: none;
   place-items: center;
@@ -439,7 +439,7 @@ a {
 }
 
 /* The costume sticks out to the right of the boneco; keep the name clear. */
-.celular-avatar .boneco-sprite {
+.celular-boneco .boneco-sprite {
   margin-right: calc(var(--boneco-size) / 2);
 }
 

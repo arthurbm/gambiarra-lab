@@ -942,7 +942,7 @@ function runMaestro(
   }
   if (maestro.state === "wanted") {
     if (world.models.length === 0) {
-      groupByDistance(world, maestro);
+      blocosByDistance(world, maestro);
       return;
     }
     const people = maestro.leftovers.flatMap((id) => {
@@ -967,13 +967,13 @@ function runMaestro(
     return request;
   }
   const result = results.get(maestro.requestId ?? "");
-  const groups =
+  const blocos =
     result?.ok && result.action.type === "maestro"
-      ? validGroups(world, maestro, result.action.groups)
+      ? validBlocos(world, maestro, result.action.blocos)
       : undefined;
-  if (groups && result?.ok && result.action.type === "maestro") {
-    for (const group of groups) {
-      formBloco(world, group, "maestro");
+  if (blocos && result?.ok && result.action.type === "maestro") {
+    for (const members of blocos) {
+      formBloco(world, members, "maestro");
     }
     const line = filterModelText(
       result.action.speech,
@@ -983,21 +983,21 @@ function runMaestro(
       world,
       line
         ? `Maestro (${result.model ?? "modelo"}): ${line}`
-        : `O maestro juntou quem sobrou em ${groups.length} blocos.`
+        : `O maestro juntou quem sobrou em ${blocos.length} blocos.`
     );
     formar.maestro = done();
     return;
   }
   if (result || world.timeMs >= maestro.deadlineMs) {
-    groupByDistance(world, maestro);
+    blocosByDistance(world, maestro);
   }
 }
 
-/** The maestro's groups as boneco ids, when they split the leftovers exactly. */
-function validGroups(
+/** The maestro's blocos as boneco ids, when they split the leftovers exactly. */
+function validBlocos(
   world: World,
   maestro: Maestro,
-  groups: string[][]
+  blocos: string[][]
 ): string[][] | undefined {
   const byName = new Map(
     maestro.leftovers.flatMap((id) => {
@@ -1010,9 +1010,9 @@ function validGroups(
   }
   const seen = new Set<string>();
   const ids: string[][] = [];
-  for (const group of groups) {
+  for (const bloco of blocos) {
     const members: string[] = [];
-    for (const name of group) {
+    for (const name of bloco) {
       const id = byName.get(name);
       if (!id || seen.has(id)) {
         return;
@@ -1022,7 +1022,7 @@ function validGroups(
     }
     ids.push(members);
   }
-  const sizes = ids.map((group) => group.length).sort();
+  const sizes = ids.map((members) => members.length).sort();
   const wanted = [...maestro.sizes].sort();
   if (
     seen.size !== maestro.leftovers.length ||
@@ -1034,7 +1034,7 @@ function validGroups(
 }
 
 /** The fallback: each bloco starts at the leftmost boneco and takes the nearest. */
-function groupByDistance(world: World, maestro: Maestro) {
+function blocosByDistance(world: World, maestro: Maestro) {
   const formar = world.formar as FormarState;
   let left = maestro.leftovers.flatMap((id) => {
     const boneco = find(world, id);
@@ -1053,13 +1053,13 @@ function groupByDistance(world: World, maestro: Maestro) {
           Math.hypot(b.x - seed.x, b.y - seed.y)
       )
       .slice(0, size - 1);
-    const group = [seed, ...nearest];
+    const members = [seed, ...nearest];
     formBloco(
       world,
-      group.map((boneco) => boneco.id),
+      members.map((boneco) => boneco.id),
       "proximidade"
     );
-    left = left.filter((boneco) => !group.includes(boneco));
+    left = left.filter((boneco) => !members.includes(boneco));
   }
   note(
     world,

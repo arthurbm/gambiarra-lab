@@ -126,7 +126,7 @@ export interface EncounterAction {
 }
 /** How the maestro splits the bonecos left without a bloco, by name. */
 export interface MaestroAction {
-  groups: string[][];
+  blocos: string[][];
   speech: string;
   type: "maestro";
 }
