@@ -69,9 +69,7 @@ export function decisionMessages(request: DecisionRequest): ChatMessage[] {
     {
       role: "user",
       content: [
-        here
-          ? `Você está em: ${here.name}.`
-          : "Você está no meio da praça.",
+        here ? `Você está em: ${here.name}.` : "Você está no meio da praça.",
         "Lugares da praça:",
         places,
         "Escolha um lugar diferente de onde você está e diga por que vai.",
@@ -89,8 +87,9 @@ function firstToolCall(completion: unknown): ToolCallLike | undefined {
   if (!Array.isArray(choices)) {
     return;
   }
-  const message = (choices[0] as { message?: { tool_calls?: unknown } })
-    ?.message;
+  const message = (
+    choices[0] as { message?: { tool_calls?: unknown } } | undefined
+  )?.message;
   const calls = message?.tool_calls;
   return Array.isArray(calls) ? (calls[0] as ToolCallLike) : undefined;
 }
@@ -104,7 +103,7 @@ export function parseDecision(completion: unknown): Action | undefined {
   ) {
     return;
   }
-  let args: { fala?: unknown; lugar?: unknown };
+  let args: { fala?: unknown; lugar?: unknown } | null;
   try {
     args = JSON.parse(call.function.arguments);
   } catch {

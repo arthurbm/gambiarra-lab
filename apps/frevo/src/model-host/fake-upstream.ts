@@ -38,11 +38,11 @@ interface JsonSchema {
 }
 
 function hash(text: string): number {
-  let value = 2_166_136_261;
+  let value = 7;
   for (let index = 0; index < text.length; index += 1) {
-    value = Math.imul(value ^ text.charCodeAt(index), 16_777_619);
+    value = (value * 31 + text.charCodeAt(index)) % 1_000_000_007;
   }
-  return value >>> 0;
+  return value;
 }
 
 /** A value that satisfies `schema`, chosen by `seed`. */

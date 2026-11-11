@@ -31,7 +31,11 @@ function run(
 /** Steps the world without a brain until `done`, for at most a fake minute. */
 function runUntil(world: World, done: (world: World) => boolean) {
   let current = world;
-  for (let elapsed = 0; elapsed < 60_000 && !done(current); elapsed += TICK_MS) {
+  for (
+    let elapsed = 0;
+    elapsed < 60_000 && !done(current);
+    elapsed += TICK_MS
+  ) {
     current = step(current, { elapsedMs: TICK_MS }).world;
   }
   return current;
@@ -65,7 +69,11 @@ describe("a boneco deciding by a brain", () => {
         {
           requestId: request.id,
           ok: true,
-          action: { type: "walk", placeId: "fonte", speech: "Vou até a fonte!" },
+          action: {
+            type: "walk",
+            placeId: "fonte",
+            speech: "Vou até a fonte!",
+          },
           model: "modelo-a",
         },
       ],
@@ -122,7 +130,9 @@ describe("a boneco whose brain does not answer", () => {
     expect(onlyBoneco(late.world).speech).toBeNull();
 
     const moved = onlyBoneco(run(late.world, 1000).world);
-    expect(Math.hypot(moved.x - origin.x, moved.y - origin.y)).toBeGreaterThan(5);
+    expect(Math.hypot(moved.x - origin.x, moved.y - origin.y)).toBeGreaterThan(
+      5
+    );
   });
 });
 
@@ -153,7 +163,11 @@ describe("a boneco whose brain answers badly", () => {
         {
           requestId: request.id,
           ok: true,
-          action: { type: "walk", placeId: "olinda", speech: "Bora pra Olinda" },
+          action: {
+            type: "walk",
+            placeId: "olinda",
+            speech: "Bora pra Olinda",
+          },
         },
       ],
     });

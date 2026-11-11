@@ -1,0 +1,62 @@
+#!/usr/bin/env bun
+// The world server as a process. PORT, HOST, GAMBI_HUB_URL, FREVO_ROOM_NAME,
+// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS and FREVO_WEB_DIST configure it.
+import { exists } from "node:fs/promises";
+import { resolve } from "node:path";
+import { DEFAULT_HUB_URL, DEFAULT_ROOM_NAME } from "../model-host/config";
+import { DEFAULT_RULES } from "../sim/world";
+import { startWorldServer } from "./app";
+
+function integer(name: string, fallback: number, minimum: number) {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return fallback;
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < minimum) {
+    throw new Error(`${name} must be an integer of at least ${minimum}`);
+  }
+  return value;
+}
+
+const defaultWebDist = resolve(import.meta.dir, "../../../frevo-web/dist");
+const webDist =
+  process.env.FREVO_WEB_DIST?.trim() ||
+  ((await exists(resolve(defaultWebDist, "index.html")))
+    ? defaultWebDist
+    : undefined);
+const host = process.env.HOST?.trim() || "0.0.0.0";
+
+const server = startWorldServer({
+  hubUrl: process.env.GAMBI_HUB_URL?.trim() || DEFAULT_HUB_URL,
+  roomName: process.env.FREVO_ROOM_NAME?.trim() || DEFAULT_ROOM_NAME,
+  host,
+  port: integer("PORT", 3200, 0),
+  bonecos: integer("FREVO_BONECOS", 1, 0),
+  rules: {
+    decisionTimeoutMs: integer(
+      "FREVO_DECISION_TIMEOUT_MS",
+      DEFAULT_RULES.decisionTimeoutMs,
+      100
+    ),
+  },
+  webDist,
+  log: (line) => console.log(line),
+});
+
+console.log(`Frevo world listening on http://${host}:${server.port}`);
+console.log(
+  webDist ? `Serving the web from ${webDist}` : "The web is not built"
+);
+
+let stopping = false;
+async function shutdown() {
+  if (stopping) {
+    return;
+  }
+  stopping = true;
+  await server.stop();
+  process.exit(0);
+}
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);

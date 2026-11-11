@@ -85,9 +85,12 @@ export function createBrainScheduler(
     };
     for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
       // biome-ignore lint/performance/noAwaitInLoops: the repeat only happens after the first answer came back unusable.
-      const action = parseDecision(
-        await options.infer(participant.id, body, signal.signal)
+      const completion = await options.infer(
+        participant.id,
+        body,
+        signal.signal
       );
+      const action = parseDecision(completion);
       if (action) {
         return action;
       }

@@ -64,9 +64,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await host?.stop();
-  upstream?.stop();
-  await hub?.stop();
+  await host.stop();
+  upstream.stop();
+  await hub.stop();
 });
 
 describe("the model host in a Room", () => {
@@ -125,7 +125,9 @@ describe("the model host in a Room", () => {
       body,
       AbortSignal.timeout(10_000)
     )) as {
-      choices: { message: { tool_calls: { function: { arguments: string } }[] } }[];
+      choices: {
+        message: { tool_calls: { function: { arguments: string } }[] };
+      }[];
     };
 
     expect(

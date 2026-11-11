@@ -133,7 +133,9 @@ export function startModelHost(options: ModelHostOptions): ModelHost {
       for (const wake of [...wakers]) {
         wake();
       }
-      await Promise.all([...sessions.values()].map((session) => session.close()));
+      await Promise.all(
+        [...sessions.values()].map((session) => session.close())
+      );
       await Promise.all(loops);
     },
   };

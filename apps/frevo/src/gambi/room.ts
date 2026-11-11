@@ -40,10 +40,10 @@ async function management<T>(
   path: string,
   init?: RequestInit
 ): Promise<T> {
-  const response = await fetch(
-    `${hubUrl.replace(TRAILING_SLASH, "")}${path}`,
-    { ...init, signal: AbortSignal.timeout(MANAGEMENT_TIMEOUT_MS) }
-  );
+  const response = await fetch(`${hubUrl.replace(TRAILING_SLASH, "")}${path}`, {
+    ...init,
+    signal: AbortSignal.timeout(MANAGEMENT_TIMEOUT_MS),
+  });
   const body = (await response.json().catch(() => ({}))) as {
     data?: T;
     error?: { message?: string };

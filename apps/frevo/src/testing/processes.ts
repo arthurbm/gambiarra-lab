@@ -164,7 +164,7 @@ export async function startHub(
 ): Promise<RunningHub> {
   const host = options.host ?? "127.0.0.1";
   const home = await mkdtemp(join(tmpdir(), "frevo-hub-home-"));
-  const serve = (port: number) =>
+  const serve = (onPort: number) =>
     spawnProcess({
       command: [
         "bun",
@@ -175,7 +175,7 @@ export async function startHub(
         "--host",
         host,
         "--port",
-        String(port),
+        String(onPort),
         "--format",
         "ndjson",
         "--no-interactive",

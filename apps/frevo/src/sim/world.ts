@@ -138,12 +138,19 @@ const NAMES = [
   "Zuzinha",
 ];
 
-/** mulberry32: one 32-bit state in, a number in [0, 1) and the next state out. */
+const RNG_MODULUS = 2_147_483_647;
+const RNG_MULTIPLIER = 48_271;
+
+/** Any integer seed as a valid generator state, from 1 to the modulus minus 1. */
+function seedState(seed: number): number {
+  const span = RNG_MODULUS - 1;
+  return (((Math.trunc(seed) % span) + span) % span) + 1;
+}
+
+/** Park-Miller: one state in, a number in [0, 1) and the next state out. */
 function random(state: number): { next: number; value: number } {
-  const next = Math.trunc(state + 0x6d_2b_79_f5);
-  let mixed = Math.imul(next ^ (next >>> 15), next | 1);
-  mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
-  return { next, value: ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296 };
+  const next = (state * RNG_MULTIPLIER) % RNG_MODULUS;
+  return { next, value: (next - 1) / (RNG_MODULUS - 1) };
 }
 
 export function createWorld(options: {
@@ -153,7 +160,7 @@ export function createWorld(options: {
   seed: number;
 }): World {
   const map = options.map ?? PRACA;
-  let rng = Math.trunc(options.seed);
+  let rng = seedState(options.seed);
   const bonecos: Boneco[] = [];
   for (let index = 0; index < options.bonecos; index += 1) {
     const x = random(rng);
@@ -283,7 +290,10 @@ export function step(
       boneco = applyAction(boneco, next, answer.action, answer.model) ?? boneco;
     }
     // Still waiting: a failed or unusable answer, or the deadline, ends it.
-    if (boneco.pending && (answer || next.timeMs >= boneco.pending.deadlineMs)) {
+    if (
+      boneco.pending &&
+      (answer || next.timeMs >= boneco.pending.deadlineMs)
+    ) {
       boneco = autopilot(boneco, next);
     }
     boneco = move(boneco, next, input.elapsedMs);
