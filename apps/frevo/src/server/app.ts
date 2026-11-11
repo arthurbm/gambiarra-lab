@@ -16,6 +16,7 @@ import { modelPanelRows } from "../models/panel";
 import { MUSIC_PATH, type MusicFiles } from "../music/files";
 import type { MusicGenerations, MusicGenerator } from "../music/generator";
 import { createJukebox } from "../music/jukebox";
+import { leave as leaveSquare } from "../sim/admin";
 import { tick } from "../sim/phases";
 import {
   acceptPersonName,
@@ -270,6 +271,11 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   >();
   /** Sessions the host expelled; they stay out until the admin restarts. */
   const expelled = new Set<string>();
+  /**
+   * Sessions whose person left from the phone. Their other tabs are told so
+   * instead of entering again; entering with one gives a new boneco.
+   */
+  const left = new Set<string>();
   const simulated = createSimulatedHumans({ seed: options.seed ?? Date.now() });
 
   function broadcast(chunk: Uint8Array) {
@@ -282,13 +288,16 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
   }
 
-  /** A phone's view, or why it has none: expelled, or the world restarted. */
+  /** A phone's view, or why it has none: expelled, left, or a restart. */
   function phoneEvent(sessionId: string): PhoneEvent {
     const view = phoneView(world, sessionId);
     if (view) {
       return view;
     }
-    return expelled.has(sessionId) ? { expulso: true } : { reiniciou: true };
+    if (expelled.has(sessionId)) {
+      return { expulso: true };
+    }
+    return left.has(sessionId) ? { saiu: true } : { reiniciou: true };
   }
 
   function publishPhones() {
@@ -327,6 +336,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     // the expelled come back and the spending ceiling counts from zero.
     restarted: () => {
       expelled.clear();
+      left.clear();
       scheduler.resetBudget();
       log("Spending reset to zero");
       publishPhones();
@@ -401,7 +411,13 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
 
   /** One person's private stream: their boneco, its thoughts, the question. */
   function phoneStream(request: Request, sessionId: string): Response {
-    if (!(privateView(world, sessionId) || expelled.has(sessionId))) {
+    if (
+      !(
+        privateView(world, sessionId) ||
+        expelled.has(sessionId) ||
+        left.has(sessionId)
+      )
+    ) {
       return new Response("Sessão desconhecida.", { status: 404 });
     }
     let self: ReadableStreamDefaultController<Uint8Array> | undefined;
@@ -470,6 +486,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       );
     }
     ({ world } = joined);
+    left.delete(sessionId);
     if (joined.created) {
       log(`${joined.bonecoId} arrived`);
     }
@@ -507,6 +524,32 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     return Response.json({ ok: true });
   }
 
+  /**
+   * The person leaves the square from the phone: the boneco goes as if the
+   * host expelled it, but nobody is kept out, and entering again gives a new
+   * one.
+   */
+  async function quit(request: Request): Promise<Response> {
+    const body = await jsonBody(request);
+    if (!body) {
+      return new Response("O corpo precisa ser JSON.", { status: 400 });
+    }
+    const sessionId = sessionOf(body.sessao);
+    const result = leaveSquare(world, sessionId);
+    if (!result.bonecoId) {
+      return Response.json(
+        { ok: false, erro: "Este boneco já não está na praça." },
+        { status: 404 }
+      );
+    }
+    ({ world } = result);
+    left.add(sessionId);
+    log(`${result.bonecoId} left`);
+    broadcast(sseEvent("snapshot", telaoSnapshot()));
+    publishPhones();
+    return Response.json({ ok: true, boneco: result.bonecoId });
+  }
+
   /** A telão says whether its sound is on and what it plays, for the admin. */
   async function soundReport(request: Request): Promise<Response> {
     const body = await jsonBody(request);
@@ -531,6 +574,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   const routes: Record<string, (request: Request) => Promise<Response>> = {
     "POST /api/entrar": enter,
     "POST /api/responder": respond,
+    "POST /api/sair": quit,
     "POST /api/telao/som": soundReport,
     "GET /api/models": () => Promise.resolve(publicModels()),
     "GET /api/config": () =>

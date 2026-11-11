@@ -5,7 +5,9 @@
 // gets the same boneco back; a server that forgot the session (a restart)
 // gets it again on the next arrival, and so does one the host restarted. A
 // person the host expelled is told so and stays out, and so is a new person
-// who arrives when the square is full.
+// who arrives when the square is full. A person who leaves from the phone
+// forgets the session and is back at the welcome, name filled in, as if they
+// had just scanned the QR.
 import type { PhoneEvent, PhoneView } from "@gambiarra-lab/frevo/views";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { connectTelaoStream, type StreamStatus } from "../telao/stream";
@@ -110,6 +112,9 @@ export function useCelular() {
   /** The name as typed: storage only keeps it for the next visit. */
   const nameRef = useRef<string | null>(stored(NAME_KEY));
 
+  /** Leaving: nothing may enter again with the session being dropped. */
+  const leaving = useRef<boolean>(false);
+
   /** The arrival in flight: React runs the effect twice in development. */
   const arriving = useRef<Promise<void> | null>(null);
 
@@ -154,9 +159,23 @@ export function useCelular() {
     }
   }, [arrive]);
 
+  /** Back to a first visit: no session, no boneco, the welcome on screen. */
+  const forget = useCallback(() => {
+    store(SESSION_KEY, null);
+    sessionRef.current = null;
+    arriving.current = null;
+    setSession(null);
+    setView(null);
+    setFull(false);
+    setExpelled(false);
+    setNameError(null);
+    setWelcome(true);
+  }, []);
+
   /** The welcome's answer: a name, or null for a drawn one. */
   const start = useCallback(
     (name: string | null) => {
+      leaving.current = false;
       setNameError(null);
       nameRef.current = name?.trim() || null;
       store(NAME_KEY, nameRef.current);
@@ -174,6 +193,15 @@ export function useCelular() {
       onSnapshot: (next) => {
         if ("expulso" in next) {
           setExpelled(true);
+          return;
+        }
+        if ("saiu" in next) {
+          // The person left, from this tab or another one.
+          leaving.current = true;
+          forget();
+          return;
+        }
+        if (leaving.current) {
           return;
         }
         if ("reiniciou" in next) {
@@ -198,12 +226,12 @@ export function useCelular() {
       onStatus: (next) => {
         setStatus(next);
         // The server may have restarted and forgotten the session.
-        if (next === "reconnecting") {
+        if (next === "reconnecting" && !leaving.current) {
           enter(session, nameRef.current).catch(() => undefined);
         }
       },
     });
-  }, [session]);
+  }, [session, forget]);
 
   const reply = useCallback(
     async (askId: string, answer: Reply): Promise<Replied> => {
@@ -230,7 +258,43 @@ export function useCelular() {
     [session]
   );
 
+  /** The person leaves the square: the boneco goes, the phone starts over. */
+  const leave = useCallback(async (): Promise<Replied> => {
+    const { current } = sessionRef;
+    if (!current) {
+      forget();
+      return { ok: true };
+    }
+    leaving.current = true;
+    try {
+      const response = await fetch("/api/sair", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessao: current }),
+      });
+      // 404: the boneco was already gone (a restart); starting over is right.
+      if (response.ok || response.status === 404) {
+        forget();
+        return { ok: true };
+      }
+      leaving.current = false;
+      const body = (await response.json().catch(() => ({}))) as {
+        erro?: string;
+      };
+      return {
+        ok: false,
+        erro: body.erro ?? "Não deu para sair. Tente de novo.",
+      };
+    } catch {
+      leaving.current = false;
+      return { ok: false, erro: "Sem conexão. Tente de novo." };
+    }
+  }, [forget]);
+
   return {
+    leave,
+    /** The name typed last, to fill the welcome again after leaving. */
+    lastName: nameRef.current,
     view,
     status,
     reply,

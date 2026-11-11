@@ -2,7 +2,8 @@
 // the boneco, the row of phases, then one "now" card that says what is
 // happening and where to look, with the question inside when it is the
 // person's turn. Everything else (bloco, personality, talks, thoughts) comes
-// below, quieter, and the long lists start folded.
+// below, quieter, and the long lists start folded. At the very bottom, a quiet
+// "Sair da praça" asks once more before the boneco goes.
 
 import { modelLabel } from "@gambiarra-lab/frevo/models";
 import {
@@ -308,12 +309,15 @@ function ThoughtList({ thoughts }: { thoughts: Thought[] }) {
 /** A first visit: the person says how they want to be called on the telão. */
 function Welcome({
   error,
+  initialName,
   start,
 }: {
   error: string | null;
+  /** The name typed before leaving, if any. */
+  initialName: string | null;
   start: (name: string | null) => Promise<void> | null;
 }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName ?? "");
   const [busy, setBusy] = useState(false);
   const nameId = useId();
 
@@ -399,6 +403,71 @@ function Now({
   );
 }
 
+/** Leaving the square, at the bottom: one tap asks, the second one leaves. */
+function Leave({ leave }: { leave: () => Promise<Replied> }) {
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  function confirm() {
+    setBusy(true);
+    setProblem(null);
+    leave().then((left) => {
+      if (!left.ok) {
+        setBusy(false);
+        setProblem(left.erro ?? null);
+      }
+    });
+  }
+
+  if (!armed) {
+    return (
+      <div className="celular-leave">
+        <button
+          className="celular-leave-open"
+          onClick={() => setArmed(true)}
+          type="button"
+        >
+          Sair da praça
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="celular-leave">
+      <p className="celular-leave-question">
+        Sair da praça? Seu boneco vai embora.
+      </p>
+      <div className="celular-leave-actions">
+        <button
+          className="celular-leave-confirm"
+          disabled={busy}
+          onClick={confirm}
+          type="button"
+        >
+          Sair
+        </button>
+        <button
+          className="celular-skip"
+          disabled={busy}
+          onClick={() => {
+            setArmed(false);
+            setProblem(null);
+          }}
+          type="button"
+        >
+          Cancelar
+        </button>
+      </div>
+      {problem ? (
+        <p className="celular-question-problem" role="alert">
+          {problem}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function Personality({ boneco }: { boneco: PrivateView["boneco"] }) {
   if (!boneco.personality) {
     return null;
@@ -429,6 +498,8 @@ export function CelularPage() {
     welcome,
     nameError,
     start,
+    leave,
+    lastName,
   } = useCelular();
   useTick(250);
 
@@ -451,7 +522,7 @@ export function CelularPage() {
   }
 
   if (welcome && !view) {
-    return <Welcome error={nameError} start={start} />;
+    return <Welcome error={nameError} initialName={lastName} start={start} />;
   }
 
   if (!view) {
@@ -508,6 +579,7 @@ export function CelularPage() {
         Seu boneco aparece no telão. Ele decide sozinho quando você não
         responde.
       </p>
+      <Leave leave={leave} />
     </main>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { expel, setSilenced } from "./admin";
+import { expel, leave, setSilenced } from "./admin";
 import { NAME_MAX_LENGTH, VERSE_MAX_LENGTH } from "./compor";
 import { advancePhase, setPhaseDurations, tick } from "./phases";
 import {
@@ -626,6 +626,20 @@ describe("arrivals during the phase", () => {
     world = untilVoting(world);
     const third = world.bonecos[2]?.id as string;
     ({ world } = expel(world, third));
+    const [first] = names(world) as [string];
+    const after = run(world, 4000, { human: () => votesFor(first) }).world;
+    expect(bloco(after)?.name).toBe(`Bloco de ${first}`);
+  });
+
+  test("someone who leaves from the phone during a vote no longer holds it", () => {
+    let world = composing({ humans: 3 });
+    world = untilVoting(world);
+    expect(privateView(world, "pessoa-3")?.compor?.voting).toBeTruthy();
+    const left = leave(world, "pessoa-3");
+    expect(left.bonecoId).not.toBeNull();
+    ({ world } = left);
+    expect(privateView(world, "pessoa-3")).toBeNull();
+    expect(bloco(world)?.members).toHaveLength(2);
     const [first] = names(world) as [string];
     const after = run(world, 4000, { human: () => votesFor(first) }).world;
     expect(bloco(after)?.name).toBe(`Bloco de ${first}`);

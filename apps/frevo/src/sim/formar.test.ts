@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { expel } from "./admin";
+import { expel, leave } from "./admin";
 import { closeFormar, enterFormar, sizesFor } from "./formar";
 import { MEETING_SPOTS } from "./meeting-spots";
 import {
@@ -596,5 +596,55 @@ describe("when the host expels someone", () => {
     // Closing the phase afterwards groups the two who are left.
     const closed = after(closeFormar(world), 200, { brain: friendly });
     expect(blocoSizes(closed)).toEqual([2]);
+  });
+});
+
+describe("when a person leaves from the phone", () => {
+  const yes: Human = (view) => {
+    if (!view.ask) {
+      return;
+    }
+    return view.ask.options.length > 0
+      ? { askId: view.ask.id, choice: 0 }
+      : { askId: view.ask.id, skip: true };
+  };
+
+  test("a pending invitation is called off and the two left still group", () => {
+    const asked = after(square({ humans: 3 }), 300, { brain: friendly });
+    expect(phone(asked, "sessao-1").ask).not.toBeNull();
+    const result = leave(asked, "sessao-1");
+    expect(result.bonecoId).toBe("boneco-1");
+    const { world } = result;
+    expect(privateView(world, "sessao-1")).toBeNull();
+    for (const session of ["sessao-2", "sessao-3"]) {
+      const view = phone(world, session);
+      expect(view.ask).toBeNull();
+      expect(view.thoughts.at(-1)?.text).toContain("O convite caiu");
+    }
+    const closed = after(closeFormar(world), 200, { brain: friendly });
+    expect(blocoSizes(closed)).toEqual([2]);
+  });
+
+  test("a bloco of three keeps the two who stayed", () => {
+    const formed = after(square({ humans: 3 }), 15_000, {
+      brain: friendly,
+      human: () => yes,
+    });
+    expect(blocoSizes(formed)).toEqual([3]);
+    const { world } = leave(formed, "sessao-2");
+    expect(blocoSizes(world)).toEqual([2]);
+    const stayed = after(world, 500, { brain: friendly, human: () => yes });
+    expect(blocoSizes(stayed)).toEqual([2]);
+    expect(phone(stayed, "sessao-1").bloco?.mates).toHaveLength(1);
+  });
+
+  test("coming back gives a new boneco, and leaving twice changes nothing", () => {
+    const world = square({ humans: 2 });
+    const { world: gone } = leave(world, "sessao-1");
+    expect(leave(gone, "sessao-1")).toEqual({ world: gone, bonecoId: null });
+    const back = join(gone, { sessionId: "sessao-nova" });
+    expect(back.created).toBe(true);
+    expect(back.bonecoId).not.toBe("boneco-1");
+    expect(back.world.bonecos).toHaveLength(2);
   });
 });

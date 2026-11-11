@@ -263,6 +263,62 @@ describe("the admin", () => {
     telao.close();
   }, 30_000);
 
+  test("leaving from the phone takes the boneco out without keeping the person out", async () => {
+    await admin("reiniciar", {});
+    const entered = (await (await enter()).json()) as {
+      boneco: string;
+      sessao: string;
+    };
+    const other = (await (await enter()).json()) as { boneco: string };
+    const celular = await phone(entered.sessao);
+    await celular.find((event) => "boneco" in event);
+
+    const sair = (body: unknown) =>
+      fetch(`${server.url}/api/sair`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    expect((await sair({})).status).toBe(400);
+    expect((await sair({ sessao: "ninguem-aqui" })).status).toBe(404);
+
+    const left = await sair({ sessao: entered.sessao });
+    expect(left.status).toBe(200);
+    expect(await left.json()).toEqual({ ok: true, boneco: entered.boneco });
+    await celular.find((event) => "saiu" in event);
+    expect((await sair({ sessao: entered.sessao })).status).toBe(404);
+    expect((await state()).bonecos.map((boneco) => boneco.id)).toEqual([
+      other.boneco,
+    ]);
+    const telao = await openEventStream<TelaoSnapshot>(
+      `${server.url}/events/telao`
+    );
+    expect((await telao.next()).bonecos.map((boneco) => boneco.id)).toEqual([
+      other.boneco,
+    ]);
+    // Another tab of the same session is told so, instead of entering again.
+    const reopened = await phone(entered.sessao);
+    expect("saiu" in (await reopened.next())).toBe(true);
+
+    // Not banned: the phone comes back with a new session and a new boneco.
+    const back = await enter();
+    expect(back.status).toBe(200);
+    const again = (await back.json()) as { boneco: string; created: boolean };
+    expect(again.created).toBe(true);
+    expect(again.boneco).not.toBe(entered.boneco);
+    // Even the old session may enter again; it gets a new boneco too.
+    const same = (await (await enter(entered.sessao)).json()) as {
+      boneco: string;
+      created: boolean;
+    };
+    expect(same.created).toBe(true);
+    expect(same.boneco).not.toBe(entered.boneco);
+    expect((await state()).bonecos).toHaveLength(3);
+    reopened.close();
+    celular.close();
+    telao.close();
+  }, 30_000);
+
   test("the admin stream shows who joined and who is connected", async () => {
     await admin("reiniciar", {});
     const response = await fetch(`${server.url}/api/admin/eventos`, {

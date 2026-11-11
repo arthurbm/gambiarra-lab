@@ -1,6 +1,8 @@
 // What the host does to one boneco from the admin: silence it (its lines no
 // longer reach the telão) or expel it (it leaves the world, and the phases
-// drop it from what they keep, such as its bloco).
+// drop it from what they keep, such as its bloco). A person leaving from their
+// phone takes the same way out; only the server decides whether they may
+// come back.
 import type { World } from "./world";
 
 /**
@@ -42,4 +44,19 @@ export function expel(
     next = hook(next, bonecoId);
   }
   return { world: next, sessionId: boneco.sessionId };
+}
+
+/**
+ * The person behind this session leaves the square: their boneco goes the
+ * way an expelled one does. Returns the boneco that left, or null.
+ */
+export function leave(
+  world: World,
+  sessionId: string
+): { bonecoId: string | null; world: World } {
+  const boneco = world.bonecos.find((other) => other.sessionId === sessionId);
+  if (!boneco) {
+    return { world, bonecoId: null };
+  }
+  return { world: expel(world, boneco.id).world, bonecoId: boneco.id };
 }
