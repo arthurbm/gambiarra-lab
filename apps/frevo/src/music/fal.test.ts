@@ -68,7 +68,7 @@ describe("the fal.ai music", () => {
     expect(request?.endpoint).toBe("fal-ai/minimax-music/v2.6");
     expect(request?.authorization).toBe(`Key ${KEY}`);
     expect(request?.input.prompt).toBe(
-      `${FREVO_STYLE} Joyful mixed choir singing the chorus in Brazilian Portuguese. Short song, about 30 seconds.`
+      `${FREVO_STYLE} The song of the carnival bloco «Sombrinha Elétrica». Joyful mixed choir singing the chorus in Brazilian Portuguese. Short song, about 30 seconds.`
     );
     expect(request?.input.lyrics).toBe(
       "[Intro]\n[Chorus]\nSomos três no Recife Antigo\nSombrinha girando no ar\nQuem tem frevo tem sempre um amigo\nNosso bloco não vai parar\n[Outro]"
@@ -98,6 +98,9 @@ describe("when MiniMax does not deliver", () => {
     ]);
     const eleven = fake.requests[1]?.input;
     expect(eleven?.music_length_ms).toBe(30_000);
+    expect(eleven?.prompt).toStartWith(
+      `${FREVO_STYLE} The song of the carnival bloco «Sombrinha Elétrica». After a short brass intro,`
+    );
     expect(eleven?.prompt).toEndWith(
       "exactly as written:\n\nSomos três no Recife Antigo\nSombrinha girando no ar\nQuem tem frevo tem sempre um amigo\nNosso bloco não vai parar"
     );

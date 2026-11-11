@@ -8,6 +8,13 @@
 import type { MusicFile, MusicFiles } from "./files";
 import type { MusicGenerator } from "./generator";
 
+type MusicInput = Parameters<MusicGenerator>[0];
+
+/** The bloco's name goes in the description, never in what is sung. */
+function songOf(blocoName: string): string {
+  return `The song of the carnival bloco «${blocoName}».`;
+}
+
 export const MINIMAX = "fal-ai/minimax-music/v2.6";
 export const ELEVENLABS = "fal-ai/elevenlabs/music";
 const QUEUE_URL = "https://queue.fal.run";
@@ -24,7 +31,7 @@ export const DEFAULT_TIMEOUTS_MS = { minimax: 75_000, elevenlabs: 30_000 };
 
 interface Step {
   endpoint: string;
-  input: (refrain: string[], style: string) => Record<string, unknown>;
+  input: (music: MusicInput) => Record<string, unknown>;
   label: string;
   timeoutMs: number;
 }
@@ -46,8 +53,8 @@ function steps(timeouts: { elevenlabs: number; minimax: number }): Step[] {
       endpoint: MINIMAX,
       label: "MiniMax",
       timeoutMs: timeouts.minimax,
-      input: (refrain, style) => ({
-        prompt: `${style} Joyful mixed choir singing the chorus in Brazilian Portuguese. Short song, about 30 seconds.`,
+      input: ({ blocoName, refrain, style }) => ({
+        prompt: `${style} ${songOf(blocoName)} Joyful mixed choir singing the chorus in Brazilian Portuguese. Short song, about 30 seconds.`,
         lyrics: minimaxLyrics(refrain),
         audio_setting: { sample_rate: 44_100, bitrate: 128_000, format: "mp3" },
       }),
@@ -56,8 +63,8 @@ function steps(timeouts: { elevenlabs: number; minimax: number }): Step[] {
       endpoint: ELEVENLABS,
       label: "ElevenLabs",
       timeoutMs: timeouts.elevenlabs,
-      input: (refrain, style) => ({
-        prompt: `${style} After a short brass intro, a joyful mixed choir sings this chorus in Brazilian Portuguese, exactly as written:\n\n${refrain.join("\n")}`,
+      input: ({ blocoName, refrain, style }) => ({
+        prompt: `${style} ${songOf(blocoName)} After a short brass intro, a joyful mixed choir sings this chorus in Brazilian Portuguese, exactly as written:\n\n${refrain.join("\n")}`,
         music_length_ms: 30_000,
         force_instrumental: false,
         output_format: "mp3_44100_128",
@@ -341,11 +348,11 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
     }
   }
 
-  async function run(step: Step, refrain: string[], style: string) {
+  async function run(step: Step, music: MusicInput) {
     const clock = stepClock(step);
     let queued: Queued = {};
     try {
-      queued = await submit(step, step.input(refrain, style), clock.signal());
+      queued = await submit(step, step.input(music), clock.signal());
       return await made(step, queued, clock);
     } catch (error) {
       // Accepted and abandoned: stop it on fal.ai, so it is not made (and billed) for nothing.
@@ -359,7 +366,8 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
     }
   }
 
-  const generate: MusicGenerator = async ({ blocoName, refrain, style }) => {
+  const generate: MusicGenerator = async (music) => {
+    const { blocoName } = music;
     const reasons: string[] = [];
     for (const step of steps(timeouts)) {
       if (used >= max) {
@@ -371,7 +379,7 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
       const startedAt = Date.now();
       try {
         // biome-ignore lint/performance/noAwaitInLoops: the next generator runs only if this one fails.
-        const file = await run(step, refrain, style);
+        const file = await run(step, music);
         log(
           `Music for "${blocoName}" made by ${step.endpoint} in ${((Date.now() - startedAt) / 1000).toFixed(1)} s`
         );
