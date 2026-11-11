@@ -107,6 +107,8 @@ export function useCelular() {
   /** When the view arrived, to run the countdown on this phone's clock. */
   const receivedAt = useRef(0);
   const sessionRef = useRef<string | null>(null);
+  /** The name as typed: storage only keeps it for the next visit. */
+  const nameRef = useRef<string | null>(stored(NAME_KEY));
 
   /** The arrival in flight: React runs the effect twice in development. */
   const arriving = useRef<Promise<void> | null>(null);
@@ -118,10 +120,11 @@ export function useCelular() {
           // biome-ignore lint/performance/noAwaitInLoops: tries again until the world answers.
           const entered = await enter(
             sessionRef.current ?? stored(SESSION_KEY),
-            stored(NAME_KEY)
+            nameRef.current
           );
           if (entered.kind === REFUSED) {
             // Back to the welcome, to pick another name.
+            nameRef.current = null;
             store(NAME_KEY, null);
             setNameError(entered.erro);
             setWelcome(true);
@@ -155,7 +158,8 @@ export function useCelular() {
   const start = useCallback(
     (name: string | null) => {
       setNameError(null);
-      store(NAME_KEY, name?.trim() || null);
+      nameRef.current = name?.trim() || null;
+      store(NAME_KEY, nameRef.current);
       return arrive();
     },
     [arrive]
@@ -178,7 +182,7 @@ export function useCelular() {
           // Several notices may arrive before the new boneco does.
           if (reentering.current === false) {
             reentering.current = true;
-            enter(session, stored(NAME_KEY))
+            enter(session, nameRef.current)
               .then((result) => setFull(result.kind === FULL))
               .catch(() => undefined)
               .finally(() => {
@@ -195,7 +199,7 @@ export function useCelular() {
         setStatus(next);
         // The server may have restarted and forgotten the session.
         if (next === "reconnecting") {
-          enter(session, stored(NAME_KEY)).catch(() => undefined);
+          enter(session, nameRef.current).catch(() => undefined);
         }
       },
     });
