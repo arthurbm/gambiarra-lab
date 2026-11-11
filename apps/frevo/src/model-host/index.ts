@@ -1,28 +1,42 @@
 #!/usr/bin/env bun
-// The model host as a process. FREVO_MODEL_HOST_MODE=fake answers with a
-// local deterministic model; the default points at OpenRouter.
+// The model host as a process. FREVO_MODEL_HOST_MODE=fake answers with local
+// fake models (FREVO_FAKE_LATENCY_MS fixes their latency, FREVO_FAKE_FAILURES=0
+// turns their failures off); the default points at OpenRouter through the
+// provider proxy, which holds the key and each model's request fields.
+import { modelEntry } from "../models/catalog";
 import { modelHostConfig } from "./config";
-import { type FakeUpstream, startFakeUpstream } from "./fake-upstream";
+import { startFakeUpstream } from "./fake-upstream";
 import { startModelHost } from "./host";
+import { startProviderProxy } from "./provider-proxy";
 
 const config = await modelHostConfig();
-const fake =
+const models = config.models.map((spec) => spec.model);
+const latency = process.env.FREVO_FAKE_LATENCY_MS?.trim();
+const failures = process.env.FREVO_FAKE_FAILURES?.trim() !== "0";
+const local =
   config.mode === "fake"
     ? startFakeUpstream({
-        models: config.models.map((spec) => spec.model),
-        latencyMs: Number(process.env.FREVO_FAKE_LATENCY_MS || 600),
+        models,
+        latencyMs: latency ? Number(latency) : undefined,
+        profiles: Object.fromEntries(
+          models.map((model) => {
+            const profile = modelEntry(model).fake;
+            return [
+              model,
+              profile && !failures
+                ? { ...profile, errorRate: 0, invalidRate: 0 }
+                : profile,
+            ];
+          })
+        ),
       })
-    : undefined;
-const upstream =
-  config.mode === "fake"
-    ? { endpoint: (fake as FakeUpstream).endpoint }
-    : config.upstream;
+    : startProviderProxy({ models, upstream: config.upstream });
 
 const host = startModelHost({
   hubUrl: config.hubUrl,
   roomName: config.roomName,
   models: config.models,
-  upstream,
+  upstream: { endpoint: local.endpoint },
   onEvent: (event) => console.log(JSON.stringify(event)),
 });
 
@@ -37,7 +51,7 @@ async function shutdown() {
   }
   stopping = true;
   await host.stop();
-  fake?.stop();
+  local.stop();
   process.exit(0);
 }
 process.once("SIGINT", shutdown);

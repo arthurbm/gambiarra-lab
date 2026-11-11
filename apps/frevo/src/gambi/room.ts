@@ -110,7 +110,11 @@ export async function listModelParticipants(
         participant.connection?.connected &&
         participant.status !== "offline"
     )
-    .map((participant) => ({ id: participant.id, model: participant.model }));
+    .map((participant) => ({
+      id: participant.id,
+      model: participant.model,
+      busy: participant.status === "busy",
+    }));
 }
 
 /** chat/completions on the Room's inference plane; `body.model` is the participant id. */

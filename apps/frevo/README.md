@@ -20,7 +20,7 @@ The telão is at `http://localhost:3201/telao` and the phone at `http://localhos
 
 ```bash
 bun run frevo:smoke        # runtime proof with a fake model; exits 0 or 1
-bun run frevo:real-check   # one real tool call through a hub (about US$ 0.0001)
+bun run frevo:real-check   # 10 decisions per stage model through a hub (about US$ 0.006)
 bun test apps/frevo/src apps/frevo-web/src
 ```
 
@@ -45,13 +45,16 @@ The world creates the Room, or reuses the one with the same name (`FREVO_ROOM_NA
 | `PORT`, `HOST` | world | `3200`, `0.0.0.0` |
 | `FREVO_BONECOS` | world | `1` simulated boneco |
 | `FREVO_DECISION_TIMEOUT_MS` | world | `12000` |
+| `FREVO_ADMIN_SECRET` | world | drawn at start and printed as `/admin?k=<secret>` |
+| `FREVO_BUDGET_USD` | world | `1`: estimated session spending that puts every boneco on autopilot |
 | `FREVO_WEB_DIST` | world | `apps/frevo-web/dist` when built |
 | `FREVO_PUBLIC_URL` | world | none; the QR falls back to the telão's origin |
 | `FREVO_MODEL_HOST_MODE` | model host | `openrouter`; `fake` needs no key and no network |
-| `FREVO_MODELS` | model host | `anthropic/claude-haiku-5.5:2` (`model[:participants]`, comma separated) |
+| `FREVO_MODELS` | model host | the twelve participants of `src/models/catalog.ts` (`model[:participants]`, comma separated) |
 | `OPENROUTER_API_KEY`, `OPENROUTER_API_KEY_FILE` | model host | the file in `~/.config/gambiarra-lab/` |
 | `OPENROUTER_BASE_URL` | model host | `https://openrouter.ai/api/v1` |
-| `FREVO_FAKE_LATENCY_MS` | model host (fake) | `600` |
+| `FREVO_FAKE_LATENCY_MS` | model host (fake) | each fake model's own range in the catalog |
+| `FREVO_FAKE_FAILURES` | model host (fake) | on; `0` turns the fake models' errors and unusable answers off |
 
 ## Modules
 
@@ -62,14 +65,33 @@ One directory per module under `src/`:
   - `ask.ts` is the boneco asking its human something with a countdown (`askMs`, 12 s) and deciding alone, with a notice, when nobody answers. Each use is a `purpose` with a handler in `ASK_HANDLERS` (`world.ts`); the interview is the first, confirming a bloco and voting are next. Typing in an open question pushes the countdown, up to `askTypingCapMs`.
   - `interview.ts` keeps what the interview knows and its fixed texts (reserve questions, open question, fallback personality, instruments). The free text goes into the personality request and nowhere else.
   - `blocklist.ts` is the one filter for model text (`filterModelText`): blocked words and letters from other scripts drop the text before it enters the world, so nothing unfiltered reaches the telão.
-- `brains/`: the brain scheduler. One `chat/completions` call per decision, without streaming, with one tool the model must call and the `participantId` as the model selector. It keeps the free/busy table, because the hub serves one request at a time per participant and does not say who answered. An answer without the tool call is repeated once.
-- `model-host/`: the model host and its fake provider, which answers any forced tool with arguments built from the tool's JSON schema.
-- `server/`: HTTP and SSE. `GET /health`, `GET /events/telao`, `POST /api/entrar` (`{ sessao? }` → `{ sessao, boneco, created }`), `POST /api/responder` (`{ sessao, pergunta, opcao | texto | pular | digitando }`; 409 when the question already passed), `GET /events/celular?sessao=…` (the phone's private view), `GET /api/config` (`{ publicUrl }`), and the built web for everything else.
-- `gambi/`: the Room by name on the management plane and the call on the inference plane.
+- `brains/`: the brain scheduler. One `chat/completions` call per decision, without streaming, with one tool the model must call (`tool_choice: "required"`) and the `participantId` as the model selector. It keeps the free/busy table, because the hub serves one request at a time per participant, refuses a busy one with 409 and does not say who answered; a participant stays busy until the hub answered, even after the decision gave up. A decision goes to a free participant of the boneco's model, or to any free one after `fallbackMs` (1.5 s). The arguments are checked against the tool's schema (and refused with letters outside the Latin alphabet); an unusable answer is repeated once. `metrics.ts` counts decisions, failures and response time per model from the hub's `llm.complete`/`llm.error` events, with the caller's side as fallback when the hub's stream dropped, and estimates the spending (tokens times the catalog's price, or OpenRouter's `usage.cost` when higher).
+- `models/catalog.ts`: the stage models, their labels, prices, request fields (reasoning at its minimum, `max_tokens`, provider routing, measured on 2026-11-11) and the fake stand-ins with their latency and failure rates. `minimax/minimax-m3` replaces `minimax/minimax-m3.1-flash` (issue #18).
+- `model-host/`: the model host, the provider proxy (a local endpoint each participant points at; it adds the key and each model's request fields) and the fake provider, which answers any forced tool with arguments built from the tool's JSON schema.
+- `server/`: HTTP and SSE. `GET /health`, `GET /events/telao`, `POST /api/entrar` (`{ sessao? }` → `{ sessao, boneco, created }`), `POST /api/responder` (`{ sessao, pergunta, opcao | texto | pular | digitando }`; 409 when the question already passed), `GET /events/celular?sessao=…` (the phone's private view), `GET /api/config` (`{ publicUrl }`), `GET /api/models` (the Room's models), `/api/admin/*` behind `Authorization: Bearer <FREVO_ADMIN_SECRET>` (`GET` and `POST /api/admin/models` with `{ model, enabled }`, `POST /api/admin/spending/reset`), and the built web for everything else. `GET /events/telao` carries the snapshot plus one row per model for the panel.
+- `gambi/`: the Room by name on the management plane, its inference events (`room-events.ts`, reconnecting) and the call on the inference plane.
 - `testing/`: hub and child processes on free ports for tests, the smoke and `frevo:dev`.
 
 The web keeps the data flow apart from the drawing: `telao/stream.ts` keeps the connection (and reconnects when the browser gives up or the stream goes silent), `telao/world-view.tsx` draws one snapshot and knows nothing else.
 
+## Art
+
+The telão draws the square on a canvas at a whole scale (`apps/frevo-web/src/telao/scale.ts`): every art pixel becomes 3 device pixels on a 720p projector and 4 on a 1080p one, the world centred and the rest of the stage filled with scenery. Bonecos chase their latest position at a capped speed between snapshots (`telao/motion.ts`), walk in four directions and are sorted by depth with the props. Speech balloons are DOM: at most five, the newest speech first, each in the first spot around its boneco that covers no other (`telao/balloons.ts`).
+
+| File | What it is |
+|---|---|
+| `apps/frevo-web/public/art/` | The pack's files, unchanged, and its `NINJA-ADVENTURE-LICENSE.txt` (CC0 1.0) and `NINJA-ADVENTURE-README.md` |
+| `apps/frevo-web/src/art/characters.ts` | The 30 characters (`look` 0 to 29), the eight instruments, `lookOf` (`look ?? hash(id) % 30`) |
+| `apps/frevo-web/src/art/boneco-sprite.tsx` | One boneco as a CSS sprite with its costume, standing or walking, for the phone |
+| `apps/frevo-web/src/art/instrument-icons.ts` | The eight 16 x 16 instrument icons, drawn for this experience |
+| `apps/frevo-web/src/art/credits.ts` | The credit lines, for the final screen |
+| `apps/frevo-web/src/telao/scene.ts` | The square's tiles and props, built on `PRACA` and the meeting spots |
+| `src/sim/meeting-spots.ts` | Where blocos gather, in map units (`@gambiarra-lab/frevo/meeting-spots`) |
+
+`/telao/demo` runs the simulation in the browser with 30 bonecos and a fake brain, to check the art at full load without a hub (`?blocos` sends them to the meeting spots).
+
 ## Credits
 
-The square is inspired by the World of [`gambiarraclub/gambiarra-arena`](https://github.com/gambiarraclub/gambiarra-arena) (MIT), by Filipe Calegario, and written from scratch here.
+- **Art:** [Ninja Adventure - Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack), by Pixel-Boy and AAA, under Creative Commons Zero (CC0 1.0). The pack's page on itch.io says: "They are released under the Creative Commons Zero (CC0) license." (checked on 2026-11-11). The author's GitHub repository ([pixel-boy/NinjaAdventure](https://github.com/pixel-boy/NinjaAdventure)) has no license file; the reference is the itch.io page and the `LICENSE.txt` inside the zip, copied as `apps/frevo-web/public/art/NINJA-ADVENTURE-LICENSE.txt`. The pack's files are unchanged.
+- **Frevo instrument icons:** drawn for this experience; not part of the pack.
+- **Inspiration:** the square is inspired by the World of Filipe Calegario in [`gambiarraclub/gambiarra-arena`](https://github.com/gambiarraclub/gambiarra-arena) (MIT, © 2025 Gambiarra LLM Club), and written from scratch here.

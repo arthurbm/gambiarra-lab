@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // The world server as a process. PORT, HOST, GAMBI_HUB_URL, FREVO_ROOM_NAME,
-// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL, FREVO_WEB_DIST
-// and FREVO_ADMIN_SECRET configure it.
+// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL, FREVO_WEB_DIST,
+// FREVO_ADMIN_SECRET and FREVO_BUDGET_USD configure it.
 import { randomBytes } from "node:crypto";
 import { exists } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -30,6 +30,11 @@ const webDist =
 const host = process.env.HOST?.trim() || "0.0.0.0";
 const givenSecret = process.env.FREVO_ADMIN_SECRET?.trim();
 const adminSecret = givenSecret || randomBytes(16).toString("hex");
+const budget = process.env.FREVO_BUDGET_USD?.trim();
+const ceilingUsd = budget ? Number(budget) : 1;
+if (!(Number.isFinite(ceilingUsd) && ceilingUsd >= 0)) {
+  throw new Error("FREVO_BUDGET_USD must be a number of dollars");
+}
 
 const server = startWorldServer({
   hubUrl: process.env.GAMBI_HUB_URL?.trim() || DEFAULT_HUB_URL,
@@ -45,8 +50,9 @@ const server = startWorldServer({
     ),
   },
   webDist,
-  publicUrl: process.env.FREVO_PUBLIC_URL?.trim() || undefined,
   adminSecret,
+  ceilingUsd,
+  publicUrl: process.env.FREVO_PUBLIC_URL?.trim() || undefined,
   log: (line) => console.log(line),
 });
 

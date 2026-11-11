@@ -181,6 +181,8 @@ interface Boneco {
     deadlineMs: number;
     kind: DecisionKind;
     requestId: string;
+    /** World time the decision was asked at. */
+    sinceMs: number;
   } | null;
   personality: string[] | null;
   restUntilMs: number;
@@ -229,6 +231,8 @@ export interface World {
 export interface PublicBoneco {
   /** Waiting for its human to answer on the phone. */
   asking: boolean;
+  /** The model the boneco was given; `model` may differ when another answered. */
+  assignedModel: string | null;
   brain: BrainSource | null;
   facing: Facing;
   id: string;
@@ -237,7 +241,10 @@ export interface PublicBoneco {
   model: string | null;
   name: string;
   speech: string | null;
+  /** Waiting for a model right now. */
   thinking: boolean;
+  /** For how long it has been waiting for a model, or null when it is not. */
+  thinkingForMs: number | null;
   walking: boolean;
   x: number;
   y: number;
@@ -944,6 +951,7 @@ function stepBoneco(
         requestId: request.id,
         deadlineMs: request.deadlineMs,
         kind: request.kind ?? "walk",
+        sinceMs: world.timeMs,
       },
     },
   };
@@ -985,12 +993,16 @@ function publicBoneco(world: World, boneco: Boneco): PublicBoneco {
     facing: boneco.facing,
     walking: boneco.target !== null,
     thinking: boneco.pending !== null,
+    thinkingForMs: boneco.pending
+      ? world.timeMs - boneco.pending.sinceMs
+      : null,
     asking: boneco.ask !== null,
     speech:
       boneco.speech && boneco.speech.untilMs > world.timeMs && !boneco.silenced
         ? boneco.speech.text
         : null,
     brain: boneco.brain,
+    assignedModel: boneco.assignedModel,
     model: boneco.model,
   };
 }

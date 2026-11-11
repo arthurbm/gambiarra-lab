@@ -1,6 +1,12 @@
-import type { TelaoSnapshot } from "@gambiarra-lab/frevo/views";
+import type { ModelPanelRow } from "@gambiarra-lab/frevo/models";
+import type { TelaoSnapshot as WorldTelaoSnapshot } from "@gambiarra-lab/frevo/views";
 import { useEffect, useState } from "react";
 import { connectTelaoStream, type StreamStatus } from "./stream";
+
+/** The world as the telão gets it: the simulation, the phase clock and the models panel. */
+export type TelaoSnapshot = WorldTelaoSnapshot & {
+  models?: ModelPanelRow[];
+};
 
 /** The world as the server last published it, and how the connection is. */
 export function useTelao(url = "/events/telao") {

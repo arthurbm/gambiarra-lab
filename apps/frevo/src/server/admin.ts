@@ -21,6 +21,11 @@ export interface AdminContext {
   /** The person behind this session was expelled: tell the phone, keep it out. */
   expelled: (sessionId: string) => void;
   log: (line: string) => void;
+  /** Routes other tickets add under /api/admin/*, after the secret was checked. */
+  otherRoutes?: (
+    request: Request,
+    pathname: string
+  ) => Promise<Response | undefined>;
   /** Sends the telão and the phones the world now, without waiting a tick. */
   publishNow: () => void;
   /** The world went back to zero: tell the phones. */
@@ -261,6 +266,10 @@ export function createAdminApi(context: AdminContext): AdminApi {
         if (response) {
           return response;
         }
+      }
+      const other = await context.otherRoutes?.(request, pathname);
+      if (other) {
+        return other;
       }
       return Response.json({ erro: "rota desconhecida" }, { status: 404 });
     },

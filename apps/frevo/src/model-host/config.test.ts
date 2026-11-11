@@ -5,13 +5,19 @@ import { join } from "node:path";
 import { modelHostConfig } from "./config";
 
 describe("the model host's configuration", () => {
-  test("defaults to the real provider with one cheap model, reading the key from the environment", async () => {
+  test("defaults to the real provider with twelve participants on five models, reading the key from the environment", async () => {
     const config = await modelHostConfig({ OPENROUTER_API_KEY: "sk-test" });
     expect(config).toEqual({
       mode: "openrouter",
       hubUrl: "http://127.0.0.1:3210",
       roomName: "bloco-de-frevo",
-      models: [{ model: "anthropic/claude-haiku-5.5", participants: 2 }],
+      models: [
+        { model: "anthropic/claude-haiku-5.5", participants: 2 },
+        { model: "minimax/minimax-m3", participants: 2 },
+        { model: "openai/gpt-6-luna", participants: 3 },
+        { model: "deepseek/deepseek-v4.1-flash-1017", participants: 2 },
+        { model: "z-ai/glm-5.3-flash", participants: 3 },
+      ],
       upstream: {
         endpoint: "https://openrouter.ai/api",
         authHeaders: { Authorization: "Bearer sk-test" },
@@ -62,8 +68,11 @@ describe("the model host's configuration", () => {
     const config = await modelHostConfig({ FREVO_MODEL_HOST_MODE: "fake" });
     expect(config.mode).toBe("fake");
     expect(config.models).toEqual([
-      { model: "fake-frevo-a", participants: 1 },
-      { model: "fake-frevo-b", participants: 1 },
+      { model: "fake-haiku", participants: 2 },
+      { model: "fake-minimax", participants: 2 },
+      { model: "fake-luna", participants: 3 },
+      { model: "fake-deepseek", participants: 2 },
+      { model: "fake-glm", participants: 3 },
     ]);
     expect("upstream" in config).toBe(false);
   });

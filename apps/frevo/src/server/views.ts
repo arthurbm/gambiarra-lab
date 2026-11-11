@@ -36,6 +36,8 @@ export interface AdminBoneco {
 
 export interface Spending {
   ceilingUsd: number;
+  /** Past the ceiling: every boneco is on autopilot. */
+  exceeded: boolean;
   spentUsd: number;
 }
 

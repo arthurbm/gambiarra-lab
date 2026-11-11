@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     "./snapshot": "./src/sim/world.ts",
+    "./meeting-spots": "./src/sim/meeting-spots.ts",
+    "./models": "./src/models/web.ts",
     "./views": "./src/server/views.ts"
   },
   "scripts": {
