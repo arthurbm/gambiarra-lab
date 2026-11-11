@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, types, tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      # Reads `packageManager` from package.json, so CI runs the same Bun as
+      # the lockfile. Never `latest`.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # Bun blocks the postinstall of the `gambi` package (npm). That is
+      # expected: the CLI works without it.
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun x ultracite check
+
+      - name: Board tests use their own database
+        run: |
+          if git grep -nF ':memory:' -- 'apps/board/src/__tests__/'; then
+            echo "::error::Board tests must not use the shared in-memory database. Use createTestDatabase() from apps/board/src/__tests__/test-database.ts."
+            exit 1
+          fi
+
+      - name: Types
+        run: bun run check-types
+
+      - name: Tests
+        run: bun run test
+
+      - name: Build board-web
+        run: bun run --cwd apps/board-web build
+
+  # A `smoke` job (`bun run board:smoke`) lands here in a parallel PR.

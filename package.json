@@ -32,7 +32,8 @@
     "dev:cli": "gambi",
     "dev:hub": "gambi hub serve",
     "event": "bun scripts/event.ts",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "test": "bun test apps/board/src packages/agents scripts"
   },
   "dependencies": {
     "zod": "catalog:"

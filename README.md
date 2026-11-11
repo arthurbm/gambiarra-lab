@@ -48,8 +48,7 @@ Precisa de [Bun](https://bun.sh). O `gambi` CLI e o `gambi-sdk` vêm do npm (`^0
 ```bash
 bun install
 bun run check-types
-bun test apps/board/src
-bun test packages/agents
+bun run test
 ```
 
 `bun run board:e2e` roda o evento completo com harnesses falsos e banco efêmero, sem chamar modelo. Os harnesses `fake` rodam `scripts/fake-acp-agent.ts`, que chama o `runFakeAcpAgent()` do `gambi-sdk`. `bun run event` é a versão com OpenCode de verdade.
