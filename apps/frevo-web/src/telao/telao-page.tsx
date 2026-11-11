@@ -1,6 +1,7 @@
 import type { PublicSnapshot } from "@gambiarra-lab/frevo/snapshot";
 import type { ReactNode } from "react";
 import { EntradaQr } from "./entrada-qr";
+import { EventLog } from "./event-log";
 import { ModelsPanel } from "./models-panel";
 import type { StreamStatus } from "./stream";
 import { useTelao } from "./use-telao";
@@ -56,6 +57,7 @@ export function TelaoPage() {
     <TelaoLayout snapshot={snapshot} status={status}>
       {snapshot?.phase === "entrada" ? <EntradaQr /> : null}
       <ModelsPanel rows={snapshot?.models ?? []} />
+      <EventLog events={snapshot?.events ?? []} />
     </TelaoLayout>
   );
 }

@@ -431,6 +431,24 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     });
   }
 
+  // Opening and closing the formar phase by hand, until the phase clock
+  // (#16) calls `enterFormar` and `closeFormar` itself.
+  function formarAdmin(request: Request, pathname: string) {
+    if (request.method !== "POST") {
+      return;
+    }
+    if (pathname === "/api/admin/formar/abrir") {
+      world = enterFormar(world);
+      log("The formar phase opened");
+      return Response.json({ phase: world.phase });
+    }
+    if (pathname === "/api/admin/formar/fechar") {
+      world = closeFormar(world);
+      log("The formar phase closed; the maestro groups whoever is left");
+      return Response.json({ phase: world.phase });
+    }
+  }
+
   async function adminApi(request: Request, pathname: string) {
     if (!adminAllowed(request)) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
@@ -453,17 +471,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       log(`Model ${body.model} switched ${body.enabled ? "on" : "off"}`);
       return adminState();
     }
-    // Opening and closing the formar phase by hand, until the phase clock
-    // (#16) calls `enterFormar` and `closeFormar` itself.
-    if (pathname === "/api/admin/formar/abrir" && request.method === "POST") {
-      world = enterFormar(world);
-      log("The formar phase opened");
-      return Response.json({ phase: world.phase });
-    }
-    if (pathname === "/api/admin/formar/fechar" && request.method === "POST") {
-      world = closeFormar(world);
-      log("The formar phase closed; the maestro groups whoever is left");
-      return Response.json({ phase: world.phase });
+    const formar = formarAdmin(request, pathname);
+    if (formar) {
+      return formar;
     }
     if (pathname === "/api/admin/spending/reset" && request.method === "POST") {
       scheduler.resetBudget();

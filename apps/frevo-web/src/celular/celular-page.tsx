@@ -2,8 +2,9 @@
 // thoughts and one question at a time with a countdown.
 
 import { modelLabel } from "@gambiarra-lab/frevo/models";
-import type { PrivateView, Thought } from "@gambiarra-lab/frevo/snapshot";
+import type { PrivateView, Talk, Thought } from "@gambiarra-lab/frevo/snapshot";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { blocoColor, blocoLabel } from "../telao/bloco-mark";
 import { otherModelLine, ownModelLabel } from "./model-line";
 import { type Reply, useCelular } from "./use-celular";
 
@@ -22,7 +23,7 @@ function lookColor(look: number) {
   return `hsl(${(look * 37) % 360} 75% 60%)`;
 }
 
-function Avatar({ boneco }: { boneco: PrivateView["boneco"] }) {
+function Avatar({ boneco }: { boneco: { look: number; name: string } }) {
   return (
     <span
       aria-hidden="true"
@@ -143,6 +144,63 @@ function Question({
   );
 }
 
+/** Whom the boneco talked to in the square, and what each one said. */
+function Talks({ talks }: { talks: Talk[] }) {
+  if (talks.length === 0) {
+    return null;
+  }
+  return (
+    <section className="celular-talks">
+      <h2>Com quem ele conversou</h2>
+      <ol>
+        {[...talks].reverse().map((talk) => (
+          <li key={`${talk.atMs}-${talk.with.id}`}>
+            <strong>{talk.with.name}</strong>
+            <p>Ele: {talk.mine ?? "(ficou calado)"}</p>
+            <p>
+              {talk.with.name}: {talk.theirs ?? "(ficou calado)"}
+            </p>
+            {talk.liked === null ? null : (
+              <small>
+                {talk.liked
+                  ? "Achou que vocês combinam."
+                  : "Achou que não combinam muito."}
+              </small>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/** The other people in the boneco's bloco, with name and boneco. */
+function BlocoMates({ bloco }: { bloco: NonNullable<PrivateView["bloco"]> }) {
+  return (
+    <section
+      className="celular-bloco"
+      style={{ "--bloco": blocoColor(bloco.mark) } as React.CSSProperties}
+    >
+      <h2>Seu bloco: {blocoLabel(bloco.mark)}</h2>
+      {bloco.mates.length === 0 ? (
+        <p>Por enquanto só você. Já chega mais gente.</p>
+      ) : (
+        <ul>
+          {bloco.mates.map((mate) => (
+            <li key={mate.id}>
+              <Avatar boneco={mate} />
+              <span>
+                <strong>{mate.name}</strong>
+                {mate.instrument ? ` · ${mate.instrument}` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function ThoughtList({ thoughts }: { thoughts: Thought[] }) {
   if (thoughts.length === 0) {
     return null;
@@ -246,7 +304,9 @@ export function CelularPage() {
       {!ask && boneco.thinking && !boneco.personality ? (
         <p className="celular-thinking">Pensando na próxima pergunta…</p>
       ) : null}
+      {view.bloco ? <BlocoMates bloco={view.bloco} /> : null}
       <Personality boneco={boneco} />
+      <Talks talks={view.talks} />
       <ThoughtList thoughts={view.thoughts} />
       <p className="celular-footer">
         Seu boneco aparece no telão. Ele decide sozinho quando você não

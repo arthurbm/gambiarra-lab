@@ -9,6 +9,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { FRAME, instrumentOf, lookOf, walkFrame } from "../art/characters";
 import { type Balloon, layoutBalloons, type Speaker } from "./balloons";
+import { blocoColor } from "./bloco-mark";
 import { type Drawn, follow } from "./motion";
 import {
   type Art,
@@ -246,17 +247,25 @@ export function WorldView({ snapshot }: { snapshot: PublicSnapshot }) {
         );
       }
 
-      const figures: Figure[] = placed.map(({ boneco, at }) => ({
-        id: boneco.id,
-        name: boneco.name,
-        look: lookOf(boneco),
-        instrument: instrumentOf(boneco.instrument),
-        x: at.x,
-        y: at.y,
-        facing: at.facing,
-        walkFrame: at.walking || boneco.walking ? walkFrame(now, boneco.id) : 0,
-        thinking: boneco.thinking,
-      }));
+      const marks = new Map(
+        snapshotRef.current.blocos.map((bloco) => [bloco.id, bloco.mark])
+      );
+      const figures: Figure[] = placed.map(({ boneco, at }) => {
+        const mark = boneco.bloco ? marks.get(boneco.bloco) : undefined;
+        return {
+          id: boneco.id,
+          blocoColor: mark === undefined ? null : blocoColor(mark),
+          name: boneco.name,
+          look: lookOf(boneco),
+          instrument: instrumentOf(boneco.instrument),
+          x: at.x,
+          y: at.y,
+          facing: at.facing,
+          walkFrame:
+            at.walking || boneco.walking ? walkFrame(now, boneco.id) : 0,
+          thinking: boneco.thinking,
+        };
+      });
       paintFrame(ctx, fit, art, ground, figures, now);
 
       for (const balloon of layoutRef.current) {
