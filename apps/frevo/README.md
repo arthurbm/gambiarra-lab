@@ -2,7 +2,7 @@
 
 `@gambiarra-lab/frevo` is the server side of the Bloco de frevo, a 2D square where each person in the audience gets a boneco: a personal agent that thinks with a model of the Room. `@gambiarra-lab/frevo-web` is its web (telão, phone, admin). The spec is issue #10.
 
-What runs today is the walking skeleton: one simulated boneco asks a model participant of the Room where to go, walks there and says its line in a balloon on the telão. With no model it keeps walking on autopilot.
+What runs today: people scan the QR on the telão, get a boneco with a drawn name and look and a model of the Room (spread evenly), and the boneco interviews them on the phone: three tap questions the model writes, one optional open question, then a two-line personality and a frevo instrument. Afterwards, and for the simulated bonecos, a boneco asks a model where to go, walks there and says its line in a balloon. With no model it keeps walking on autopilot and the interview uses fixed questions.
 
 ## Run it
 
@@ -14,7 +14,7 @@ bun run frevo:dev             # hub + world + model host + web, fake models
 bun run frevo:dev -- --real   # same, with models from OpenRouter (spends money)
 ```
 
-The telão is at `http://localhost:3201/telao`. `PORT` (world, 3200), `FREVO_WEB_PORT` (web, 3201) and `FREVO_HUB_PORT` (hub, 3210) move the ports; 0 asks the OS for a free one. `--no-web` skips Vite; the world then serves `apps/frevo-web/dist` when it was built.
+The telão is at `http://localhost:3201/telao` and the phone at `http://localhost:3201/`. The QR on the telão points at `FREVO_PUBLIC_URL`, or at the telão's own address; to scan it from a real phone in development, open the telão by the Network address Vite prints. `PORT` (world, 3200), `FREVO_WEB_PORT` (web, 3201) and `FREVO_HUB_PORT` (hub, 3210) move the ports; 0 asks the OS for a free one. `--no-web` skips Vite; the world then serves `apps/frevo-web/dist` when it was built.
 
 `--real` reads the key from `OPENROUTER_API_KEY`, or from `~/.config/gambiarra-lab/openrouter.key` (`OPENROUTER_API_KEY_FILE` moves it). The key never reaches the hub or the repository.
 
@@ -46,6 +46,7 @@ The world creates the Room, or reuses the one with the same name (`FREVO_ROOM_NA
 | `FREVO_BONECOS` | world | `1` simulated boneco |
 | `FREVO_DECISION_TIMEOUT_MS` | world | `12000` |
 | `FREVO_WEB_DIST` | world | `apps/frevo-web/dist` when built |
+| `FREVO_PUBLIC_URL` | world | none; the QR falls back to the telão's origin |
 | `FREVO_MODEL_HOST_PORT`, `HOST` | model host | a free port, `::`; where `GET /health` answers |
 | `FREVO_MODEL_HOST_MODE` | model host | `openrouter`; `fake` needs no key and no network |
 | `FREVO_MODELS` | model host | `anthropic/claude-haiku-5.5:2` (`model[:participants]`, comma separated) |
@@ -57,10 +58,14 @@ The world creates the Room, or reuses the one with the same name (`FREVO_ROOM_NA
 
 One directory per module under `src/`:
 
-- `sim/`: the world simulation. Pure: no I/O, no real clock, and its only randomness is a seeded generator in the state. `step(world, { elapsedMs, results })` returns the next world and the decisions it waits for; `publicSnapshot(world)` is what the telão may show.
+- `sim/`: the world simulation. Pure: no I/O, no real clock, and its only randomness is a seeded generator in the state. `step(world, { elapsedMs, results, models })` returns the next world and the decisions it waits for; `publicSnapshot(world)` is what the telão may show and `privateView(world, session)` what one phone shows. `join` and `answerHuman` take what people do on their phones.
+  - Phases are declared in order (`PHASES`: `entrada`, `formar`, `compor`, `desfile`, `final`); the world starts at `entrada`.
+  - `ask.ts` is the boneco asking its human something with a countdown (`askMs`, 12 s) and deciding alone, with a notice, when nobody answers. Each use is a `purpose` with a handler in `ASK_HANDLERS` (`world.ts`); the interview is the first, confirming a bloco and voting are next. Typing in an open question pushes the countdown, up to `askTypingCapMs`.
+  - `interview.ts` keeps what the interview knows and its fixed texts (reserve questions, open question, fallback personality, instruments). The free text goes into the personality request and nowhere else.
+  - `blocklist.ts` is the one filter for model text (`filterModelText`): blocked words and letters from other scripts drop the text before it enters the world, so nothing unfiltered reaches the telão.
 - `brains/`: the brain scheduler. One `chat/completions` call per decision, without streaming, with one tool the model must call and the `participantId` as the model selector. It keeps the free/busy table, because the hub serves one request at a time per participant and does not say who answered. An answer without the tool call is repeated once.
 - `model-host/`: the model host and its fake provider, which answers any forced tool with arguments built from the tool's JSON schema. `health.ts` is its only HTTP route, `GET /health`: 200 while the process runs, with how many participants joined.
-- `server/`: HTTP and SSE. `GET /health`, `GET /events/telao`, and the built web for everything else. While no SSE stream is open (telão, phone or admin) the server sends no decision to the scheduler and the bonecos walk on autopilot, so a deploy left up all day spends nothing on models. A new SSE route must call `watch()` to count as a viewer; `GET /health` reports `viewers`.
+- `server/`: HTTP and SSE. `GET /health`, `GET /events/telao`, `POST /api/entrar` (`{ sessao? }` → `{ sessao, boneco, created }`), `POST /api/responder` (`{ sessao, pergunta, opcao | texto | pular | digitando }`; 409 when the question already passed), `GET /events/celular?sessao=…` (the phone's private view), `GET /api/config` (`{ publicUrl }`), and the built web for everything else. While no SSE stream is open (telão, phone or admin) the server sends no decision to the scheduler and the bonecos walk on autopilot, so a deploy left up all day spends nothing on models. A new SSE route must call `watch()` to count as a viewer; `GET /health` reports `viewers`.
 - `gambi/`: the Room by name on the management plane and the call on the inference plane.
 - `testing/`: hub and child processes on free ports for tests, the smoke and `frevo:dev`.
 

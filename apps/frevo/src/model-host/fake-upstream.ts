@@ -32,6 +32,7 @@ export interface FakeUpstreamOptions {
 interface JsonSchema {
   enum?: unknown[];
   items?: JsonSchema;
+  minItems?: number;
   properties?: Record<string, JsonSchema>;
   required?: string[];
   type?: string;
@@ -59,8 +60,14 @@ function valueFor(schema: JsonSchema, seed: number): unknown {
       }
       return value;
     }
-    case "array":
-      return schema.items ? [valueFor(schema.items, seed)] : [];
+    case "array": {
+      const { items } = schema;
+      return items
+        ? Array.from({ length: Math.max(1, schema.minItems ?? 1) }, (_, i) =>
+            valueFor(items, seed + i)
+          )
+        : [];
+    }
     case "number":
     case "integer":
       return seed % 10;

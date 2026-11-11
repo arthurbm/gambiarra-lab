@@ -5,6 +5,7 @@ import {
   type DecisionRequest,
   publicSnapshot,
   step,
+  type WalkRequest,
   type World,
 } from "./world";
 
@@ -59,7 +60,7 @@ describe("a boneco deciding by a brain", () => {
 
     const asked = step(start, { elapsedMs: TICK_MS });
     expect(asked.requests).toHaveLength(1);
-    const [request] = asked.requests as [DecisionRequest];
+    const [request] = asked.requests as [WalkRequest];
     expect(onlyBoneco(asked.world).thinking).toBe(true);
     expect(request.places.map((place) => place.id)).toContain("fonte");
 
@@ -223,15 +224,17 @@ describe("the world over time", () => {
         ok: true,
         action: {
           type: "walk",
-          placeId: request.placeId === "palco" ? "coreto" : "palco",
+          placeId:
+            (request as WalkRequest).placeId === "palco" ? "coreto" : "palco",
           speech: "Simbora",
         },
       })
     );
-    expect(requests.length).toBeGreaterThan(2);
-    expect(requests[0]?.placeId).toBeNull();
-    expect(requests[1]?.placeId).toBe("palco");
-    expect(requests[2]?.placeId).toBe("coreto");
+    const walks = requests as WalkRequest[];
+    expect(walks.length).toBeGreaterThan(2);
+    expect(walks[0]?.placeId).toBeNull();
+    expect(walks[1]?.placeId).toBe("palco");
+    expect(walks[2]?.placeId).toBe("coreto");
     expect(new Set(requests.map((request) => request.id)).size).toBe(
       requests.length
     );

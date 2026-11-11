@@ -62,7 +62,7 @@ export function createBrainScheduler(
   options: BrainSchedulerOptions
 ): BrainScheduler {
   const requestTimeoutMs = options.requestTimeoutMs ?? 12_000;
-  const maxTokens = options.maxTokens ?? 200;
+  const maxTokens = options.maxTokens ?? 400;
   const participants = new Map<string, RoomParticipant>();
   const busy = new Set<string>();
   const queue: Queued[] = [];
@@ -93,7 +93,7 @@ export function createBrainScheduler(
         body,
         signal.signal
       );
-      const action = parseDecision(completion);
+      const action = parseDecision(completion, request);
       if (action) {
         return action;
       }
@@ -103,11 +103,15 @@ export function createBrainScheduler(
 
   function dispatch() {
     while (queue.length > 0) {
-      // The free participant that answered longest ago, so models take turns.
+      // The free participant that answered longest ago, so models take turns;
+      // one of the boneco's own model first, when one is free.
+      const preferred = queue[0]?.request.model;
       const [free] = [...participants.values()]
         .filter((participant) => !busy.has(participant.id))
         .sort(
-          (a, b) => (lastAsked.get(a.id) ?? 0) - (lastAsked.get(b.id) ?? 0)
+          (a, b) =>
+            Number(b.model === preferred) - Number(a.model === preferred) ||
+            (lastAsked.get(a.id) ?? 0) - (lastAsked.get(b.id) ?? 0)
         );
       if (!free) {
         return;
