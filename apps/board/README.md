@@ -11,11 +11,27 @@ bun install
 bun run event
 ```
 
+`GAMBI_HUB_PORT`, `BOARD_PORT` and `BOARD_WEB_PORT` move the three ports; leave
+them alone for an event, because the projector and participants expect
+3000/3001/3002. `bun run board:e2e` adds fake harnesses, a temporary database
+and temporary workspaces, and runs until Ctrl+C.
+
+`bun run board:smoke` is the runtime proof that exits on its own. It starts the
+hub, two model fixtures, the board and the web on ports the OS hands out, then
+checks a hosted harness up to a valid tile with the starter README, a `fake`
+harness joined through `gambi participant join` (starter in the first prompt
+only), and the orchestrator (`models`, `propose`, `swapModel`, and the hub's
+`llm.request` over Open Responses). It prints one line per step, exits 1 at the
+first failure with the children's last log lines, and always stops every
+process it started. `BOARD_SMOKE_VERBOSE=1` streams the children's output;
+`BOARD_SMOKE_KILL=model-b` kills that child after startup to show a failure.
+
 The default admin URL is `http://localhost:3002/admin?token=gambi-local-admin`. Set `BOARD_ADMIN_TOKEN` before an event. The browser stores this token in session storage and removes it from the visible URL. SQLite data lives at `apps/board/data/board.db` by default.
 
 Useful checks:
 
 ```bash
+bun run board:smoke
 bun run --cwd apps/board check-types
 bun test apps/board/src
 bun run --cwd apps/board-web check-types
@@ -94,7 +110,9 @@ stop. Reducing the count fails while one of the removed ordinals is claimed or
 assigned.
 
 Each hosted harness runs in a `gambi-sdk` local directory workspace
-(`~/.gambi/workspaces/<room>/<participant>/`) wrapped by
+(`~/.gambi/workspaces/<room>/<participant>/`, or under `BOARD_GAMBI_HOME`
+when set; `board:e2e` and `board:smoke` point it at their temporary
+directory) wrapped by
 `createCityTileWorkspace()`, which writes the city tile starter (`index.html`,
 `README.md`, `manifest.json`) before the harness starts and never overwrites a
 file that is already there. A `fake` hosted harness runs
