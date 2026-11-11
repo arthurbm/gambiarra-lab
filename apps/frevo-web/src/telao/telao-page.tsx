@@ -1,3 +1,4 @@
+import { EntradaQr } from "./entrada-qr";
 import { ModelsPanel } from "./models-panel";
 import type { StreamStatus } from "./stream";
 import { useTelao } from "./use-telao";
@@ -29,6 +30,7 @@ export function TelaoPage() {
           )}
         </section>
         <aside className="telao-side">
+          {snapshot?.phase === "entrada" ? <EntradaQr /> : null}
           <ModelsPanel rows={snapshot?.models ?? []} />
         </aside>
       </div>

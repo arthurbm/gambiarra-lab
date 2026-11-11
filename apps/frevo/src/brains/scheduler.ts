@@ -155,12 +155,16 @@ export function decisionBody(
 }
 
 /** The action in a completion, when its tool call passes the tool's schema. */
-export function readDecision(completion: unknown, body: ChatCompletionBody) {
+export function readDecision(
+  completion: unknown,
+  body: ChatCompletionBody,
+  request: DecisionRequest
+) {
   const checked = toolArguments(completion, body.tools[0] as FunctionTool);
   if (!checked.ok) {
     return { ok: false as const, reason: checked.reason };
   }
-  const action = parseDecision(completion);
+  const action = parseDecision(completion, request);
   return action
     ? { ok: true as const, action }
     : { ok: false as const, reason: "the action does not fit" };
@@ -304,7 +308,11 @@ export function createBrainScheduler(
       : ({ kind: "refused", status: refused, reason } as const);
   }
 
-  async function call(participant: RoomParticipant, body: ChatCompletionBody) {
+  async function call(
+    participant: RoomParticipant,
+    body: ChatCompletionBody,
+    request: DecisionRequest
+  ) {
     const attempt = metrics.begin(participant.id, participant.model);
     const startedAt = clock.now();
     const abort = new AbortController();
@@ -318,7 +326,7 @@ export function createBrainScheduler(
         body,
         abort.signal
       );
-      const read = readDecision(completion, body);
+      const read = readDecision(completion, body, request);
       const action = read.ok ? read.action : undefined;
       metrics.end(attempt, {
         dispatched: true,
@@ -349,7 +357,7 @@ export function createBrainScheduler(
     let reason = "no answer";
     for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
       // biome-ignore lint/performance/noAwaitInLoops: the repeat only happens after the first answer came back unusable.
-      const outcome = await call(participant, body);
+      const outcome = await call(participant, body, queued.request);
       if (outcome.kind === "decided") {
         finish(queued, {
           requestId: queued.request.id,

@@ -5,6 +5,7 @@ import {
   type DecisionRequest,
   publicSnapshot,
   step,
+  type WalkRequest,
   type World,
 } from "./world";
 
@@ -59,7 +60,7 @@ describe("a boneco deciding by a brain", () => {
 
     const asked = step(start, { elapsedMs: TICK_MS });
     expect(asked.requests).toHaveLength(1);
-    const [request] = asked.requests as [DecisionRequest];
+    const [request] = asked.requests as [WalkRequest];
     expect(onlyBoneco(asked.world).thinking).toBe(true);
     expect(request.places.map((place) => place.id)).toContain("fonte");
 
@@ -223,15 +224,17 @@ describe("the world over time", () => {
         ok: true,
         action: {
           type: "walk",
-          placeId: request.placeId === "palco" ? "coreto" : "palco",
+          placeId:
+            (request as WalkRequest).placeId === "palco" ? "coreto" : "palco",
           speech: "Simbora",
         },
       })
     );
-    expect(requests.length).toBeGreaterThan(2);
-    expect(requests[0]?.placeId).toBeNull();
-    expect(requests[1]?.placeId).toBe("palco");
-    expect(requests[2]?.placeId).toBe("coreto");
+    const walks = requests as WalkRequest[];
+    expect(walks.length).toBeGreaterThan(2);
+    expect(walks[0]?.placeId).toBeNull();
+    expect(walks[1]?.placeId).toBe("palco");
+    expect(walks[2]?.placeId).toBe("coreto");
     expect(new Set(requests.map((request) => request.id)).size).toBe(
       requests.length
     );
@@ -268,31 +271,25 @@ describe("the world over time", () => {
 });
 
 describe("the model a boneco thinks with", () => {
-  test("is given in turns to the simulated bonecos and asked for in each decision", () => {
-    const world = createWorld({
-      seed: 3,
-      bonecos: 3,
-      models: ["modelo-a", "modelo-b"],
-    });
-    const { requests } = step(world, { elapsedMs: TICK_MS });
-    expect(requests.map((request) => request.model)).toEqual([
-      "modelo-a",
-      "modelo-b",
-      "modelo-a",
-    ]);
-    expect(
-      publicSnapshot(world).bonecos.map((boneco) => boneco.assignedModel)
-    ).toEqual(["modelo-a", "modelo-b", "modelo-a"]);
-  });
-
   test("shows which model answered next to the one the boneco was given", () => {
-    const start = createWorld({ seed: 3, bonecos: 1, models: ["modelo-a"] });
-    const answered = run(start, 300, (request) => ({
-      requestId: request.id,
-      ok: true,
-      action: { type: "walk", placeId: "fonte", speech: "Bora" },
-      model: "modelo-b",
-    }));
+    // The Room has one model: the boneco is given it, and asks for it.
+    const asked = step(createWorld({ seed: 3, bonecos: 1 }), {
+      elapsedMs: TICK_MS,
+      models: ["modelo-a"],
+    });
+    const [request] = asked.requests;
+    expect(request?.model).toBe("modelo-a");
+    const answered = step(asked.world, {
+      elapsedMs: TICK_MS,
+      results: [
+        {
+          requestId: request?.id as string,
+          ok: true,
+          action: { type: "walk", placeId: "fonte", speech: "Bora" },
+          model: "modelo-b",
+        },
+      ],
+    });
     expect(onlyBoneco(answered.world)).toMatchObject({
       assignedModel: "modelo-a",
       model: "modelo-b",
@@ -303,7 +300,8 @@ describe("the model a boneco thinks with", () => {
   test("tells for how long a boneco has been thinking", () => {
     const start = createWorld({ seed: 3, bonecos: 1 });
     expect(onlyBoneco(start).thinkingForMs).toBeNull();
-    const waiting = run(start, 1000).world;
+    const asked = step(start, { elapsedMs: TICK_MS }).world;
+    const waiting = run(asked, 900).world;
     expect(onlyBoneco(waiting)).toMatchObject({
       thinking: true,
       thinkingForMs: 900,

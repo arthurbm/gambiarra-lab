@@ -85,11 +85,10 @@ describe("the model host in a Room", () => {
     const result = await decideThroughTheRoom("boneco-1#1");
 
     expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
+    if (!result.ok || result.action.type !== "walk") {
+      throw new Error("expected a walk decided by the model");
     }
     expect(result.model).toBe("fake-frevo");
-    expect(result.action.type).toBe("walk");
     expect(PLACE_IDS).toContain(result.action.placeId);
     expect(result.action.speech.length).toBeGreaterThan(0);
   });

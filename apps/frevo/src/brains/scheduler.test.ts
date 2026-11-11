@@ -421,3 +421,95 @@ describe("the brain scheduler", () => {
     ]);
   });
 });
+
+describe("the brain scheduler during the interview", () => {
+  const base = {
+    boneco: { id: "boneco-1", name: "Biu" },
+    deadlineMs: 8000,
+    model: "modelo-a",
+  };
+
+  test("asks the model for a tap question with two or three choices", async () => {
+    const r = room([A1]);
+    r.scheduler.submit({
+      ...base,
+      id: "boneco-1#1",
+      kind: "question",
+      index: 0,
+      total: 3,
+      previous: [],
+    });
+    await r.flush();
+    const sent = r.calls[0]?.body as ChatCompletionBody;
+    await r.answer(
+      "frevo-a-1",
+      toolCall(sent, {
+        pergunta: "Cuscuz ou tapioca?",
+        opcoes: ["Cuscuz", "Tapioca"],
+      })
+    );
+    expect(r.results()).toMatchObject([
+      {
+        ok: true,
+        action: {
+          type: "question",
+          question: "Cuscuz ou tapioca?",
+          options: ["Cuscuz", "Tapioca"],
+        },
+      },
+    ]);
+    expect(JSON.stringify(sent.messages)).toContain("Recife");
+  });
+
+  test("asks for the personality with the free text, and the instrument", async () => {
+    const r = room([A1]);
+    r.scheduler.submit({
+      ...base,
+      id: "boneco-1#4",
+      kind: "personality",
+      answers: [{ question: "Cuscuz ou tapioca?", answer: "Cuscuz" }],
+      freeText: "toco zabumba",
+      instruments: ["tuba", "surdo"],
+    });
+    await r.flush();
+    const sent = r.calls[0]?.body as ChatCompletionBody;
+    await r.answer(
+      "frevo-a-1",
+      toolCall(sent, {
+        resumo: "Linha um.\nLinha dois.",
+        instrumento: "tuba",
+        fala: "Achei meu som!",
+      })
+    );
+    expect(r.results()).toMatchObject([
+      {
+        ok: true,
+        action: {
+          type: "personality",
+          summary: "Linha um.\nLinha dois.",
+          instrument: "tuba",
+          speech: "Achei meu som!",
+        },
+      },
+    ]);
+    expect(JSON.stringify(sent.messages)).toContain("toco zabumba");
+  });
+
+  test("repeats when the model answers a question without choices", async () => {
+    const r = room([A1]);
+    r.scheduler.submit({
+      ...base,
+      id: "boneco-1#1",
+      kind: "question",
+      index: 0,
+      total: 3,
+      previous: [],
+    });
+    await r.flush();
+    const sent = r.calls[0]?.body as ChatCompletionBody;
+    await r.answer("frevo-a-1", toolCall(sent, { pergunta: "Frevo?" }));
+    await r.answer("frevo-a-1", toolCall(sent, { pergunta: "Frevo?" }));
+    expect(r.asked()).toEqual(["frevo-a-1", "frevo-a-1"]);
+    expect(r.results()).toMatchObject([{ ok: false }]);
+  });
+});

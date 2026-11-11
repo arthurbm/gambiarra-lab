@@ -1,13 +1,11 @@
 #!/usr/bin/env bun
 // The world server as a process. PORT, HOST, GAMBI_HUB_URL, FREVO_ROOM_NAME,
-// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_WEB_DIST, FREVO_ADMIN_SECRET,
-// FREVO_BUDGET_USD and FREVO_MODELS (with FREVO_MODEL_HOST_MODE, for the
-// models the simulated bonecos are given) configure it.
+// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL, FREVO_WEB_DIST,
+// FREVO_ADMIN_SECRET and FREVO_BUDGET_USD configure it.
 import { randomBytes } from "node:crypto";
 import { exists } from "node:fs/promises";
 import { resolve } from "node:path";
 import { DEFAULT_HUB_URL, DEFAULT_ROOM_NAME } from "../model-host/config";
-import { modelSpecs } from "../models/catalog";
 import { DEFAULT_RULES } from "../sim/world";
 import { startWorldServer } from "./app";
 
@@ -54,7 +52,7 @@ const server = startWorldServer({
   webDist,
   adminSecret,
   ceilingUsd,
-  models: modelSpecs(process.env).map((spec) => spec.model),
+  publicUrl: process.env.FREVO_PUBLIC_URL?.trim() || undefined,
   log: (line) => console.log(line),
 });
 

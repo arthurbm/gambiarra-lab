@@ -88,6 +88,61 @@ a {
   background: #3bceac;
 }
 
+/* The stage on the left, a side column for panels on the right. */
+.telao-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.telao-side {
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+  min-height: 0;
+  padding: 0.8rem 0.8rem 0.8rem 0;
+}
+
+.telao-side:empty {
+  display: none;
+}
+
+.entrada-qr {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  width: clamp(11rem, 18vw, 20rem);
+  padding: 0.8rem;
+  text-align: center;
+  background: var(--night-soft);
+  border-radius: 12px;
+}
+
+.entrada-qr h2 {
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.6rem);
+  color: var(--yellow);
+}
+
+.entrada-qr-code {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.entrada-qr-url {
+  margin: 0;
+  font-size: clamp(0.8rem, 1.1vw, 1.1rem);
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.entrada-qr-hint {
+  margin: 0;
+  font-size: clamp(0.7rem, 0.95vw, 1rem);
+  opacity: 0.85;
+}
+
 .telao-stage {
   display: grid;
   place-items: center;
@@ -249,21 +304,10 @@ a {
   }
 }
 
-/* Stage on the left, side column on the right (the telão ticket owns the
-   final layout). */
-.telao-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(14rem, 22vw, 24rem);
-  min-height: 0;
-}
-
-.telao-side {
-  min-height: 0;
-  padding: 0.8rem 0.8rem 0.8rem 0;
-  overflow: hidden;
-}
-
+/* The models panel, in the telão's side column. */
 .models-panel {
+  box-sizing: border-box;
+  width: clamp(14rem, 22vw, 24rem);
   padding: 0.8rem;
   font-size: clamp(0.7rem, 1vw, 1rem);
   background: var(--night-soft);
@@ -340,4 +384,211 @@ a {
   color: var(--ink);
   background: var(--yellow);
   border-radius: 0.4rem;
+}
+
+/* The phone: one column, big targets, readable outdoors. */
+.celular {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  max-width: 32rem;
+  min-height: 100%;
+  padding: 1rem 1rem 2rem;
+  margin: 0 auto;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+.celular-waiting {
+  align-content: center;
+  text-align: center;
+}
+
+.celular h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--yellow);
+}
+
+.celular h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  color: var(--yellow);
+}
+
+.celular-header {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.celular-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--ink);
+  border: 3px solid var(--paper);
+  border-radius: 45% 45% 35% 35%;
+}
+
+.celular-model {
+  margin: 0.1rem 0 0;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.celular-offline {
+  padding: 0.2rem 0.6rem;
+  margin-left: auto;
+  font-size: 0.8rem;
+  background: var(--red);
+  border-radius: 999px;
+}
+
+.celular-progress,
+.celular-thinking,
+.celular-footer {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.celular-question {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 14px;
+}
+
+.celular-question-text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.celular-options {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.celular button {
+  min-height: 3rem;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+}
+
+.celular button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.celular .celular-skip {
+  background: transparent;
+}
+
+.celular-open {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.celular-open textarea {
+  width: 100%;
+  padding: 0.6rem;
+  font: inherit;
+  color: var(--ink);
+  resize: none;
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+}
+
+.celular-open-count {
+  justify-self: end;
+  font-size: 0.8rem;
+}
+
+.celular-open-actions {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.6rem;
+}
+
+.celular-countdown {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.celular-countdown-bar {
+  height: 0.5rem;
+  overflow: hidden;
+  background: rgb(27 16 53 / 15%);
+  border-radius: 999px;
+}
+
+.celular-countdown-bar span {
+  display: block;
+  height: 100%;
+  background: var(--red);
+  transition: width 250ms linear;
+}
+
+.celular-personality {
+  padding: 0.8rem 1rem;
+  background: var(--night-soft);
+  border-radius: 14px;
+}
+
+.celular-personality p {
+  margin: 0;
+}
+
+.celular-instrument {
+  margin-top: 0.5rem !important;
+}
+
+.celular-thoughts ol {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.celular-thoughts li {
+  padding: 0.5rem 0.8rem;
+  background: var(--night-soft);
+  border-left: 4px solid var(--yellow);
+  border-radius: 8px;
+}
+
+.celular-thoughts li[data-tone="aviso"] {
+  border-left-color: var(--red);
+}
+
+.celular-thoughts p {
+  margin: 0;
+}
+
+.celular-thoughts small {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.celular-model-other {
+  margin: 0.2rem 0 0;
+  font-size: 0.9em;
+  color: var(--yellow);
 }
