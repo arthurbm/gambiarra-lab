@@ -244,3 +244,61 @@ export function previousBloco(world: World): World {
   const current = currentIndex(world);
   return current === null ? world : putOnStage(world, current - 1);
 }
+
+/** Marks or unmarks a bloco as chosen; refuses a fourth one. */
+export function setChosen(
+  world: World,
+  blocoId: string,
+  chosen: boolean
+): { error?: string; world: World } {
+  if (!(world.desfile && (world.phase === "desfile" || world.phase === "final"))) {
+    return { world, error: "O júri só escolhe no desfile e no final." };
+  }
+  if (!parade(world).some((bloco) => bloco.id === blocoId)) {
+    return { world, error: "Bloco não encontrado." };
+  }
+  const current = chosenOf(world);
+  if (chosen === current.includes(blocoId)) {
+    return { world };
+  }
+  if (chosen && current.length >= MAX_CHOSEN) {
+    return { world, error: `Já há ${MAX_CHOSEN} blocos escolhidos.` };
+  }
+  const next = chosen
+    ? [...current, blocoId]
+    : current.filter((id) => id !== blocoId);
+  const bloco = parade(world).find((other) => other.id === blocoId) as Bloco;
+  return {
+    world: logEvent(
+      { ...world, desfile: { ...world.desfile, chosen: next } },
+      chosen
+        ? `O júri escolheu ${blocoName(bloco)}!`
+        : `O júri desmarcou ${blocoName(bloco)}.`
+    ),
+  };
+}
+
+// --- The phone -------------------------------------------------------------
+
+export function phoneDesfile(
+  world: World,
+  bonecoId: string
+): PhoneDesfile | null {
+  const view = desfileView(world);
+  const index =
+    view?.blocos.findIndex((bloco) =>
+      bloco.members.some((member) => member.id === bonecoId)
+    ) ?? -1;
+  const bloco = view?.blocos[index];
+  if (!(view && bloco)) {
+    return null;
+  }
+  return {
+    phase: view.phase,
+    name: bloco.name,
+    refrain: bloco.refrain,
+    onStage: view.current === index,
+    chosen: bloco.chosen,
+    placement: bloco.placement,
+  };
+}

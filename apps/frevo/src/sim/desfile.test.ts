@@ -3,8 +3,11 @@ import { expel } from "./admin";
 import {
   DEFAULT_REFRAIN,
   desfileView,
+  MAX_CHOSEN,
   nextBloco,
+  phoneDesfile,
   previousBloco,
+  setChosen,
 } from "./desfile";
 import {
   advancePhase,
@@ -163,5 +166,117 @@ describe("the desfile", () => {
       "bloco-1",
       "bloco-2",
     ]);
+  });
+});
+
+describe("the jury", () => {
+  test("the host marks up to three blocos, and the order of marking is the placement", () => {
+    let world = paraded([3, 3, 3, 3]);
+    for (const id of ["bloco-3", "bloco-1", "bloco-4"]) {
+      const marked = setChosen(world, id, true);
+      expect(marked.error).toBeUndefined();
+      world = marked.world;
+    }
+    const refused = setChosen(world, "bloco-2", true);
+    expect(refused.error).toBe(`Já há ${MAX_CHOSEN} blocos escolhidos.`);
+    expect(refused.world).toBe(world);
+    const view = desfileView(world);
+    expect(view?.chosen).toEqual(["bloco-3", "bloco-1", "bloco-4"]);
+    expect(view?.blocos.map((bloco) => bloco.placement)).toEqual([
+      2,
+      null,
+      1,
+      3,
+    ]);
+  });
+
+  test("unmarking frees a place, and marking twice changes nothing", () => {
+    let world = paraded([3, 3, 3, 3]);
+    for (const id of ["bloco-1", "bloco-2", "bloco-2", "bloco-3"]) {
+      world = setChosen(world, id, true).world;
+    }
+    world = setChosen(world, "bloco-1", false).world;
+    const marked = setChosen(world, "bloco-4", true);
+    expect(marked.error).toBeUndefined();
+    expect(desfileView(marked.world)?.chosen).toEqual([
+      "bloco-2",
+      "bloco-3",
+      "bloco-4",
+    ]);
+  });
+
+  test("the host may still mark in the final, but not before the desfile or an unknown bloco", () => {
+    expect(setChosen(composed([3]), "bloco-1", true).error).toBe(
+      "O júri só escolhe no desfile e no final."
+    );
+    expect(setChosen(paraded([3]), "bloco-9", true).error).toBe(
+      "Bloco não encontrado."
+    );
+    const final = advancePhase(paraded([3, 3]));
+    expect(desfileView(setChosen(final, "bloco-2", true).world)?.chosen).toEqual(
+      ["bloco-2"]
+    );
+  });
+
+  test("the final announces the chosen blocos", () => {
+    let world = setChosen(paraded([3, 3]), "bloco-2", true).world;
+    world = advancePhase(world);
+    expect(world.events.at(-1)?.text).toBe(
+      "Fim do desfile! Escolhidos do júri: Bloco 2."
+    );
+  });
+
+  test("a bloco emptied by the host leaves the parade and the choices", () => {
+    let world = setChosen(paraded([1, 3]), "bloco-1", true).world;
+    world = expel(world, "boneco-1").world;
+    const view = desfileView(world);
+    expect(view?.blocos.map((bloco) => bloco.id)).toEqual(["bloco-2"]);
+    expect(view?.chosen).toEqual([]);
+  });
+
+  test("restarting forgets the desfile and the choices", () => {
+    let world = setChosen(paraded([3, 3]), "bloco-1", true).world;
+    world = restartWorld(advancePhase(world));
+    expect(world.phase).toBe("entrada");
+    expect(world.desfile).toBeNull();
+    expect(desfileView(world)).toBeNull();
+  });
+});
+
+describe("the phone in the desfile", () => {
+  test("shows the refrain of its own bloco and whether it is on stage", () => {
+    const world = paraded([3, 3]);
+    expect(phoneDesfile(world, "boneco-1")).toEqual({
+      phase: "desfile",
+      name: "Sombrinha Elétrica",
+      refrain: ["Lá vem a sombrinha", "Girando no ar"],
+      onStage: true,
+      chosen: false,
+      placement: null,
+    });
+    expect(phoneDesfile(world, "boneco-4")).toMatchObject({
+      name: "Bloco 2",
+      onStage: false,
+    });
+  });
+
+  test("in the final, shows whether its bloco was chosen", () => {
+    let world = setChosen(paraded([3, 3]), "bloco-2", true).world;
+    world = advancePhase(world);
+    expect(phoneDesfile(world, "boneco-4")).toMatchObject({
+      phase: "final",
+      chosen: true,
+      placement: 1,
+      onStage: false,
+    });
+    expect(phoneDesfile(world, "boneco-1")).toMatchObject({
+      chosen: false,
+      placement: null,
+    });
+  });
+
+  test("shows nothing before the desfile or to a boneco without a bloco", () => {
+    expect(phoneDesfile(composed([3]), "boneco-1")).toBeNull();
+    expect(phoneDesfile(paraded([3]), "boneco-9")).toBeNull();
   });
 });
