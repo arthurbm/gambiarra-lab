@@ -190,7 +190,7 @@ railway logs --service mundo --build --lines 200 | grep -A1 -i healthcheck
 curl -s https://<mundo domain>/health    # room, participants, bonecos, viewers
 ```
 
-Every service follows `main` on GitHub (`source` in `.railway/railway.ts`): a push to `main` that touches a service's `watchPatterns` redeploys it; the hub rebuilds only when its own Dockerfile or `bun.lock` change. `railway up` above stays as the manual deploy. A redeploy of `mundo` drops the dynamic in memory and one of `hub` wipes the Rooms, so before a show do not merge to `main`, or detach the source and connect it again afterwards:
+Every service has `main` on GitHub as its source (`source` in `.railway/railway.ts`), with `watchPatterns` per service; the hub rebuilds only when its own Dockerfile or `bun.lock` change. Deploy on push is not confirmed: connecting the source on 2026-11-11 deployed commit `68eafb2` from GitHub, but the next merge to `main` (`03091ac`, which touched `apps/frevo/**`) had produced no deployment thirty minutes later. Until a push is seen to redeploy, check the commit that is live with `railway deployment list --service mundo --json` and deploy by hand with `railway up` above. Treat a merge as if it could redeploy anyway: a redeploy of `mundo` drops the dynamic in memory and one of `hub` wipes the Rooms, so before a show do not merge to `main`, or detach the source and connect it again afterwards:
 
 ```bash
 for s in hub modelos mundo; do railway service source disconnect --service "$s"; done

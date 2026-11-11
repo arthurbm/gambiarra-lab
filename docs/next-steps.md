@@ -23,3 +23,9 @@ A segunda experiência é uma arena reconstruída sobre o Gambi, usando o Gambia
 ## Board: teste instável sem reprodução
 
 `apps/board/src/__tests__/recovery.test.ts`, "recovers configuration, membership, phase, and audit events after restart", falhou uma vez em 2026-11-11 sem mudança de código; a saída daquela falha não foi guardada. Em 2026-11-11 o arquivo rodou sozinho 15 vezes em série (`bun test apps/board/src/__tests__/recovery.test.ts`) e passou nas 15. Cada um dos três testes leva cerca de 1 s (medido pelo relatório junit), e o arquivo inteiro de 3,3 s a 7,0 s conforme a carga da máquina, perto do limite padrão de 5 s por teste do `bun test`. A hipótese mais provável, não confirmada, é esse limite estourado com a máquina sobrecarregada por baterias paralelas de outros worktrees, o que a trava de `scripts/heavy.ts` agora evita. Se voltar a falhar, guarde a mensagem: um `timed out after 5000ms` confirma a hipótese (o remédio é um limite explícito no teste); uma asserção diferente (`events` com tamanho errado, `revision`) aponta para estado e pede outra investigação.
+
+## Bloco de frevo: visto depois do merge de 2026-11-11
+
+- `scripts/frevo-real-check.ts` tem dois erros de tipo que ninguém vê: o `check-types` não cobre `scripts/`. Corrigir os erros e pôr `scripts/` na checagem de tipos.
+- A Railway não redeployou sozinha no merge do PR #23; ver `docs/bloco-de-frevo/onde-esta-cada-coisa.md`, seção "Deploys".
+- `scripts/heavy.ts` e `frevo:stop` não foram testados num Mac.
