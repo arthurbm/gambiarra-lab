@@ -180,6 +180,11 @@ interface RequestBase {
 
 /** Where to walk next. */
 export interface WalkRequest extends RequestBase {
+  /**
+   * Bonecos without a bloco at or walking to each place, by place id, not
+   * counting the one asking, so the model can avoid the crowded ones.
+   */
+  crowd?: Record<string, number>;
   kind?: "walk";
   /** The place the boneco is standing at, when it is at one. */
   placeId: string | null;
@@ -851,10 +856,37 @@ function applyWalk(
   return text ? think(next, world, text, model ?? null, "fala") : next;
 }
 
-/** The rule a boneco follows when no brain decides: walk somewhere else. */
+/**
+ * Bonecos without a bloco at or walking to each place, other than `self`: the
+ * ones a boneco could still meet there. A boneco in a bloco is out of the
+ * meetings, so it does not count.
+ */
+function crowdOf(world: World, self: Boneco): Record<string, number> {
+  const crowd: Record<string, number> = Object.fromEntries(
+    world.map.places.map((place) => [place.id, 0])
+  );
+  for (const boneco of world.bonecos) {
+    if (boneco.id === self.id || boneco.blocoId !== null) {
+      continue;
+    }
+    const place = boneco.target ?? placeAt(world, boneco);
+    if (place && place.id in crowd) {
+      crowd[place.id] = (crowd[place.id] ?? 0) + 1;
+    }
+  }
+  return crowd;
+}
+
+/**
+ * The rule a boneco follows when no brain decides: walk somewhere else, to one
+ * of the least crowded places, so the square does not pile up in one spot.
+ */
 function autopilot(boneco: Boneco, world: World): Boneco {
   const here = placeAt(world, boneco);
-  const elsewhere = world.map.places.filter((place) => place !== here);
+  const crowd = crowdOf(world, boneco);
+  const others = world.map.places.filter((place) => place !== here);
+  const fewest = Math.min(...others.map((place) => crowd[place.id] ?? 0));
+  const elsewhere = others.filter((place) => (crowd[place.id] ?? 0) === fewest);
   return {
     ...boneco,
     target: elsewhere[Math.floor(roll(world) * elsewhere.length)] ?? null,
@@ -1185,6 +1217,7 @@ function walkRequest(boneco: Boneco, world: World): WalkRequest {
     model: boneco.assignedModel,
     placeId: placeAt(world, boneco)?.id ?? null,
     places: world.map.places,
+    crowd: crowdOf(world, boneco),
   };
 }
 

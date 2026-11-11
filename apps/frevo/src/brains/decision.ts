@@ -270,10 +270,25 @@ function persona(name: string): string {
   ].join(" ");
 }
 
+/** How many bonecos without a bloco are at a place, in words. */
+function peopleThere(count: number): string {
+  if (count === 0) {
+    return "ninguém sem bloco";
+  }
+  return count === 1 ? "1 boneco sem bloco" : `${count} bonecos sem bloco`;
+}
+
 function walkMessages(request: WalkRequest): ChatMessage[] {
   const here = request.places.find((place) => place.id === request.placeId);
+  const { crowd } = request;
   const places = request.places
-    .map((place) => `- ${place.id}: ${place.name}`)
+    .map((place) => {
+      const count = crowd?.[place.id];
+      if (count === undefined) {
+        return `- ${place.id}: ${place.name}`;
+      }
+      return `- ${place.id}: ${place.name} (${peopleThere(count)})`;
+    })
     .join("\n");
   return [
     { role: "system", content: persona(request.boneco.name) },
@@ -284,6 +299,11 @@ function walkMessages(request: WalkRequest): ChatMessage[] {
         "Lugares da praça:",
         places,
         "Escolha um lugar diferente de onde você está e diga por que vai.",
+        ...(crowd
+          ? [
+              "Prefira um lugar com menos gente sem bloco: a praça fica espalhada e todo mundo tem com quem cruzar.",
+            ]
+          : []),
       ].join("\n"),
     },
   ];
