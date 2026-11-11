@@ -10,6 +10,7 @@ import { BonecoSprite } from "../art/boneco-sprite";
 import { CREDITS } from "../art/credits";
 import { clockText } from "../phase/phase-text";
 import { blocoColor } from "./bloco-mark";
+import { nameSizeVw, refrainSizeVw } from "./desfile-sizes";
 import { panelEntries } from "./models-panel-rows";
 import "./desfile.css";
 
@@ -35,7 +36,16 @@ function BlocoOnStage({
   heading: string;
 }) {
   return (
-    <article className="desfile-card" style={colorOf(bloco)}>
+    <article
+      className="desfile-card"
+      style={
+        {
+          ...colorOf(bloco),
+          "--name-size": `${nameSizeVw(bloco.name)}vw`,
+          "--refrain-size": `${refrainSizeVw(bloco.refrain)}vw`,
+        } as CSSProperties
+      }
+    >
       <p className="desfile-heading">
         {heading}
         {bloco.chosen ? (
@@ -68,6 +78,30 @@ function BlocoOnStage({
   );
 }
 
+/**
+ * Sprites are drawn in whole pixels while the final is sized in vh: a full HD
+ * telão gets one step bigger, so both resolutions keep the same proportions.
+ */
+function finalSpriteScale(chosen: boolean): number {
+  const tall = typeof window !== "undefined" && window.innerHeight >= 1000;
+  return (chosen ? 3 : 2) + (tall ? 1 : 0);
+}
+
+/**
+ * Up to seven blocos besides the chosen ones go in one row (ten blocos, three
+ * chosen); more go in two rows of five, which fit because fewer chosen ones
+ * are wider and their refrains wrap less.
+ */
+const OTHERS_IN_ONE_ROW = 7;
+const OTHERS_MIN_COLUMNS = 4;
+const OTHERS_TWO_ROW_COLUMNS = 5;
+
+function othersColumns(count: number): number {
+  return count > OTHERS_IN_ONE_ROW
+    ? OTHERS_TWO_ROW_COLUMNS
+    : Math.max(OTHERS_MIN_COLUMNS, count);
+}
+
 function FinalBloco({ bloco }: { bloco: DesfileBloco }) {
   return (
     <li
@@ -95,7 +129,7 @@ function FinalBloco({ bloco }: { bloco: DesfileBloco }) {
             <BonecoSprite
               instrument={member.instrument}
               look={member.look}
-              scale={bloco.chosen ? 4 : 3}
+              scale={finalSpriteScale(bloco.chosen)}
             />
             <span>{member.name}</span>
           </li>
@@ -132,14 +166,24 @@ function FinalScreen({
         </p>
       </header>
       {chosen.length > 0 ? (
-        <ol className="final-chosen">
+        <ol
+          className="final-chosen"
+          style={{ "--columns": chosen.length } as CSSProperties}
+        >
           {chosen.map((bloco) => (
             <FinalBloco bloco={bloco} key={bloco.id} />
           ))}
         </ol>
       ) : null}
       {others.length > 0 ? (
-        <ul className="final-others">
+        <ul
+          className="final-others"
+          style={
+            {
+              "--columns": othersColumns(others.length),
+            } as CSSProperties
+          }
+        >
           {others.map((bloco) => (
             <FinalBloco bloco={bloco} key={bloco.id} />
           ))}
@@ -187,7 +231,7 @@ export function DesfileStage({
   }
   if (desfile.phase === "final") {
     return (
-      <div className="desfile">
+      <div className="desfile desfile-final">
         <FinalScreen desfile={desfile} models={models} />
       </div>
     );
