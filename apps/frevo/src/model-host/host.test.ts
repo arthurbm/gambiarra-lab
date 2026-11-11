@@ -135,7 +135,7 @@ describe("the model host in a Room", () => {
       tools: [tool],
       tool_choice: { type: "function", function: { name: "agir" } },
       reasoning: { effort: "minimal" },
-    } as ChatCompletionBody;
+    } as unknown as ChatCompletionBody;
 
     received.length = 0;
     const completion = (await infer(

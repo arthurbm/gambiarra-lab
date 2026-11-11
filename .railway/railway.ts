@@ -78,7 +78,8 @@ export default defineRailway(() => {
       FREVO_ROOM_NAME: ROOM_NAME,
       FREVO_MODEL_HOST_PORT: MODELOS_PORT,
       PORT: MODELOS_PORT,
-      FREVO_MODELS: "anthropic/claude-haiku-5.5:2",
+      // FREVO_MODELS is left out: the default is the twelve participants of
+      // apps/frevo/src/models/catalog.ts, five models.
       // Set from the local file by the CLI. The only service with this key.
       OPENROUTER_API_KEY: preserve(),
     },
@@ -99,6 +100,8 @@ export default defineRailway(() => {
       // this file; the reference resolves to it.
       // biome-ignore lint/suspicious/noTemplateCurlyInString: Railway's reference syntax, not a JS template.
       FREVO_PUBLIC_URL: "https://${{RAILWAY_PUBLIC_DOMAIN}}",
+      // Estimated session spending that puts every boneco on autopilot.
+      FREVO_BUDGET_USD: "1",
       FREVO_ADMIN_SECRET: preserve(),
       FAL_KEY: preserve(),
     },

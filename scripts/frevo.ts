@@ -103,6 +103,8 @@ export async function startFrevo(options: FrevoOptions): Promise<RunningFrevo> {
     ...options.env,
     GAMBI_HUB_URL: hubUrl,
     FREVO_ROOM_NAME: options.roomName,
+    // The world reads it too, to give the simulated bonecos the same models.
+    FREVO_MODEL_HOST_MODE: options.real ? "openrouter" : "fake",
   };
 
   async function stop() {
@@ -140,10 +142,7 @@ export async function startFrevo(options: FrevoOptions): Promise<RunningFrevo> {
         spawnProcess({
           command: ["bun", "run", "apps/frevo/src/model-host/index.ts"],
           cwd: ROOT,
-          env: {
-            ...shared,
-            FREVO_MODEL_HOST_MODE: options.real ? "openrouter" : "fake",
-          },
+          env: shared,
           onLine: (line, error) => options.onLine("models", line, error),
           readyWhen: (line) => line.includes('"type":"joined"'),
         })

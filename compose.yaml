@@ -69,6 +69,7 @@ services:
       FREVO_ROOM_NAME: bloco-de-frevo
       PORT: "3001"
       FREVO_BONECOS: ${FREVO_BONECOS:-1}
+      FREVO_BUDGET_USD: ${FREVO_BUDGET_USD:-1}
       # The address in the QR. On stage without the cloud: the notebook's IP.
       FREVO_PUBLIC_URL: ${FREVO_PUBLIC_URL:-http://localhost:3001}
       FREVO_ADMIN_SECRET_FILE: /run/secrets/admin_secret

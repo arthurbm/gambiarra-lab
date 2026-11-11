@@ -1,13 +1,19 @@
 // The world server: runs the simulation on a fixed clock, asks the Room's
 // models for the bonecos' decisions and publishes the world over SSE. It also
 // serves the built web, so the experience is one public service.
+
+import { timingSafeEqual } from "node:crypto";
 import { resolve, sep } from "node:path";
+import { createModelMetrics } from "../brains/metrics";
 import { createBrainScheduler } from "../brains/scheduler";
 import {
   ensureRoom,
   listModelParticipants,
   roomInference,
 } from "../gambi/room";
+import { watchRoomLlmEvents } from "../gambi/room-events";
+import { modelEntry, modelLabel } from "../models/catalog";
+import { modelPanelRows } from "../models/panel";
 import {
   answerHuman,
   type BrainResult,
@@ -22,8 +28,14 @@ import {
 } from "../sim/world";
 
 export interface WorldServerOptions {
+  /** `Authorization: Bearer <secret>` opens /api/admin/*; without it they stay closed. */
+  adminSecret?: string;
   /** Simulated bonecos in the square. */
   bonecos?: number;
+  /** Estimated session spending after which every boneco goes on autopilot. */
+  ceilingUsd?: number;
+  /** How long a decision waits for its boneco's model before any model takes it. */
+  fallbackMs?: number;
   host?: string;
   hubUrl: string;
   log?: (line: string) => void;
@@ -111,10 +123,45 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   let models: string[] = [];
   let stopped = false;
 
+  const metrics = createModelMetrics({
+    price: (model) => modelEntry(model).price,
+  });
   const scheduler = createBrainScheduler({
     infer: roomInference(options.hubUrl, () => roomCode ?? ""),
     requestTimeoutMs: rules.decisionTimeoutMs,
+    ceilingUsd: options.ceilingUsd ?? 1,
+    fallbackMs: options.fallbackMs,
+    metrics,
   });
+  // The panel's numbers come from the Room's inference events.
+  const roomEvents = watchRoomLlmEvents({
+    hubUrl: options.hubUrl,
+    roomCode: () => roomCode,
+    onEvent: metrics.observe,
+    onOpen: metrics.streamOpened,
+  });
+  let warnedCeiling = false;
+
+  function modelRows() {
+    return modelPanelRows({
+      available: scheduler.models(),
+      stats: metrics.stats(),
+    });
+  }
+
+  function telaoSnapshot() {
+    const budget = scheduler.budget();
+    if (budget.exceeded && !warnedCeiling) {
+      log(
+        `Spending ceiling reached (US$ ${budget.spentUsd.toFixed(4)} of ${budget.ceilingUsd}): every boneco is on autopilot`
+      );
+    }
+    warnedCeiling = budget.exceeded;
+    return {
+      ...publicSnapshot(world),
+      models: modelRows().map(({ fromEvents: _, ...row }) => row),
+    };
+  }
 
   // The Room: created or reused by name, and looked up again whenever the hub
   // stops knowing it, which is what a hub restart looks like from here.
@@ -135,8 +182,12 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         log(`${participants.length} model participant(s) in the Room`);
       }
       participantCount = participants.length;
-      models = [...new Set(participants.map((item) => item.model))];
       scheduler.setParticipants(participants);
+      // New bonecos are spread over the models that are switched on.
+      models = scheduler
+        .models()
+        .filter((entry) => entry.enabled)
+        .map((entry) => entry.model);
     } catch (error) {
       if (roomCode) {
         log(
@@ -243,7 +294,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
   }, tickMs);
   const publishTimer = setInterval(() => {
-    broadcast(sseEvent("snapshot", publicSnapshot(world)));
+    broadcast(sseEvent("snapshot", telaoSnapshot()));
     publishPhones();
   }, options.publishMs ?? 200);
   const keepaliveTimer = setInterval(() => {
@@ -273,7 +324,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       start(controller) {
         self = controller;
         controller.enqueue(encoder.encode(`retry: ${SSE_RETRY_MS}\n\n`));
-        controller.enqueue(sseEvent("snapshot", publicSnapshot(world)));
+        controller.enqueue(sseEvent("snapshot", telaoSnapshot()));
         telao.set(controller, leave);
       },
       cancel: leave,
@@ -369,6 +420,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       if (request.method === "POST" && pathname === "/api/responder") {
         return await respond(request);
       }
+      if (request.method === "GET" && pathname === "/api/models") {
+        return publicModels();
+      }
       if (request.method === "GET" && pathname === "/api/config") {
         return Response.json({ publicUrl: options.publicUrl ?? null });
       }
@@ -406,6 +460,65 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     });
   }
 
+  function adminAllowed(request: Request) {
+    const secret = options.adminSecret;
+    const given = request.headers.get("authorization") ?? "";
+    const expected = `Bearer ${secret}`;
+    return (
+      Boolean(secret) &&
+      given.length === expected.length &&
+      timingSafeEqual(Buffer.from(given), Buffer.from(expected))
+    );
+  }
+
+  function adminState() {
+    return Response.json({
+      models: modelRows(),
+      spending: scheduler.budget(),
+    });
+  }
+
+  async function adminApi(request: Request, pathname: string) {
+    if (!adminAllowed(request)) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    if (pathname === "/api/admin/models" && request.method === "GET") {
+      return adminState();
+    }
+    if (pathname === "/api/admin/models" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as {
+        enabled?: unknown;
+        model?: unknown;
+      };
+      if (typeof body.model !== "string" || typeof body.enabled !== "boolean") {
+        return Response.json(
+          { error: "send { model: string, enabled: boolean }" },
+          { status: 400 }
+        );
+      }
+      scheduler.setModelEnabled(body.model, body.enabled);
+      log(`Model ${body.model} switched ${body.enabled ? "on" : "off"}`);
+      return adminState();
+    }
+    if (pathname === "/api/admin/spending/reset" && request.method === "POST") {
+      scheduler.resetBudget();
+      log("Spending reset to zero");
+      return adminState();
+    }
+    return Response.json({ error: "not found" }, { status: 404 });
+  }
+
+  function publicModels() {
+    return Response.json({
+      models: scheduler.models().map((entry) => ({
+        model: entry.model,
+        label: modelLabel(entry.model),
+        participants: entry.participants,
+        enabled: entry.enabled,
+      })),
+    });
+  }
+
   const server = Bun.serve({
     // `::` takes IPv6 and IPv4; Railway's private network needs IPv6.
     hostname: options.host ?? "::",
@@ -413,8 +526,11 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     fetch(request, bunServer) {
       const { pathname, searchParams } = new URL(request.url);
       if (pathname.startsWith("/api/")) {
+        // A phone entering or answering, or the admin's page polling.
         activeUntil = Date.now() + API_ACTIVITY_MS;
-        return api(request, pathname);
+        return pathname.startsWith("/api/admin/")
+          ? adminApi(request, pathname)
+          : api(request, pathname);
       }
       if (request.method !== "GET" && request.method !== "HEAD") {
         return new Response("Method Not Allowed", { status: 405 });
@@ -470,6 +586,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         }
       }
       telao.clear();
+      await roomEvents.stop();
       for (const streams of phones.values()) {
         for (const controller of streams.keys()) {
           try {
