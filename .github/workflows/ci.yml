@@ -13,6 +13,29 @@ permissions:
   contents: read
 
 jobs:
+  commits:
+    name: Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # AGENTS.md rule 5. PRs are squashed and the title becomes the commit,
+      # so the title is checked too; merge commits are exempt. The title goes
+      # through env, never straight into the script.
+      - name: Title and commits
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+        run: bun scripts/conventional-commits.ts --title "$PR_TITLE" --range "$RANGE"
+
   check:
     name: Lint, types, tests and build
     runs-on: ubuntu-latest

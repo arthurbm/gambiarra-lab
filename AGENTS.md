@@ -10,7 +10,7 @@ Gambiarra Lab is where the Gambiarra Club builds social experiences on top of [G
 2. **Nothing here is published to npm while it has a single consumer.** Every workspace package stays `private: true`.
 3. **A term or primitive enters `packages/agents` only when two experiences need it.** Until then it lives in the app that uses it. "Gambi Agents", if it ever exists, is extracted from what two experiences share. Meira et al. (*As Três Inteligências Revisitadas*) are an inspiration, not the specification.
 4. **`packages/agents` knows nothing about rounds, tiles or the city.** No import from `apps/*` and no event-specific vocabulary in its prompts. Keep this checkable by absence of imports.
-5. **Conventional Commits** on every commit (`type(scope): subject`, e.g. `feat(board): add round timer`).
+5. **Conventional Commits** on every commit (`type(scope): subject`, e.g. `feat(board): add round timer`). PRs are squash-merged, so the PR title becomes the commit and follows the same form; CI checks the title and every non-merge commit.
 6. **Trusted local network only.** Gambi has no native auth; neither do these experiences. One exception: the Bloco de frevo (`apps/frevo`) runs in public on Railway, because the audience joins from their own phones over the internet. It stays within the spirit of the rule: the hub and the model host live only on Railway's private network (the hub never gets a public domain), the inference provider's key (OpenRouter) exists only in the model host, the world server holds only the admin's secret (`FREVO_ADMIN_SECRET`, which the admin needs) and the fal.ai key for the music (`FAL_KEY`). The world server is the only public service. See `apps/frevo/README.md` ("Deploy").
 
 ## Commands
