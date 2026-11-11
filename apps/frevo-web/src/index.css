@@ -652,3 +652,57 @@ a {
   gap: 0.6rem;
   align-items: center;
 }
+
+/* The compor phase: the bloco's name, refrain and vote. */
+.celular .celular-vote-option {
+  white-space: pre-line;
+}
+
+.celular-compor {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  background: var(--night-soft);
+  border: 3px solid var(--yellow);
+  border-radius: 12px;
+}
+
+.celular-compor h2,
+.celular-compor p {
+  margin: 0;
+}
+
+.celular-compor-refrain {
+  padding-left: 0.8rem;
+  margin: 0;
+  font-style: italic;
+  border-left: 3px solid var(--yellow);
+}
+
+.celular-compor-status {
+  font-weight: 700;
+}
+
+.celular-compor-options {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.celular-compor-options li {
+  display: grid;
+  padding: 0.4rem 0.6rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+
+.celular-compor-options li[data-mine] {
+  border-color: var(--yellow);
+}
+
+.celular-compor-options small {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}

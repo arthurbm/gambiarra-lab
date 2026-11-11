@@ -7,6 +7,7 @@ import type { PhoneView as PrivateView } from "@gambiarra-lab/frevo/views";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { phaseLine } from "../phase/phase-text";
 import { blocoColor, blocoLabel } from "../telao/bloco-mark";
+import { ComporPanel } from "./compor-panel";
 import { otherModelLine, ownModelLabel } from "./model-line";
 import { type Reply, useCelular } from "./use-celular";
 
@@ -40,9 +41,11 @@ function Avatar({ boneco }: { boneco: { look: number; name: string } }) {
 function Countdown({
   remainingMs,
   totalMs,
+  vote,
 }: {
   remainingMs: number;
   totalMs: number;
+  vote: boolean;
 }) {
   const seconds = Math.ceil(remainingMs / 1000);
   const share = Math.max(0, Math.min(1, remainingMs / totalMs));
@@ -52,22 +55,33 @@ function Countdown({
         <span style={{ width: `${share * 100}%` }} />
       </div>
       <span className="celular-countdown-text">
-        {seconds > 0
-          ? `${seconds} s para responder. Depois eu decido sozinho.`
-          : "Decidindo sozinho…"}
+        {countdownText(seconds, vote)}
       </span>
     </div>
   );
+}
+
+function countdownText(seconds: number, vote: boolean): string {
+  if (vote) {
+    return seconds > 0
+      ? `${seconds} s para votar. Depois vale o voto de quem votou.`
+      : "Fechando a votação…";
+  }
+  return seconds > 0
+    ? `${seconds} s para responder. Depois eu decido sozinho.`
+    : "Decidindo sozinho…";
 }
 
 function Question({
   ask,
   remainingMs,
   reply,
+  vote,
 }: {
   ask: NonNullable<PrivateView["ask"]>;
   remainingMs: number;
   reply: (askId: string, answer: Reply) => Promise<boolean>;
+  vote: boolean;
 }) {
   const [sent, setSent] = useState(false);
   const [text, setText] = useState("");
@@ -103,6 +117,7 @@ function Question({
         <div className="celular-options">
           {ask.options.map((option, index) => (
             <button
+              className={vote ? "celular-vote-option" : undefined}
               disabled={sent}
               key={option}
               onClick={() => send({ opcao: index })}
@@ -141,7 +156,7 @@ function Question({
           </div>
         </form>
       )}
-      <Countdown remainingMs={remainingMs} totalMs={ask.totalMs} />
+      <Countdown remainingMs={remainingMs} totalMs={ask.totalMs} vote={vote} />
     </section>
   );
 }
@@ -311,11 +326,13 @@ export function CelularPage() {
           key={ask.id}
           remainingMs={remainingMs}
           reply={reply}
+          vote={view.compor?.voting === true}
         />
       ) : null}
       {!ask && boneco.thinking && !boneco.personality ? (
         <p className="celular-thinking">Pensando na próxima pergunta…</p>
       ) : null}
+      {view.compor ? <ComporPanel compor={view.compor} /> : null}
       {view.bloco ? <BlocoMates bloco={view.bloco} /> : null}
       <Personality boneco={boneco} />
       <Talks talks={view.talks} />
