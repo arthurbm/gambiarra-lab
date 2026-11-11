@@ -12,6 +12,7 @@ import {
   openAsk,
 } from "./ask";
 import { filterModelText } from "./blocklist";
+import type { DesfileState } from "./desfile";
 import {
   type Bloco,
   blocoAnswered,
@@ -40,6 +41,7 @@ import {
 } from "./interview";
 
 export type { Ask, AskOutcome, HumanAnswer } from "./ask";
+export type { DesfileState } from "./desfile";
 export type { Bloco } from "./formar";
 export { INSTRUMENTS, type Instrument } from "./interview";
 
@@ -291,6 +293,8 @@ export interface WorldRules {
 export interface World {
   blocos: Bloco[];
   bonecos: Boneco[];
+  /** The desfile's bloco on stage and the host's choices; null before it starts. */
+  desfile: DesfileState | null;
   events: WorldEvent[];
   /** The formar phase's encounters and proposals; null before it starts. */
   formar: FormarState | null;
@@ -574,6 +578,7 @@ export function createWorld(options: {
   const world: World = {
     blocos: [],
     bonecos: [],
+    desfile: null,
     events: [],
     formar: null,
     map: options.map ?? PRACA,
