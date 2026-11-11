@@ -270,7 +270,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     string,
     Map<ReadableStreamDefaultController<Uint8Array>, () => void>
   >();
-  /** Sessions the host expelled; they stay out, even after a restart. */
+  /** Sessions the host expelled; they stay out until the admin restarts. */
   const expelled = new Set<string>();
   const simulated = createSimulatedHumans({ seed: options.seed ?? Date.now() });
 
@@ -324,7 +324,11 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       expelled.add(sessionId);
       publishPhones();
     },
-    restarted: publishPhones,
+    // A restart starts the session over: the rehearsal's expelled come back.
+    restarted: () => {
+      expelled.clear();
+      publishPhones();
+    },
     publishNow: () => {
       broadcast(sseEvent("snapshot", telaoSnapshot()));
       publishPhones();

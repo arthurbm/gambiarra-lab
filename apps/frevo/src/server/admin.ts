@@ -37,7 +37,7 @@ export interface AdminContext {
   ) => Promise<Response | undefined>;
   /** Sends the telão and the phones the world now, without waiting a tick. */
   publishNow: () => void;
-  /** The world went back to zero: tell the phones. */
+  /** The world went back to zero: forget who was expelled and tell the phones. */
   restarted: () => void;
   secret: string | undefined;
   setWorld: (world: World) => void;

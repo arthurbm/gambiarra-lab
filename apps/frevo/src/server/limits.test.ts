@@ -78,6 +78,23 @@ describe("the square's ceiling", () => {
   });
 });
 
+describe("the admin's restart", () => {
+  test("lets back in whoever was expelled in the rehearsal", async () => {
+    await admin("reiniciar");
+    const entered = (await (await enter()).json()) as {
+      boneco: string;
+      sessao: string;
+    };
+    await admin("expulsar", { boneco: entered.boneco });
+    expect((await enter(entered.sessao)).status).toBe(403);
+
+    await admin("reiniciar");
+    const again = await enter(entered.sessao);
+    expect(again.status).toBe(200);
+    expect(((await again.json()) as { created: boolean }).created).toBe(true);
+  });
+});
+
 describe("a world server that just started", () => {
   test("has no boneco without a person unless asked for one", async () => {
     const empty = startWorldServer({
