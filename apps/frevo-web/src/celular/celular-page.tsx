@@ -1,4 +1,5 @@
-// The phone. A first visit asks the person's name. After that, top to bottom:
+// The phone. A first visit asks the person's name and lets them pick their
+// boneco among the thirty (or have one drawn). After that, top to bottom:
 // the boneco, the row of phases, then one "now" card that says what is
 // happening and where to look, with the question inside when it is the
 // person's turn. Everything else (bloco, personality, talks, thoughts) comes
@@ -7,6 +8,7 @@
 
 import { modelLabel } from "@gambiarra-lab/frevo/models";
 import {
+  LOOKS,
   PERSON_NAME_MAX_LENGTH,
   type Talk,
   type Thought,
@@ -14,6 +16,7 @@ import {
 import type { PhoneView as PrivateView } from "@gambiarra-lab/frevo/views";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { BonecoSprite } from "../art/boneco-sprite";
+import { CHARACTERS } from "../art/characters";
 import { PhaseSteps } from "../phase/phase-steps";
 import { PHASE_ORDER, phaseLine } from "../phase/phase-text";
 import { blocoColor, blocoLabel } from "../telao/bloco-mark";
@@ -306,24 +309,117 @@ function ThoughtList({ thoughts }: { thoughts: Thought[] }) {
   );
 }
 
+/** The looks already on the square, asked once when the welcome opens. */
+function useLooksInUse(): Set<number> {
+  const [inUse, setInUse] = useState<Set<number>>(() => new Set());
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/visuais", { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { emUso?: unknown } | null) => {
+        if (Array.isArray(body?.emUso)) {
+          setInUse(
+            new Set(body.emUso.filter((look) => typeof look === "number"))
+          );
+        }
+      })
+      // Without the list every boneco looks free; the server still refuses a taken one.
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+  return inUse;
+}
+
+/**
+ * The thirty bonecos to pick from, plus letting one be drawn. Those already
+ * on the square are greyed out: the world does not repeat a look.
+ */
+function LookPicker({
+  busy,
+  error,
+  look,
+  setLook,
+}: {
+  busy: boolean;
+  error: string | null;
+  look: number | null;
+  setLook: (look: number | null) => void;
+}) {
+  const inUse = useLooksInUse();
+  // A pick someone else took meanwhile goes back to a drawn one.
+  useEffect(() => {
+    if (look !== null && inUse.has(look)) {
+      setLook(null);
+    }
+  }, [inUse, look, setLook]);
+  return (
+    <fieldset className="celular-looks" disabled={busy}>
+      <legend>Escolha seu boneco</legend>
+      <button
+        aria-pressed={look === null}
+        className="celular-look-draw"
+        onClick={() => setLook(null)}
+        type="button"
+      >
+        Sortear um boneco para mim
+      </button>
+      <div className="celular-looks-grid">
+        {Array.from({ length: LOOKS }, (_, index) => {
+          const taken = inUse.has(index);
+          return (
+            <button
+              aria-label={`Boneco ${index + 1}${taken ? ", já está na praça" : ""}`}
+              aria-pressed={look === index}
+              className="celular-look"
+              disabled={taken}
+              key={CHARACTERS[index]}
+              onClick={() => setLook(index)}
+              type="button"
+            >
+              <BonecoSprite look={index} scale={2} />
+            </button>
+          );
+        })}
+      </div>
+      <p aria-live="polite" className="celular-looks-note">
+        {look === null
+          ? "Seu boneco vai ser sorteado."
+          : `Você escolheu o boneco ${look + 1}.`}
+        {inUse.size > 0 ? " Os apagados já estão na praça." : ""}
+      </p>
+      {error ? (
+        <p className="celular-question-problem" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </fieldset>
+  );
+}
+
 /** A first visit: the person says how they want to be called on the telão. */
 function Welcome({
   error,
+  initialLook,
   initialName,
+  lookError,
   start,
 }: {
   error: string | null;
+  /** The boneco picked before leaving, if any. */
+  initialLook: number | null;
   /** The name typed before leaving, if any. */
   initialName: string | null;
-  start: (name: string | null) => Promise<void> | null;
+  lookError: string | null;
+  start: (name: string | null, look: number | null) => Promise<void> | null;
 }) {
   const [name, setName] = useState(initialName ?? "");
+  const [look, setLook] = useState<number | null>(initialLook);
   const [busy, setBusy] = useState(false);
   const nameId = useId();
 
   function enter(chosen: string | null) {
     setBusy(true);
-    Promise.resolve(start(chosen)).finally(() => setBusy(false));
+    Promise.resolve(start(chosen, look)).finally(() => setBusy(false));
   }
 
   function submit(event: FormEvent) {
@@ -357,6 +453,12 @@ function Welcome({
             {error}
           </p>
         ) : null}
+        <LookPicker
+          busy={busy}
+          error={lookError}
+          look={look}
+          setLook={setLook}
+        />
         <button disabled={busy || !name.trim()} type="submit">
           Entrar na praça
         </button>
@@ -500,6 +602,8 @@ export function CelularPage() {
     start,
     leave,
     lastName,
+    lastLook,
+    lookError,
   } = useCelular();
   useTick(250);
 
@@ -522,7 +626,18 @@ export function CelularPage() {
   }
 
   if (welcome && !view) {
-    return <Welcome error={nameError} initialName={lastName} start={start} />;
+    return (
+      <Welcome
+        error={nameError}
+        initialLook={lastLook}
+        initialName={lastName}
+        // A boneco taken meanwhile opens the welcome afresh: the name is
+        // kept and the list of bonecos in use is asked again.
+        key={lookError ?? ""}
+        lookError={lookError}
+        start={start}
+      />
+    );
   }
 
   if (!view) {

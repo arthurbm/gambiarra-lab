@@ -25,8 +25,13 @@ import {
   createWorld,
   DEFAULT_RULES,
   type HumanAnswer,
+  isLook,
   join,
+  LOOKS,
+  looksInUse,
   privateView,
+  squareFull,
+  type World,
   type WorldRules,
 } from "../sim/world";
 import { createAdminApi } from "./admin";
@@ -107,6 +112,60 @@ async function jsonBody(
   } catch {
     return null;
   }
+}
+
+/**
+ * The name and look a new person asked for; null lets the world draw one. A
+ * name the filter refuses is a 422 `nomeRecusado`. A look that is not one of
+ * the art is a 400; one a boneco on the square already wears is a 409
+ * `visualOcupado`, unless the square is full, which answers `lotado` instead.
+ */
+function newcomerChoices(
+  world: World,
+  body: Record<string, unknown>
+): { look: number | null; name: string | null } | { refused: Response } {
+  const asked = typeof body.nome === "string" ? body.nome.trim() : "";
+  const name = asked ? acceptPersonName(asked) : null;
+  if (asked && !name) {
+    return {
+      refused: Response.json(
+        {
+          ok: false,
+          nomeRecusado: true,
+          erro: "Esse nome não pode ir para o telão. Tente outro.",
+        },
+        { status: 422 }
+      ),
+    };
+  }
+  const value = body.look;
+  if (value === undefined || value === null) {
+    return { name, look: null };
+  }
+  if (!isLook(value)) {
+    return {
+      refused: Response.json(
+        {
+          ok: false,
+          erro: `O visual precisa ser um número inteiro de 0 a ${LOOKS - 1}.`,
+        },
+        { status: 400 }
+      ),
+    };
+  }
+  if (!squareFull(world) && looksInUse(world).includes(value)) {
+    return {
+      refused: Response.json(
+        {
+          ok: false,
+          visualOcupado: true,
+          erro: "Esse boneco já está na praça. Escolha outro.",
+        },
+        { status: 409 }
+      ),
+    };
+  }
+  return { name, look: value };
 }
 
 function sessionOf(value: unknown): string {
@@ -460,21 +519,16 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         { status: 403 }
       );
     }
-    // The name counts only for a new boneco; a known session keeps its own.
+    // The name and the look count only for a new boneco; a known session
+    // keeps its own.
     const known = privateView(world, sessionId) !== null;
-    const asked = typeof body.nome === "string" ? body.nome.trim() : "";
-    const name = known || !asked ? null : acceptPersonName(asked);
-    if (asked && !known && !name) {
-      return Response.json(
-        {
-          ok: false,
-          nomeRecusado: true,
-          erro: "Esse nome não pode ir para o telão. Tente outro.",
-        },
-        { status: 422 }
-      );
+    const asked = known
+      ? { name: null, look: null }
+      : newcomerChoices(world, body);
+    if ("refused" in asked) {
+      return asked.refused;
     }
-    const joined = join(world, { sessionId, name });
+    const joined = join(world, { sessionId, ...asked });
     if (joined.full) {
       return Response.json(
         {
@@ -576,6 +630,14 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     "POST /api/responder": respond,
     "POST /api/sair": quit,
     "POST /api/telao/som": soundReport,
+    // The welcome greys out the looks already on the square.
+    "GET /api/visuais": () =>
+      Promise.resolve(
+        Response.json(
+          { total: LOOKS, emUso: looksInUse(world) },
+          { headers: { "Cache-Control": "no-store" } }
+        )
+      ),
     "GET /api/models": () => Promise.resolve(publicModels()),
     "GET /api/config": () =>
       Promise.resolve(Response.json({ publicUrl: options.publicUrl ?? null })),
