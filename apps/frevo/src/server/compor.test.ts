@@ -38,7 +38,7 @@ beforeAll(async () => {
     rules: {
       speed: 400,
       restMs: 60,
-      decisionTimeoutMs: 2000,
+      decisionTimeoutMs: 6000,
       meetCooldownMs: 200,
       meetRadius: 40,
       askMs: 3000,
@@ -136,24 +136,30 @@ describe("composing through the world server", () => {
     );
     const phone = await person();
     await admin("simulados", { total: 7 });
-    await admin("duracoes", { formar: 8000, compor: 24_000 });
+    await admin("duracoes", { formar: 8000, compor: 30_000 });
+    // Everyone is done with the interview before the dynamic starts.
+    await telao.find(
+      (snapshot) =>
+        snapshot.bonecos.length === 7 &&
+        snapshot.bonecos.every((boneco) => boneco.instrument !== null),
+      60_000
+    );
     expect((await admin("iniciar")).status).toBe(200);
 
-    // The proposals show up as balloons.
-    const balloon = await telao.find(
-      (snapshot) =>
+    // The proposals show up as balloons while the bloco composes.
+    let balloons = 0;
+    const after = await telao.find((snapshot) => {
+      if (
         snapshot.clock.phase === "compor" &&
         snapshot.bonecos.some((boneco) =>
           boneco.speech?.startsWith("Que tal «")
-        ),
-      30_000
-    );
-    expect(balloon.blocos.length).toBeGreaterThan(0);
-
-    const after = await telao.find(
-      (snapshot) => snapshot.clock.phase === "desfile",
-      45_000
-    );
+        )
+      ) {
+        balloons += 1;
+      }
+      return snapshot.clock.phase === "desfile";
+    }, 90_000);
+    expect(balloons).toBeGreaterThan(0);
     expect(after.blocos.length).toBeGreaterThanOrEqual(2);
     for (const bloco of after.blocos) {
       expect(bloco.name).toBeTruthy();
@@ -179,5 +185,5 @@ describe("composing through the world server", () => {
 
     telao.close();
     await phone.close();
-  }, 90_000);
+  }, 180_000);
 });

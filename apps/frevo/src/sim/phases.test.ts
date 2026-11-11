@@ -207,6 +207,7 @@ describe("the phases of the dynamic", () => {
 
   test("phases run their hooks when they start and when they end", () => {
     const calls: string[] = [];
+    const original = PHASE_HOOKS.compor;
     PHASE_HOOKS.compor = {
       onEnter: (world) => {
         calls.push(`enter ${world.phase}`);
@@ -223,7 +224,7 @@ describe("the phases of the dynamic", () => {
       expect(world.phase).toBe("desfile");
       expect(calls).toEqual(["enter compor", "exit compor"]);
     } finally {
-      PHASE_HOOKS.compor = undefined;
+      PHASE_HOOKS.compor = original;
     }
   });
 });
