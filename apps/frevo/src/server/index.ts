@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 // The world server as a process. PORT, HOST, GAMBI_HUB_URL, FREVO_ROOM_NAME,
-// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS and FREVO_WEB_DIST configure it.
+// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL and FREVO_WEB_DIST
+// configure it.
 import { exists } from "node:fs/promises";
 import { resolve } from "node:path";
 import { DEFAULT_HUB_URL, DEFAULT_ROOM_NAME } from "../model-host/config";
@@ -41,6 +42,7 @@ const server = startWorldServer({
     ),
   },
   webDist,
+  publicUrl: process.env.FREVO_PUBLIC_URL?.trim() || undefined,
   log: (line) => console.log(line),
 });
 
