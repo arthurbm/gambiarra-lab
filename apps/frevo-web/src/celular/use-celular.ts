@@ -32,6 +32,10 @@ async function enter(session: string | null): Promise<string> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(session ? { sessao: session } : {}),
   });
+  if (response.status === 403 && session) {
+    // Expelled: the session's stream tells the phone so.
+    return session;
+  }
   if (!response.ok) {
     throw new Error(`entrar answered ${response.status}`);
   }
@@ -57,18 +61,24 @@ export function useCelular() {
   const receivedAt = useRef(0);
   const sessionRef = useRef<string | null>(null);
 
-  const arrive = useCallback(async () => {
-    for (;;) {
-      try {
-        // biome-ignore lint/performance/noAwaitInLoops: tries again until the world answers.
-        const sessao = await enter(sessionRef.current ?? storedSession());
-        sessionRef.current = sessao;
-        setSession(sessao);
-        return;
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, ENTER_RETRY_MS));
+  /** The arrival in flight: React runs the effect twice in development. */
+  const arriving = useRef<Promise<void> | null>(null);
+
+  const arrive = useCallback(() => {
+    arriving.current ??= (async () => {
+      for (;;) {
+        try {
+          // biome-ignore lint/performance/noAwaitInLoops: tries again until the world answers.
+          const sessao = await enter(sessionRef.current ?? storedSession());
+          sessionRef.current = sessao;
+          setSession(sessao);
+          return;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, ENTER_RETRY_MS));
+        }
       }
-    }
+    })();
+    return arriving.current;
   }, []);
 
   useEffect(() => {

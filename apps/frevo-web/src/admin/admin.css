@@ -255,3 +255,9 @@
   min-height: 2.6rem;
   padding: 0.3rem 0.7rem;
 }
+
+/* Confirming in a boneco's row takes a line of its own. */
+.admin-boneco .admin-confirm {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}

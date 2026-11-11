@@ -8,6 +8,7 @@
 // Ports: PORT (world, 3200), FREVO_WEB_PORT (web, 3201) and FREVO_HUB_PORT
 // (hub, 3210); 0 asks the OS for a free one. FREVO_MODELS and FREVO_BONECOS
 // pass through to the model host and the world.
+import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import {
   freePort,
@@ -227,8 +228,13 @@ async function main() {
   process.once("SIGINT", () => shutdown(0));
   process.once("SIGTERM", () => shutdown(0));
 
+  // The admin link must open; a secret is drawn for this run unless one is set.
+  const adminSecret =
+    process.env.FREVO_ADMIN_SECRET?.trim() || randomBytes(16).toString("hex");
+
   try {
     running = await startFrevo({
+      env: { FREVO_ADMIN_SECRET: adminSecret },
       host: process.env.HOST?.trim() || "0.0.0.0",
       onLine: prefixed,
       ports: {
@@ -251,7 +257,7 @@ async function main() {
         `Bloco de frevo ready (${real ? "real models from OpenRouter" : "fake models"})`,
         `Telão:   ${pages}/telao`,
         `Celular: ${pages}/`,
-        `Admin:   ${pages}/admin`,
+        `Admin:   ${pages}/admin?k=${adminSecret}`,
         `World:   ${running.worldUrl}/health`,
         `Hub:     ${running.hubUrl}`,
         "Stop everything: Ctrl+C",
