@@ -160,7 +160,7 @@ export function parseSse(pending: string): { data: string[]; rest: string } {
 
 /** Reads a stream body to the end, handing each event's parsed data on. */
 async function pump(
-  body: ReadableStream<Uint8Array>,
+  body: NonNullable<Response["body"]>,
   onEvent: (data: unknown) => void,
   onBytes: () => void
 ) {
