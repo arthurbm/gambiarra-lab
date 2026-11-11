@@ -89,7 +89,8 @@ const QUESTION_TOOL = tool(
     properties: {
       pergunta: {
         type: "string",
-        description: "A pergunta, em português, com até 80 caracteres.",
+        description:
+          "A pergunta, em português, com até 80 caracteres, sem número na frente.",
       },
       opcoes: {
         type: "array",
@@ -97,7 +98,7 @@ const QUESTION_TOOL = tool(
         maxItems: 3,
         items: { type: "string" },
         description:
-          "Duas ou três respostas diferentes, cada uma com até 30 caracteres.",
+          "Duas ou três respostas diferentes, cada uma com até quatro palavras e 30 caracteres: comidas, lugares ou ritmos que existem de verdade.",
       },
     },
   }
@@ -241,11 +242,27 @@ export function decisionTool(request: DecisionRequest): FunctionTool {
   }
 }
 
+/**
+ * What every prompt says about the people on the square: the telão is in
+ * front of an audience, and one model once called a human "nêgo".
+ */
+const RESPECT = [
+  "A praça é uma festa de rua para todas as idades, num telão diante de uma plateia: nada de palavrão, ofensa ou assunto pesado.",
+  "Nunca se refira a pessoas por cor, raça, etnia, corpo, aparência, gênero, idade, religião ou origem.",
+  "Não use apelido nem gíria para chamar alguém: chame cada boneco pelo nome, ou fale tu.",
+  "Nada de duplo sentido. Na dúvida, escolha a palavra mais neutra.",
+].join(" ");
+
+/** Every boneco on the same telão opened with "Oxe" before this rule. */
+const OPENINGS =
+  "Varie o começo das frases: não comece com oxe nem visse (use essas palavras no máximo de vez em quando, no meio da frase), porque todos os bonecos falam no mesmo telão e a repetição cansa.";
+
 function persona(name: string): string {
   return [
     `Você é ${name}, um boneco de um bloco de frevo numa praça do Recife.`,
-    "Você fala em português do Brasil simples, com humor leve e sotaque do Recife (tu, bora). Use oxe e visse só de vez em quando, nunca para abrir a frase: todos os bonecos falam no mesmo telão e a repetição cansa.",
-    "A praça é um evento público: nada de palavrão, ofensa ou assunto pesado.",
+    "Você fala em português do Brasil simples, com humor leve e sotaque do Recife (tu, bora).",
+    OPENINGS,
+    RESPECT,
     `Responda só chamando a ferramenta ${DECISION_TOOL_NAME}.`,
   ].join(" ");
 }
@@ -286,8 +303,9 @@ function questionMessages(request: QuestionRequest): ChatMessage[] {
       role: "user",
       content: [
         "Você acabou de conhecer o seu humano e quer saber do jeito dele com perguntas rápidas de tocar na tela.",
-        `Escreva a pergunta ${request.index + 1} de ${request.total}: curta, divertida e com sabor do Recife (comida, praia, carnaval, música, lugares, jeito de falar).`,
-        "Dê duas ou três respostas curtas e bem diferentes entre si.",
+        `Escreva a próxima pergunta (são ${request.total} ao todo): curta, divertida e com sabor do Recife, sobre gostos, lugares, comidas, músicas e hábitos.`,
+        "Escreva só a pergunta: sem número, sem «Pergunta 1» e sem contar quantas faltam.",
+        "Dê duas ou três respostas bem diferentes entre si, cada uma com até quatro palavras e nomeando uma coisa que existe de verdade: uma comida (tapioca, bolo de rolo, cuscuz, caldo de cana, macaxeira, acarajé), um lugar (Boa Viagem, Marco Zero, Olinda, Recife Antigo, Rua da Aurora) ou um ritmo (frevo, maracatu, ciranda, coco, brega, manguebeat). Nada de palavra inventada nem de palavra repetida dentro da mesma resposta.",
         "Não peça dados pessoais (nome, idade, onde mora, trabalho) e não repita o tema de uma pergunta anterior.",
         answered(request.previous),
       ].join("\n"),
@@ -352,7 +370,8 @@ function maestroMessages(request: MaestroRequest): ChatMessage[] {
       content: [
         "Você é o maestro de um carnaval de frevo numa praça do Recife.",
         "Você fala em português do Brasil simples, com humor leve.",
-        "A praça é um evento público: nada de palavrão, ofensa ou assunto pesado.",
+        OPENINGS,
+        RESPECT,
         `Responda só chamando a ferramenta ${DECISION_TOOL_NAME}.`,
       ].join(" "),
     },
@@ -418,7 +437,8 @@ function refrainMessages(request: RefrainRequest): ChatMessage[] {
         bloco(request),
         "Primeiro diga o que os humanos do bloco têm em comum, olhando o jeito de cada um.",
         ...task,
-        "Cada verso com até 50 caracteres. Nada de palavrão, nem nomes de marcas.",
+        "Cada verso com até 50 caracteres, com palavras que existem e fazem sentido juntas. Nada de palavrão, nem nomes de marcas.",
+        "Se citar alguém, use o nome do boneco, nunca um apelido. Não comece os versos com oxe nem visse.",
       ].join("\n"),
     },
   ];

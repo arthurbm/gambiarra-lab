@@ -95,12 +95,29 @@ export function reserveQuestion(
   };
 }
 
+/**
+ * "Pergunta 2 de 3:", "2/3)" or "Pergunta 1 -" at the start: models copied the
+ * count from the prompt into the question itself.
+ */
+const NUMBERED =
+  /^\s*(?:pergunta\s*\d*\s*(?:(?:de|\/)\s*\d+)?|\d+\s*(?:de|\/)\s*\d+)\s*[:.)\-–—]\s*/iu;
+
+function unnumbered(question: unknown): unknown {
+  if (typeof question !== "string") {
+    return question;
+  }
+  const rest = question.replace(NUMBERED, "");
+  return rest === question
+    ? question
+    : rest.charAt(0).toLocaleUpperCase("pt-BR") + rest.slice(1);
+}
+
 /** A question the model wrote, filtered, or null when it cannot be used. */
 export function acceptQuestion(
   question: unknown,
   options: unknown
 ): { options: string[]; question: string } | null {
-  const text = filterModelText(question, QUESTION_MAX_LENGTH);
+  const text = filterModelText(unnumbered(question), QUESTION_MAX_LENGTH);
   if (!(text && Array.isArray(options))) {
     return null;
   }

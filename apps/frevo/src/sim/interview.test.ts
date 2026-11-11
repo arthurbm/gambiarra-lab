@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { RESERVE_QUESTIONS } from "./interview";
+import { acceptQuestion, RESERVE_QUESTIONS } from "./interview";
 import {
   answerHuman,
   type BrainResult,
@@ -90,7 +90,7 @@ const writer: Brain = (request) => {
       model: "modelo-a",
       action: {
         type: "question",
-        question: `Pergunta ${request.index + 1}: frevo ou maracatu?`,
+        question: `Frevo ou maracatu, rodada ${request.index + 1}?`,
         options: ["Frevo", "Maracatu", "Os dois"],
       },
     };
@@ -119,13 +119,13 @@ const failing: Brain = (request) => ({
 describe("the interview with a person who answers", () => {
   test("three tap questions written by the model, an open one, then a personality and an instrument", () => {
     let world = after(arrived(), 300, writer);
-    expect(phone(world).ask?.question).toBe("Pergunta 1: frevo ou maracatu?");
+    expect(phone(world).ask?.question).toBe("Frevo ou maracatu, rodada 1?");
     expect(phone(world).ask?.options).toEqual(["Frevo", "Maracatu", "Os dois"]);
     expect(phone(world).ask?.remainingMs).toBeGreaterThan(11_000);
     expect(phone(world).ask?.remainingMs).toBeLessThanOrEqual(12_000);
     // The question is the boneco's balloon on the telão.
     expect(publicSnapshot(world).bonecos[0]?.speech).toBe(
-      "Pergunta 1: frevo ou maracatu?"
+      "Frevo ou maracatu, rodada 1?"
     );
 
     const questions: QuestionRequest[] = [];
@@ -147,8 +147,8 @@ describe("the interview with a person who answers", () => {
 
     expect(questions.map((request) => request.index)).toEqual([1, 2]);
     expect(questions[1]?.previous).toEqual([
-      { question: "Pergunta 1: frevo ou maracatu?", answer: "Frevo" },
-      { question: "Pergunta 2: frevo ou maracatu?", answer: "Maracatu" },
+      { question: "Frevo ou maracatu, rodada 1?", answer: "Frevo" },
+      { question: "Frevo ou maracatu, rodada 2?", answer: "Maracatu" },
     ]);
 
     const open = phone(world).ask;
@@ -241,10 +241,10 @@ describe("the interview with a person who does not answer", () => {
     const options = phone(world).ask?.options as string[];
 
     const waiting = after(world, 11_500, writer);
-    expect(phone(waiting).ask?.question).toBe("Pergunta 1: frevo ou maracatu?");
+    expect(phone(waiting).ask?.question).toBe("Frevo ou maracatu, rodada 1?");
 
     const alone = after(world, 12_300, writer);
-    expect(phone(alone).ask?.question).toBe("Pergunta 2: frevo ou maracatu?");
+    expect(phone(alone).ask?.question).toBe("Frevo ou maracatu, rodada 2?");
     const notice = phone(alone).thoughts.find(
       (thought) => thought.tone === "aviso"
     );
@@ -416,5 +416,27 @@ describe("model text and the blocklist", () => {
       expect(boneco?.walking).toBe(true);
       expect(boneco?.speech).toBeNull();
     }
+  });
+});
+
+describe("a question the model numbered", () => {
+  test("loses the number before it reaches the phone", () => {
+    for (const question of [
+      "Pergunta 2 de 3: qual é o seu prato preferido?",
+      "pergunta 3/3 - qual é o seu prato preferido?",
+      "Pergunta 1: qual é o seu prato preferido?",
+      "2 de 3: qual é o seu prato preferido?",
+      "2/3) qual é o seu prato preferido?",
+    ]) {
+      expect(acceptQuestion(question, ["Tapioca", "Cuscuz"])?.question).toBe(
+        "Qual é o seu prato preferido?"
+      );
+    }
+  });
+
+  test("keeps a question that only has a number inside", () => {
+    expect(
+      acceptQuestion("Tu dança 3 horas de frevo?", ["Sim", "Não"])?.question
+    ).toBe("Tu dança 3 horas de frevo?");
   });
 });
