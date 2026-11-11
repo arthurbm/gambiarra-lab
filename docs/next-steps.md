@@ -29,3 +29,45 @@ A segunda experiência é uma arena reconstruída sobre o Gambi, usando o Gambia
 - `scripts/frevo-real-check.ts` tem dois erros de tipo que ninguém vê: o `check-types` não cobre `scripts/`. Corrigir os erros e pôr `scripts/` na checagem de tipos.
 - A Railway não redeployou sozinha no merge do PR #23; ver `docs/bloco-de-frevo/onde-esta-cada-coisa.md`, seção "Deploys".
 - `scripts/heavy.ts` e `frevo:stop` não foram testados num Mac.
+
+## Bloco de frevo: em aberto ao fim da sessão de 2026-11-11
+
+Ponto de partida de quem continuar: `docs/bloco-de-frevo/onde-esta-cada-coisa.md`.
+
+**Deploy**
+
+- No ar está o commit `68eafb2` (PR #22), a versão do palco. Os PRs #23 e #24 estão na `main` e não foram publicados; o #23 quase não toca código de produção.
+- Para publicar a `main`: `railway up --service modelos --ci` e `railway up --service mundo --ci`, a partir do checkout principal. O `hub` não precisa, e redeployá-lo apaga as Rooms.
+- Descobrir por que o push na `main` não redeploya (primeiro lugar a olhar: o acesso do GitHub App da Railway ao repositório, no painel). Enquanto isso não for resolvido, trate todo merge como se pudesse redeployar e não faça merge perto de uma apresentação.
+
+**Nunca verificado**
+
+- Som audível: toda música tocou em navegador sem saída de áudio. Ninguém ouviu a faixa gerada, as três de reserva nem o telão tocando.
+- Celular de verdade escaneando o QR, e projetor de verdade (só capturas em 1920x1080 e 1280x720).
+- A correção do MiniMax M3 (raciocínio desligado, provider fixo) no deploy: foi provada localmente (21 de 21 direto, 44 de 44 pelo hub); no deploy só rodou uma dinâmica de 9 celulares, sem medir falhas por modelo.
+- Júri e música no `docker compose`: as duas rodadas do plano B pularam marcar blocos e tocar.
+- A queda do MiniMax para o ElevenLabs e o cancelamento de geração demorada: só contra o fal.ai falso.
+- Nome de bloco com 40 letras escrito por um modelo real no cartão do desfile.
+- Um intervalo isolado de 14,8 s entre snapshots num celular, visto uma vez na carga de 25 celulares.
+
+**Material**
+
+- Os quatro vídeos da galeria (https://bloco-de-frevo-videos.vercel.app) foram gravados antes dos ajustes de palco: mostram o prompt antigo (muito "Oxe"), a tela final antiga e o cartão do desfile que cortava com refrão longo. Estão mudos. As instruções para gravar com som estão em `onde-esta-cada-coisa.md`.
+- A galeria não tem link para o mundo ao vivo, de propósito; dá para acrescentar depois da apresentação.
+
+**Revisão**
+
+- O code-review de dois eixos cobriu os tickets #11 a #20. O diff do #21 (script de carga, documentos, três correções pequenas), o dos ajustes de palco (prompts, lista de bloqueio, tela final, catálogo do MiniMax) e o do PR #23 não passaram por ele.
+- Uma proposta de nome ou refrão de um boneco silenciado ainda pode ir a voto e vencer; só o texto some do registro do telão.
+- Pausar pelo admin congela o relógio e as perguntas, mas os modelos continuam sendo chamados: pausa longa gasta.
+
+**Repositório**
+
+- O PR #24 entrou como commit de merge, fora do squash que a regra 5 do `AGENTS.md` pede. Deixar só o squash habilitado nas configurações do repositório evita repetir.
+- As keys seguem em `~/.config/gambiarra-lab/`, fora do repositório, de propósito; os outros artefatos estão em `artifacts/`.
+
+**Contas, em 2026-11-11**
+
+- OpenRouter: US$ 3,46 de saldo (`bun run frevo:spend`). A sessão gastou cerca de US$ 0,53.
+- fal.ai: cerca de US$ 3,45 gastos, estimados, porque a key não lê o faturamento.
+- Railway: US$ 0,05 de uso; o plano Hobby custa US$ 5 por mês. Como derrubar tudo depois do evento está em `apps/frevo/README.md`, seção "Deploy".
