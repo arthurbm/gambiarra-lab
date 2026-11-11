@@ -314,10 +314,7 @@ function Bonecos({ state, act }: { act: Act; state: AdminState }) {
     (boneco) => showSimulated || !boneco.simulated
   );
   return (
-    <Fold
-      hint={`${state.bonecos.length} · silenciar ou expulsar`}
-      title="Bonecos na praça"
-    >
+    <Fold hint={`${state.bonecos.length} · moderar`} title="Bonecos na praça">
       {state.people.simulated > 0 ? (
         <label className="admin-check">
           <input

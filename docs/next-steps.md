@@ -52,7 +52,7 @@ Ponto de partida de quem continuar: `docs/bloco-de-frevo/onde-esta-cada-coisa.md
 
 **Material**
 
-- Os quatro vídeos da galeria (https://bloco-de-frevo-videos.vercel.app) foram gravados antes dos ajustes de palco: mostram o prompt antigo (muito "Oxe"), a tela final antiga e o cartão do desfile que cortava com refrão longo. Estão mudos. As instruções para gravar com som estão em `onde-esta-cada-coisa.md`.
+- Os quatro vídeos da galeria (https://bloco-de-frevo-videos.vercel.app) foram gravados antes dos ajustes de palco e das telas com etapas (PR #26; a galeria mostra as telas novas em capturas, não em vídeo): mostram o prompt antigo (muito "Oxe"), a tela final antiga e o cartão do desfile que cortava com refrão longo. Estão mudos. As instruções para gravar com som estão em `onde-esta-cada-coisa.md`.
 - A galeria não tem link para o mundo ao vivo, de propósito; dá para acrescentar depois da apresentação.
 
 **Revisão**

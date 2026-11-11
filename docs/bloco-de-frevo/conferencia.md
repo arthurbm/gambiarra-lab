@@ -32,7 +32,7 @@ O link de admin completo, com o segredo, está só neste notebook, em `~/.config
 
 1. No admin, toque em **Reiniciar do zero…** e confirme em **Sim, reiniciar do zero**: volta à entrada com a praça vazia e zera o gasto estimado. Confira em "Modelos e gasto" que está em US$ 0,00; se não, toque em **Zerar o gasto**. O gasto soma entre ensaios enquanto o servidor não reinicia; o teto é US$ 1 por vida do servidor (`FREVO_BUDGET_USD`) e, ao passar dele, todos os bonecos vão para o piloto automático (continuam andando, mas sem modelo).
 2. Ainda em "Modelos e gasto", confira o **MiniMax M3**. Nas duas rodadas com modelos reais de hoje cedo (06h10 e 06h26) ele falhou em mais da metade das chamadas (45 de 73 e 43 de 78). A causa: sob carga o OpenRouter o mandava para o provider Venice, que gasta os 400 tokens raciocinando e responde sem chamar a ferramenta. A correção (branch `fix/ajustes-de-palco`) desliga o raciocínio e prefere a CoreWeave; com ela, 21 de 21 numa rajada direta e 44 de 44 pelo hub. **Se o deploy em uso já tem essa correção, deixe o MiniMax ligado; se não tem, desligue-o.** Desligado, os bonecos dele pensam com os outros modelos.
-3. No admin, seção "Júri": **Música gerada no fal.ai: restam N de 6 gerações.** São seis por vida do servidor (`FREVO_MUSIC_MAX_GENERATIONS`); reiniciar pelo admin não devolve. Cada bloco marcado gasta uma. Se restarem menos de 3, rode `railway redeploy --service mundo --yes` (de dentro do repo ligado ao projeto, ver o fim desta lista): o servidor volta com 6, a praça vazia e a mesma Room. Sem gerações, toca a base de reserva.
+3. No admin, seção "Som e música do telão" (durante o desfile, no cartão "Júri"): **Música gerada no fal.ai: restam N de 6 gerações.** São seis por vida do servidor (`FREVO_MUSIC_MAX_GENERATIONS`); reiniciar pelo admin não devolve. Cada bloco marcado gasta uma. Se restarem menos de 3, rode `railway redeploy --service mundo --yes` (de dentro do repo ligado ao projeto, ver o fim desta lista): o servidor volta com 6, a praça vazia e a mesma Room. Sem gerações, toca a base de reserva.
 4. No telão, toque em **Ativar som** (canto superior direito do palco) com um toque ou clique de verdade. O navegador só toca áudio depois disso; o admin mostra "Som do telão: ativado" quando deu certo. Se o botão continua lá, o navegador recusou: toque de novo.
 5. Saúde: `curl -s https://mundo-production-7b9b0ad9.up.railway.app/health` deve mostrar `"ok":true`, um `room` e `"participants":12`.
 
@@ -61,7 +61,7 @@ Tetos que valem durante a apresentação:
 
 ### 3. Um bloco se forma e o celular mostra os outros dois
 
-- **Abrir:** admin, **Preencher** a praça até 25 bonecos simulados (no ensaio; no palco, só o bastante para completar a sala, sem passar de 30 bonecos no total), e **Iniciar: Conhecer e formar**.
+- **Abrir:** admin, **Preencher** a praça até 25 bonecos simulados (no ensaio; no palco, só o bastante para completar a sala, sem passar de 30 bonecos no total), e **Iniciar a brincadeira**.
 - **Esperar:** em até 2,5 min, os bonecos se encontram, falam e formam blocos de três; no celular aparecem as conversas e depois os outros dois do bloco. Ao fim da fase, quem sobrou é agrupado pelo maestro.
 - **Se falhar:** se nenhum bloco se forma, avance a fase no admin: o maestro (ou o agrupamento por proximidade, se o maestro falhar) põe todo mundo num bloco.
 
