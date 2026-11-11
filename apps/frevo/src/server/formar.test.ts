@@ -178,8 +178,10 @@ describe("forming blocos through the world server", () => {
       async () => (late.view()?.bloco?.mates.length === 3 ? true : undefined),
       10_000
     );
-    const final = await telao.find((snapshot) =>
-      snapshot.bonecos.every((boneco) => boneco.bloco !== null)
+    const final = await telao.find(
+      (snapshot) =>
+        snapshot.bonecos.length === 4 &&
+        snapshot.bonecos.every((boneco) => boneco.bloco !== null)
     );
     expect(final.blocos).toHaveLength(1);
     expect(final.blocos[0]?.members).toHaveLength(4);
