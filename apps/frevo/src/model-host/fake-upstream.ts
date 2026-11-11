@@ -1,7 +1,10 @@
 // A fake provider: an OpenAI-compatible endpoint on a free local port that
 // answers every chat/completions with a valid call to the forced tool. It is
 // deterministic and never touches the network, so tests, the smoke and a
-// local rehearsal can run the whole path without a key.
+// local rehearsal can run the whole path without a key. Each model can have a
+// profile (latency, errors, unusable answers) so a rehearsal shows the models
+// panel comparing something.
+import type { FakeProfile } from "../models/catalog";
 
 const LINES = [
   "Eita, bora ver o que tem por lá!",
@@ -21,10 +24,14 @@ export interface FakeUpstream {
 }
 
 export interface FakeUpstreamOptions {
-  /** Delay before each answer. */
+  /** Delay before each answer, for every model; overrides the profiles' latency. */
   latencyMs?: number;
   models: string[];
   onRequest?: (body: Record<string, unknown>) => void;
+  /** How each model behaves; a model without one answers well and at once. */
+  profiles?: Record<string, FakeProfile | undefined>;
+  /** Seed of the draws for latency and failures. */
+  seed?: number;
   /** Answer with plain text instead of a tool call. */
   silent?: boolean;
 }
@@ -86,9 +93,9 @@ function completion(
   model: string,
   body: Record<string, unknown>,
   sequence: number,
-  silent: boolean
+  answer: "invalid" | "silent" | "valid"
 ) {
-  const tool = silent ? undefined : forcedTool(body);
+  const tool = answer === "silent" ? undefined : forcedTool(body);
   const seed = hash(JSON.stringify(body.messages ?? "")) + sequence;
   const message = tool?.function?.name
     ? {
@@ -100,9 +107,17 @@ function completion(
             type: "function",
             function: {
               name: tool.function.name,
-              arguments: JSON.stringify(
-                valueFor(tool.function.parameters ?? { type: "object" }, seed)
-              ),
+              // An unusable answer is cut short, the way a model that ran
+              // out of tokens answers: it parses, but misses fields.
+              arguments:
+                answer === "invalid"
+                  ? "{}"
+                  : JSON.stringify(
+                      valueFor(
+                        tool.function.parameters ?? { type: "object" },
+                        seed
+                      )
+                    ),
             },
           },
         ],
@@ -120,12 +135,21 @@ function completion(
         message,
       },
     ],
-    usage: { prompt_tokens: 120, completion_tokens: 24, total_tokens: 144 },
+    usage: { prompt_tokens: 900, completion_tokens: 80, total_tokens: 980 },
   };
 }
 
 export function startFakeUpstream(options: FakeUpstreamOptions): FakeUpstream {
   let sequence = 0;
+  // Park-Miller, so a rehearsal with the same seed fails the same way.
+  let state = Math.max(
+    1,
+    Math.trunc(options.seed ?? 20_261_111) % 2_147_483_646
+  );
+  const draw = () => {
+    state = (state * 48_271) % 2_147_483_647;
+    return (state - 1) / 2_147_483_646;
+  };
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -155,17 +179,26 @@ export function startFakeUpstream(options: FakeUpstreamOptions): FakeUpstream {
         }
         options.onRequest?.(body);
         sequence += 1;
-        if (options.latencyMs) {
-          await Bun.sleep(options.latencyMs);
+        const model = String(body.model);
+        const profile = options.profiles?.[model];
+        const [low, high] = profile?.latencyMs ?? [0, 0];
+        const latencyMs = options.latencyMs ?? low + draw() * (high - low);
+        if (latencyMs > 0) {
+          await Bun.sleep(latencyMs);
         }
-        return Response.json(
-          completion(
-            String(body.model),
-            body,
-            sequence,
-            options.silent ?? false
-          )
-        );
+        if (profile && draw() < profile.errorRate) {
+          return Response.json(
+            { error: { message: "the fake provider failed on purpose" } },
+            { status: 500 }
+          );
+        }
+        let answer: "invalid" | "silent" | "valid" = "valid";
+        if (options.silent) {
+          answer = "silent";
+        } else if (profile && draw() < profile.invalidRate) {
+          answer = "invalid";
+        }
+        return Response.json(completion(model, body, sequence, answer));
       }
       return new Response("Not Found", { status: 404 });
     },

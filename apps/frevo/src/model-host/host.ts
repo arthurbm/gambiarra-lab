@@ -4,13 +4,9 @@
 // again. This is the only module that holds the provider's credentials.
 import { createParticipantSession, type ParticipantSession } from "gambi-sdk";
 import { findRoomByName } from "../gambi/room";
+import type { ModelSpec } from "../models/catalog";
 
-export interface ModelSpec {
-  /** The model id the upstream serves. */
-  model: string;
-  /** How many participants to keep open; each answers one request at a time. */
-  participants: number;
-}
+export type { ModelSpec } from "../models/catalog";
 
 export interface Upstream {
   /** Sent to the upstream only; the hub never sees them. */

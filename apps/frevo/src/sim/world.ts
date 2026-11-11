@@ -30,6 +30,8 @@ export interface DecisionRequest {
   /** World time after which the boneco stops waiting and goes on autopilot. */
   deadlineMs: number;
   id: string;
+  /** The model the boneco was given; null lets any free participant answer. */
+  model?: string | null;
   /** The place the boneco is standing at, when it is at one. */
   placeId: string | null;
   places: Place[];
@@ -49,13 +51,16 @@ export type Facing = "down" | "left" | "right" | "up";
 export type BrainSource = "autopilot" | "model";
 
 interface Boneco {
+  /** The model the boneco was given; null lets any free participant answer. */
+  assignedModel: string | null;
   brain: BrainSource | null;
   decisions: number;
   facing: Facing;
   id: string;
+  /** The model that answered the last decision. */
   model: string | null;
   name: string;
-  pending: { deadlineMs: number; requestId: string } | null;
+  pending: { deadlineMs: number; requestId: string; sinceMs: number } | null;
   restUntilMs: number;
   speech: { text: string; untilMs: number } | null;
   target: Place | null;
@@ -84,13 +89,19 @@ export interface World {
 }
 
 export interface PublicBoneco {
+  /** The model the boneco was given. */
+  assignedModel: string | null;
   brain: BrainSource | null;
   facing: Facing;
   id: string;
+  /** The model that answered the last decision; may differ from assignedModel. */
   model: string | null;
   name: string;
   speech: string | null;
+  /** Waiting for a model right now. */
   thinking: boolean;
+  /** For how long it has been waiting, or null when it is not. */
+  thinkingForMs: number | null;
   walking: boolean;
   x: number;
   y: number;
@@ -156,6 +167,8 @@ function random(state: number): { next: number; value: number } {
 export function createWorld(options: {
   bonecos: number;
   map?: WorldMap;
+  /** Models given in turns to the simulated bonecos. */
+  models?: string[];
   rules?: Partial<WorldRules>;
   seed: number;
 }): World {
@@ -177,6 +190,7 @@ export function createWorld(options: {
       pending: null,
       restUntilMs: 0,
       brain: null,
+      assignedModel: options.models?.[index % options.models.length] ?? null,
       model: null,
       decisions: 0,
     });
@@ -305,6 +319,7 @@ export function step(
         id: `${boneco.id}#${boneco.decisions + 1}`,
         boneco: { id: boneco.id, name: boneco.name },
         deadlineMs: next.timeMs + next.rules.decisionTimeoutMs,
+        model: boneco.assignedModel,
         placeId: placeAt(next, boneco)?.id ?? null,
         places: next.map.places,
       };
@@ -312,7 +327,11 @@ export function step(
       boneco = {
         ...boneco,
         decisions: boneco.decisions + 1,
-        pending: { requestId: request.id, deadlineMs: request.deadlineMs },
+        pending: {
+          requestId: request.id,
+          deadlineMs: request.deadlineMs,
+          sinceMs: next.timeMs,
+        },
       };
     }
     return boneco;
@@ -333,11 +352,15 @@ export function publicSnapshot(world: World): PublicSnapshot {
       facing: boneco.facing,
       walking: boneco.target !== null,
       thinking: boneco.pending !== null,
+      thinkingForMs: boneco.pending
+        ? world.timeMs - boneco.pending.sinceMs
+        : null,
       speech:
         boneco.speech && boneco.speech.untilMs > world.timeMs
           ? boneco.speech.text
           : null,
       brain: boneco.brain,
+      assignedModel: boneco.assignedModel,
       model: boneco.model,
     })),
   };

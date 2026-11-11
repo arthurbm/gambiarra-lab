@@ -266,3 +266,47 @@ describe("the world over time", () => {
     expect(new Set(requests.map((request) => request.boneco.id)).size).toBe(6);
   });
 });
+
+describe("the model a boneco thinks with", () => {
+  test("is given in turns to the simulated bonecos and asked for in each decision", () => {
+    const world = createWorld({
+      seed: 3,
+      bonecos: 3,
+      models: ["modelo-a", "modelo-b"],
+    });
+    const { requests } = step(world, { elapsedMs: TICK_MS });
+    expect(requests.map((request) => request.model)).toEqual([
+      "modelo-a",
+      "modelo-b",
+      "modelo-a",
+    ]);
+    expect(
+      publicSnapshot(world).bonecos.map((boneco) => boneco.assignedModel)
+    ).toEqual(["modelo-a", "modelo-b", "modelo-a"]);
+  });
+
+  test("shows which model answered next to the one the boneco was given", () => {
+    const start = createWorld({ seed: 3, bonecos: 1, models: ["modelo-a"] });
+    const answered = run(start, 300, (request) => ({
+      requestId: request.id,
+      ok: true,
+      action: { type: "walk", placeId: "fonte", speech: "Bora" },
+      model: "modelo-b",
+    }));
+    expect(onlyBoneco(answered.world)).toMatchObject({
+      assignedModel: "modelo-a",
+      model: "modelo-b",
+      brain: "model",
+    });
+  });
+
+  test("tells for how long a boneco has been thinking", () => {
+    const start = createWorld({ seed: 3, bonecos: 1 });
+    expect(onlyBoneco(start).thinkingForMs).toBeNull();
+    const waiting = run(start, 1000).world;
+    expect(onlyBoneco(waiting)).toMatchObject({
+      thinking: true,
+      thinkingForMs: 900,
+    });
+  });
+});
