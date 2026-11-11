@@ -248,3 +248,96 @@ a {
     animation: none;
   }
 }
+
+/* Stage on the left, side column on the right (the telão ticket owns the
+   final layout). */
+.telao-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(14rem, 22vw, 24rem);
+  min-height: 0;
+}
+
+.telao-side {
+  min-height: 0;
+  padding: 0.8rem 0.8rem 0.8rem 0;
+  overflow: hidden;
+}
+
+.models-panel {
+  padding: 0.8rem;
+  font-size: clamp(0.7rem, 1vw, 1rem);
+  background: var(--night-soft);
+  border-radius: 0.6rem;
+}
+
+.models-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1em;
+  color: var(--yellow);
+}
+
+.models-panel table {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  border-collapse: collapse;
+}
+
+.models-panel th,
+.models-panel td {
+  padding: 0.3em 0.2em;
+  text-align: right;
+  border-bottom: 1px solid rgb(255 248 231 / 0.15);
+}
+
+.models-panel thead th {
+  font-size: 0.8em;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.models-panel tbody th {
+  font-weight: 600;
+  text-align: left;
+}
+
+.models-panel tr[data-off="true"] {
+  opacity: 0.45;
+}
+
+.models-panel-state {
+  display: block;
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--yellow);
+}
+
+.models-panel-empty {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.admin-models {
+  display: grid;
+  gap: 0.8rem;
+  max-width: 40rem;
+  text-align: left;
+}
+
+.admin-models table {
+  border-collapse: collapse;
+}
+
+.admin-models th,
+.admin-models td {
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid rgb(255 248 231 / 0.2);
+}
+
+.admin-warning {
+  padding: 0.6rem 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--yellow);
+  border-radius: 0.4rem;
+}

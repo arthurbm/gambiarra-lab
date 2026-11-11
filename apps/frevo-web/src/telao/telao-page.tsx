@@ -1,3 +1,4 @@
+import { ModelsPanel } from "./models-panel";
 import type { StreamStatus } from "./stream";
 import { useTelao } from "./use-telao";
 import { WorldView } from "./world-view";
@@ -19,13 +20,18 @@ export function TelaoPage() {
           {STATUS_LABEL[status]}
         </span>
       </header>
-      <section className="telao-stage">
-        {snapshot ? (
-          <WorldView snapshot={snapshot} />
-        ) : (
-          <p className="telao-waiting">Abrindo a praça…</p>
-        )}
-      </section>
+      <div className="telao-body">
+        <section className="telao-stage">
+          {snapshot ? (
+            <WorldView snapshot={snapshot} />
+          ) : (
+            <p className="telao-waiting">Abrindo a praça…</p>
+          )}
+        </section>
+        <aside className="telao-side">
+          <ModelsPanel rows={snapshot?.models ?? []} />
+        </aside>
+      </div>
     </main>
   );
 }
