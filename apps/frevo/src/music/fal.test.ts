@@ -147,7 +147,9 @@ describe("the ceiling", () => {
       outcome.status === "rejected" ? (outcome.reason as Error).message : ""
     );
     // Four MiniMax and two ElevenLabs: the last two blocos meet the ceiling.
-    expect(reasons.filter((reason) => reason.includes("teto de 6"))).toHaveLength(2);
+    expect(
+      reasons.filter((reason) => reason.includes("teto de 6"))
+    ).toHaveLength(2);
   });
 
   test("the ceiling can be set", async () => {
@@ -173,7 +175,10 @@ describe("without a key", () => {
 describe("a short refrain", () => {
   test("is sung twice by MiniMax, which follows the lyrics' length", async () => {
     const { fake, music } = setup({ minimax: { kind: "ok" } });
-    await music.generate({ ...INPUT, refrain: ["Lá vem a sombrinha", "Girando no ar"] });
+    await music.generate({
+      ...INPUT,
+      refrain: ["Lá vem a sombrinha", "Girando no ar"],
+    });
     expect(fake.requests[0]?.input.lyrics).toBe(
       "[Intro]\n[Chorus]\nLá vem a sombrinha\nGirando no ar\n[Chorus]\nLá vem a sombrinha\nGirando no ar\n[Outro]"
     );

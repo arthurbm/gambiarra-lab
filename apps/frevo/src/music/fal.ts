@@ -4,8 +4,9 @@
 // track if both do. Every audio is downloaded and served by the world. The
 // key comes from the caller (the environment) and goes only into the
 // Authorization header: never into a log, an error or a URL.
-import type { MusicGenerator } from "./generator";
+
 import type { MusicFile, MusicFiles } from "./files";
+import type { MusicGenerator } from "./generator";
 
 export const MINIMAX = "fal-ai/minimax-music/v2.6";
 export const ELEVENLABS = "fal-ai/elevenlabs/music";

@@ -43,9 +43,9 @@ export function startFakeFal(options: {
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
-    async fetch(request) {
-      const { pathname } = new URL(request.url);
-      const base = `http://127.0.0.1:${server.port}`;
+    async fetch(request): Promise<Response> {
+      const { pathname, origin } = new URL(request.url);
+      const base: string = origin;
       const file = /^\/files\/([\w-]+)\.mp3$/.exec(pathname);
       if (file && request.method === "GET") {
         return new Response(FAKE_AUDIO, {

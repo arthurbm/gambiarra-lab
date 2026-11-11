@@ -10,7 +10,9 @@ import {
   startFakeUpstream,
 } from "../model-host/fake-upstream";
 import { type ModelHost, startModelHost } from "../model-host/host";
-import { EMBEDDED_TRACK } from "../music/generator";
+import { FAKE_AUDIO, type FakeFal, startFakeFal } from "../music/fake-fal";
+import { createFalMusic, ELEVENLABS, MINIMAX } from "../music/fal";
+import { createMusicFiles } from "../music/files";
 import { type RunningHub, startHub } from "../testing/processes";
 import { openEventStream } from "../testing/sse";
 import { until } from "../testing/until";
@@ -24,9 +26,23 @@ let hub: RunningHub;
 let upstream: FakeUpstream;
 let host: ModelHost;
 let server: WorldServer;
+let fal: FakeFal;
 
 beforeAll(async () => {
   hub = await startHub();
+  fal = startFakeFal({
+    behaviors: {
+      [MINIMAX]: { kind: "ok", ms: 50 },
+      [ELEVENLABS]: { kind: "ok" },
+    },
+  });
+  const files = createMusicFiles();
+  const music = createFalMusic({
+    key: "fal-test-key",
+    files,
+    queueUrl: fal.url,
+    pollMs: 10,
+  });
   upstream = startFakeUpstream({ models: ["fake-frevo"], latencyMs: 20 });
   server = startWorldServer({
     tickMs: 20,
@@ -48,6 +64,9 @@ beforeAll(async () => {
     bonecos: 0,
     seed: 11,
     adminSecret: ADMIN_SECRET,
+    music: music.generate,
+    musicFiles: files,
+    musicGenerations: music.generations,
   });
   host = startModelHost({
     hubUrl: hub.url,
@@ -68,6 +87,7 @@ afterAll(async () => {
   await host.stop();
   await server.stop();
   upstream.stop();
+  fal.stop();
   await hub.stop();
 });
 
@@ -193,11 +213,27 @@ describe("the desfile through the world server", () => {
       escolhido: true,
     });
     expect(remarked.body.jury.desfile?.chosen).toEqual(chosen);
-    // Marking prepares the music; the default is the embedded track.
-    expect(remarked.body.jury.tracks[chosen[0] as string]).toEqual({
-      state: "pronta",
-      url: EMBEDDED_TRACK,
-    });
+    // Marking makes the music in the background; the world serves its own
+    // copy of the audio, and the admin counts the generations left.
+    const ready = await until(async () => {
+      const body = (await (
+        await fetch(`${server.url}/api/admin/estado`, {
+          headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
+        })
+      ).json()) as AdminState;
+      return chosen.every((id) => body.jury.tracks[id]?.state === "pronta")
+        ? body
+        : undefined;
+    }, 5000);
+    const track = ready.jury.tracks[chosen[1] as string];
+    expect(track).toMatchObject({ state: "pronta", reason: null });
+    expect(track?.url).toStartWith("/api/musica/");
+    expect(ready.jury.generations).toEqual({ used: 3, max: 6 });
+    const copy = await fetch(`${server.url}${track?.url}`);
+    expect(copy.status).toBe(200);
+    expect(copy.headers.get("content-type")).toStartWith("audio/mpeg");
+    expect(new Uint8Array(await copy.arrayBuffer())).toEqual(FAKE_AUDIO);
+    expect((await fetch(`${server.url}/api/musica/0000.mp3`)).status).toBe(404);
 
     // The phone sees its refrain in the desfile.
     await until(
@@ -216,12 +252,12 @@ describe("the desfile through the world server", () => {
     const played = await admin("desfile/tocar", { bloco: chosen[1] });
     expect(played.body.jury.playing).toMatchObject({
       blocoId: chosen[1],
-      url: EMBEDDED_TRACK,
+      url: track?.url,
     });
     const playing = await telao.find(
       (snapshot) => snapshot.audio?.blocoId === chosen[1]
     );
-    expect(playing.audio?.url).toBe(EMBEDDED_TRACK);
+    expect(playing.audio?.url).toBe(track?.url as string);
     const reported = await post("/api/telao/som", {
       telao: "telao-teste",
       ativo: true,
