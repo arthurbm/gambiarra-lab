@@ -324,9 +324,12 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       expelled.add(sessionId);
       publishPhones();
     },
-    // A restart starts the session over: the rehearsal's expelled come back.
+    // A restart starts the session over (a rehearsal, then the real one):
+    // the expelled come back and the spending ceiling counts from zero.
     restarted: () => {
       expelled.clear();
+      scheduler.resetBudget();
+      log("Spending reset to zero");
       publishPhones();
     },
     publishNow: () => {

@@ -37,7 +37,10 @@ export interface AdminContext {
   ) => Promise<Response | undefined>;
   /** Sends the telão and the phones the world now, without waiting a tick. */
   publishNow: () => void;
-  /** The world went back to zero: forget who was expelled and tell the phones. */
+  /**
+   * The world went back to zero: forget who was expelled and the session's
+   * spending, and tell the phones.
+   */
   restarted: () => void;
   secret: string | undefined;
   setWorld: (world: World) => void;
@@ -255,9 +258,10 @@ export function createAdminApi(context: AdminContext): AdminApi {
     reiniciar: (world) => {
       context.simulated.reset();
       context.jukebox?.reset();
-      const response = change(restartWorld(world), "restarted from zero");
+      context.setWorld(restartWorld(world));
+      // Before the answer, so it carries the state after the restart.
       context.restarted();
-      return response;
+      return change(context.world(), "restarted from zero");
     },
     simulados: (world, input) => {
       const filled = context.simulated.fill(world, totalOf(world, input));

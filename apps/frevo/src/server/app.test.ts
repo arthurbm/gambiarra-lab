@@ -400,6 +400,40 @@ describe("the session's spending ceiling", () => {
       await thrifty.stop();
     }
   }, 40_000);
+
+  test("starts over when the admin restarts the dynamic", async () => {
+    const thrifty = startWorldServer({
+      ...FAST,
+      hubUrl: hub.url,
+      roomName: ROOM_NAME,
+      host: "127.0.0.1",
+      port: 0,
+      bonecos: 2,
+      seed: 5,
+      adminSecret: ADMIN_SECRET,
+      ceilingUsd: 0.000_000_1,
+    });
+    const asAdmin = { Authorization: `Bearer ${ADMIN_SECRET}` };
+    try {
+      await until(async () => {
+        const state = (await (
+          await fetch(`${thrifty.url}/api/admin/models`, { headers: asAdmin })
+        ).json()) as { spending: { exceeded: boolean } };
+        return state.spending.exceeded ? true : undefined;
+      }, 20_000);
+      const restarted = await fetch(`${thrifty.url}/api/admin/reiniciar`, {
+        method: "POST",
+        headers: asAdmin,
+      });
+      expect(restarted.status).toBe(200);
+      const { spending } = (await restarted.json()) as {
+        spending: { exceeded: boolean; spentUsd: number };
+      };
+      expect(spending).toMatchObject({ exceeded: false, spentUsd: 0 });
+    } finally {
+      await thrifty.stop();
+    }
+  }, 40_000);
 });
 
 describe("the world server without any model", () => {
