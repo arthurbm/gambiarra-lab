@@ -7,12 +7,26 @@ import type {
   DecisionRequest,
   EncounterRequest,
   MaestroRequest,
+  NameRequest,
   PersonalityRequest,
   QuestionRequest,
+  RefrainRequest,
   WalkRequest,
 } from "../sim/world";
 
 export const DECISION_TOOL_NAME = "agir";
+/** A refrain is longer than one line: its decision gets more room to answer. */
+export const REFRAIN_MAX_TOKENS = 700;
+
+/** The `max_tokens` a decision is sent with, given the scheduler's default. */
+export function maxTokensFor(
+  request: DecisionRequest,
+  fallback: number
+): number {
+  return request.kind === "refrao"
+    ? Math.max(fallback, REFRAIN_MAX_TOKENS)
+    : fallback;
+}
 
 export interface ChatMessage {
   content: string | null;
@@ -167,8 +181,53 @@ function maestroTool(request: MaestroRequest): FunctionTool {
   });
 }
 
+const NAME_TOOL = tool(
+  "Propõe um nome para o bloco. Sempre chame esta ferramenta.",
+  {
+    type: "object",
+    additionalProperties: false,
+    required: ["nome"],
+    properties: {
+      nome: {
+        type: "string",
+        maxLength: 60,
+        description:
+          "O nome do bloco de frevo, em português, com até 40 caracteres.",
+      },
+    },
+  }
+);
+
+const REFRAIN_TOOL = tool(
+  "Propõe o refrão do bloco. Sempre chame esta ferramenta.",
+  {
+    type: "object",
+    additionalProperties: false,
+    required: ["em_comum", "versos"],
+    properties: {
+      em_comum: {
+        type: "string",
+        description:
+          "Em poucas palavras, o que os humanos do bloco têm em comum.",
+      },
+      versos: {
+        type: "array",
+        minItems: 2,
+        maxItems: 4,
+        items: { type: "string" },
+        description:
+          "De dois a quatro versos do refrão, em português, cada um com até 50 caracteres.",
+      },
+    },
+  }
+);
+
 export function decisionTool(request: DecisionRequest): FunctionTool {
   switch (request.kind) {
+    case "nome":
+      return NAME_TOOL;
+    case "refrao":
+      return REFRAIN_TOOL;
     case "encounter":
       return ENCOUNTER_TOOL;
     case "maestro":
@@ -310,8 +369,67 @@ function maestroMessages(request: MaestroRequest): ChatMessage[] {
   ];
 }
 
+function bloco(request: NameRequest | RefrainRequest): string {
+  return [
+    "O seu bloco:",
+    ...request.people.map(
+      (person) =>
+        `- ${introduce(person)}${person.name === request.boneco.name ? " (é você)" : ""}`
+    ),
+  ].join("\n");
+}
+
+function nameMessages(request: NameRequest): ChatMessage[] {
+  const taken =
+    request.taken.length > 0
+      ? [`Outros blocos já se chamam: ${request.taken.join("; ")}. Não repita.`]
+      : [];
+  return [
+    { role: "system", content: persona(request.boneco.name) },
+    {
+      role: "user",
+      content: [
+        "Você e os bonecos abaixo formaram um bloco de frevo e agora escolhem o nome dele.",
+        bloco(request),
+        ...taken,
+        "Proponha um nome curto e divertido de bloco de frevo do Recife, que lembre o que os humanos do bloco têm em comum. Os humanos vão votar entre as propostas.",
+      ].join("\n"),
+    },
+  ];
+}
+
+function refrainMessages(request: RefrainRequest): ChatMessage[] {
+  const task = request.current
+    ? [
+        "O bloco já escolheu este refrão:",
+        ...request.current.map((line) => `  ${line}`),
+        "Proponha uma versão melhorada, com de dois a quatro versos, ainda sobre o que os humanos têm em comum. Os humanos vão escolher entre manter o de agora e os ajustes.",
+      ]
+    : [
+        "Escreva um refrão de frevo para o bloco cantar: de dois a quatro versos curtos, fáceis de cantar e com rima, sobre o que os humanos do bloco têm em comum.",
+        "Os humanos vão votar entre as propostas dos bonecos.",
+      ];
+  return [
+    { role: "system", content: persona(request.boneco.name) },
+    {
+      role: "user",
+      content: [
+        `Você está no bloco «${request.blocoName}».`,
+        bloco(request),
+        "Primeiro diga o que os humanos do bloco têm em comum, olhando o jeito de cada um.",
+        ...task,
+        "Cada verso com até 50 caracteres. Nada de palavrão, nem nomes de marcas.",
+      ].join("\n"),
+    },
+  ];
+}
+
 export function decisionMessages(request: DecisionRequest): ChatMessage[] {
   switch (request.kind) {
+    case "nome":
+      return nameMessages(request);
+    case "refrao":
+      return refrainMessages(request);
     case "encounter":
       return encounterMessages(request);
     case "maestro":
@@ -389,6 +507,21 @@ function parseMaestro(args: Record<string, unknown>): Action | undefined {
   };
 }
 
+function parseRefrain(args: Record<string, unknown>): Action | undefined {
+  const { versos, em_comum } = args;
+  if (
+    !Array.isArray(versos) ||
+    versos.some((line) => typeof line !== "string")
+  ) {
+    return;
+  }
+  return {
+    type: "refrao",
+    lines: versos as string[],
+    common: typeof em_comum === "string" ? em_comum : "",
+  };
+}
+
 /**
  * The action in a chat completion, or nothing when the model did not call
  * the tool or the arguments do not fit the request's kind.
@@ -402,6 +535,12 @@ export function parseDecision(
     return;
   }
   switch (request?.kind) {
+    case "nome":
+      return typeof args.nome === "string"
+        ? { type: "nome", name: args.nome }
+        : undefined;
+    case "refrao":
+      return parseRefrain(args);
     case "encounter":
       return parseEncounter(args);
     case "maestro":

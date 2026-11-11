@@ -8,6 +8,7 @@
 // PHASE_HOOKS. The world only keeps the clock's data; this module moves it,
 // and `tick` is the step the server runs. The hooks are wired here, not in
 // each phase's module, so a phase imports the world and never this module.
+import { closeCompor, enterCompor } from "./compor";
 import { closeFormar, enterFormar } from "./formar";
 import {
   type BrainResult,
@@ -42,6 +43,8 @@ export const PHASE_HOOKS: Partial<Record<Phase, PhaseHooks | undefined>> = {
   // The phase clock changes the phase; closing only ends the encounters and
   // hands whoever is left to the maestro.
   formar: { onEnter: enterFormar, onExit: closeFormar },
+  // Every bloco leaves the compor phase with a name and a refrain.
+  compor: { onEnter: enterCompor, onExit: closeCompor },
 };
 
 export interface PhaseStatus {

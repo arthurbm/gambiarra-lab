@@ -13,6 +13,15 @@ import {
 } from "./ask";
 import { filterModelText } from "./blocklist";
 import {
+  type ComporState,
+  type ComposeView,
+  composeView,
+  holdsComposeDecision,
+  stepCompor,
+  VOTE_PURPOSE,
+  votoAnswered,
+} from "./compor";
+import {
   type Bloco,
   blocoAnswered,
   canWander,
@@ -40,6 +49,7 @@ import {
 } from "./interview";
 
 export type { Ask, AskOutcome, HumanAnswer } from "./ask";
+export type { ComporState, ComposeView } from "./compor";
 export type { Bloco } from "./formar";
 export { INSTRUMENTS, type Instrument } from "./interview";
 
@@ -118,9 +128,23 @@ export interface MaestroAction {
   speech: string;
   type: "maestro";
 }
+/** A name for the boneco's bloco. */
+export interface NameAction {
+  name: string;
+  type: "nome";
+}
+/** A refrain of two to four verses about what the bloco's humans share. */
+export interface RefrainAction {
+  /** What the humans have in common, in the model's words. */
+  common: string;
+  lines: string[];
+  type: "refrao";
+}
 export type Action =
   | EncounterAction
   | MaestroAction
+  | NameAction
+  | RefrainAction
   | PersonalityAction
   | QuestionAction
   | WalkAction;
@@ -184,10 +208,31 @@ export interface MaestroRequest extends RequestBase {
   sizes: number[];
 }
 
+/** A boneco proposes a name for its bloco. */
+export interface NameRequest extends RequestBase {
+  kind: "nome";
+  /** Everyone in the bloco, the boneco itself included. */
+  people: Acquaintance[];
+  /** Names other blocos already have, to avoid. */
+  taken: string[];
+}
+
+/** A boneco proposes the bloco's refrain, or a reworked one. */
+export interface RefrainRequest extends RequestBase {
+  blocoName: string;
+  /** The refrain the bloco chose, when this is the round to rework it. */
+  current: string[] | null;
+  kind: "refrao";
+  /** Everyone in the bloco, the boneco itself included. */
+  people: Acquaintance[];
+}
+
 /** A decision the simulation wants from a brain before `deadlineMs`. */
 export type DecisionRequest =
   | EncounterRequest
   | MaestroRequest
+  | NameRequest
+  | RefrainRequest
   | PersonalityRequest
   | QuestionRequest
   | WalkRequest;
@@ -221,6 +266,8 @@ export interface Boneco {
   asks: number;
   /** The model the boneco was given on arrival. */
   assignedModel: string | null;
+  /** The human's vote in the bloco's current round, until the round reads it. */
+  ballot: { askId: string; choice: number | null } | null;
   blocoId: string | null;
   brain: BrainSource | null;
   decisions: number;
@@ -291,6 +338,8 @@ export interface WorldRules {
 export interface World {
   blocos: Bloco[];
   bonecos: Boneco[];
+  /** The compor phase's rounds and votes; null before it starts. */
+  compor: ComporState | null;
   events: WorldEvent[];
   /** The formar phase's encounters and proposals; null before it starts. */
   formar: FormarState | null;
@@ -336,6 +385,10 @@ export interface PublicBloco {
   mark: number;
   /** Boneco ids. */
   members: string[];
+  /** Chosen in the compor phase; null until then. */
+  name: string | null;
+  /** One verse per item, two to four; null until chosen. */
+  refrain: string[] | null;
   /** Where the bloco gathers; `id` is the meeting spot's, on the square. */
   spot: { id: string | null; x: number; y: number };
 }
@@ -387,6 +440,8 @@ export interface PrivateView {
     assignedModel: string | null;
     personality: string[] | null;
   };
+  /** The bloco's name and refrain rounds, the same on every phone of the bloco. */
+  compor: ComposeView | null;
   interview: { answered: number; done: boolean; total: number } | null;
   phase: Phase;
   /** Encounters, oldest first. */
@@ -520,6 +575,7 @@ function newBoneco(world: World, id: string, sessionId: string | null): Boneco {
     instrument: null,
     sessionId,
     assignedModel: leastUsedModel(world.models, world.bonecos),
+    ballot: null,
     blocoId: null,
     vote: null,
     x,
@@ -574,6 +630,7 @@ export function createWorld(options: {
   const world: World = {
     blocos: [],
     bonecos: [],
+    compor: null,
     events: [],
     formar: null,
     map: options.map ?? PRACA,
@@ -737,12 +794,14 @@ const ASK_HANDLERS: Record<
 > = {
   interview: interviewAnswered,
   bloco: blocoAnswered,
+  voto: votoAnswered,
 };
 
 function closeAsk(boneco: Boneco, world: World, outcome: AskOutcome): Boneco {
   const ask = boneco.ask as Ask;
   let next: Boneco = { ...boneco, ask: null };
-  if (outcome.by === "boneco") {
+  // A vote has its own notice: the boneco does not vote for its human.
+  if (outcome.by === "boneco" && ask.purpose !== VOTE_PURPOSE) {
     next = think(next, world, decidedAloneNotice(ask, outcome), null, "aviso");
   }
   const handler = ASK_HANDLERS[ask.purpose];
@@ -1047,6 +1106,11 @@ function assignModels(bonecos: Boneco[], world: World): Boneco[] {
   return assigned;
 }
 
+/** Decisions a phase module settles itself, instead of the boneco's step. */
+function held(kind: DecisionKind): boolean {
+  return holdsDecision(kind) || holdsComposeDecision(kind);
+}
+
 function stepBoneco(
   previous: Boneco,
   world: World,
@@ -1056,7 +1120,7 @@ function stepBoneco(
   let boneco = previous;
   // Decisions of the formar phase are settled by `stepFormar`.
   const answer =
-    boneco.pending && !holdsDecision(boneco.pending.kind)
+    boneco.pending && !held(boneco.pending.kind)
       ? results.get(boneco.pending.requestId)
       : undefined;
   if (answer?.ok) {
@@ -1065,7 +1129,7 @@ function stepBoneco(
   // Still waiting: a failed or unusable answer, or the deadline, ends it.
   if (
     boneco.pending &&
-    !holdsDecision(boneco.pending.kind) &&
+    !held(boneco.pending.kind) &&
     (answer || world.timeMs >= boneco.pending.deadlineMs)
   ) {
     boneco = fallback(boneco, world);
@@ -1114,7 +1178,11 @@ export function step(
     return stepped.boneco;
   });
   const formed = stepFormar(next, results);
-  return { world: formed.world, requests: [...requests, ...formed.requests] };
+  const composed = stepCompor(formed.world, results);
+  return {
+    world: composed.world,
+    requests: [...requests, ...formed.requests, ...composed.requests],
+  };
 }
 
 // --- Views -----------------------------------------------------------------
@@ -1151,11 +1219,13 @@ export function publicSnapshot(world: World): PublicSnapshot {
     phase: world.phase,
     map: world.map,
     bonecos: world.bonecos.map((boneco) => publicBoneco(world, boneco)),
-    blocos: world.blocos.map(({ id, mark, members, spot }) => ({
+    blocos: world.blocos.map(({ id, mark, members, spot, name, refrain }) => ({
       id,
       mark,
       members,
       spot,
+      name,
+      refrain,
     })),
     events: world.events.filter((event) => !silenced(world, event.bonecoId)),
   };
@@ -1211,6 +1281,7 @@ export function privateView(
     thoughts: boneco.thoughts,
     talks: talksOf(world, boneco.id),
     bloco: blocoOf(world, boneco),
+    compor: composeView(world, boneco),
     ask: ask
       ? {
           id: ask.id,

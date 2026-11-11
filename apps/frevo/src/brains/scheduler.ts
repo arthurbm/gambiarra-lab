@@ -11,6 +11,7 @@ import {
   decisionMessages,
   decisionTool,
   type FunctionTool,
+  maxTokensFor,
   parseDecision,
 } from "./decision";
 import { createModelMetrics, type ModelMetrics, type Usage } from "./metrics";
@@ -147,7 +148,7 @@ export function decisionBody(
   return {
     model: participantId,
     stream: false,
-    max_tokens: maxTokens,
+    max_tokens: maxTokensFor(request, maxTokens),
     messages: decisionMessages(request),
     tools: [decisionTool(request)],
     tool_choice: "required",

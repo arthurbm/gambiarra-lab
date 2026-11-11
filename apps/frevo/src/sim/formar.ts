@@ -41,6 +41,10 @@ export interface Bloco {
   mark: number;
   /** Boneco ids. */
   members: string[];
+  /** The bloco's name, chosen in the compor phase; null until then. */
+  name: string | null;
+  /** The bloco's refrain, one verse per item (two to four); null until chosen. */
+  refrain: string[] | null;
   /** Where the bloco gathers; `id` is the meeting spot's, on the square. */
   spot: { id: string | null; x: number; y: number };
 }
@@ -872,6 +876,8 @@ function formBloco(world: World, ids: string[], formedBy: Bloco["formedBy"]) {
     members: [...ids],
     spot: blocoSpot(world, mark),
     formedBy,
+    name: null,
+    refrain: null,
   };
   world.blocos.push(bloco);
   const members = ids.map((id) => get(world, id));
