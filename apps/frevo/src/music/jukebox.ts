@@ -46,8 +46,9 @@ export interface BlocoMusic {
 
 export interface Jukebox {
   current: () => PlayCommand | null;
+  /** Plays the bloco's music if it is ready, the embedded track otherwise; never makes it. */
   play: (bloco: BlocoMusic) => PlayCommand;
-  /** Starts making the bloco's music, once. */
+  /** Starts making the bloco's music, once: marking a bloco calls it. */
   prepare: (bloco: BlocoMusic) => void;
   /** A telão says whether its sound is on and what it plays. */
   report: (
@@ -150,7 +151,7 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
   return {
     prepare,
     play(bloco) {
-      prepare(bloco);
+      // Only marking makes music: a bloco never prepared plays the embedded track.
       return issue(
         bloco.blocoId,
         tracks.get(bloco.blocoId)?.url ?? fallbackUrl

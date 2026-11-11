@@ -85,8 +85,17 @@ describe("the jukebox", () => {
   test("playing before the music is ready plays the embedded track and the dynamic goes on", () => {
     const fake = manual();
     const jukebox = createJukebox({ generator: fake.generator });
+    jukebox.prepare(BLOCO);
     expect(jukebox.play(BLOCO).url).toBe(EMBEDDED_TRACK);
     expect(fake.calls).toHaveLength(1);
+  });
+
+  test("playing a bloco that was never marked plays the embedded track and makes nothing", () => {
+    const fake = manual();
+    const jukebox = createJukebox({ generator: fake.generator });
+    expect(jukebox.play(BLOCO).url).toBe(EMBEDDED_TRACK);
+    expect(fake.calls).toHaveLength(0);
+    expect(jukebox.tracks()).toEqual({});
   });
 
   test("a generator that fails or takes too long leaves the embedded track", async () => {
@@ -155,6 +164,7 @@ describe("the jukebox", () => {
   test("resetting forgets the tracks, the command and late answers", async () => {
     const fake = manual();
     const jukebox = createJukebox({ generator: fake.generator });
+    jukebox.prepare(BLOCO);
     jukebox.play(BLOCO);
     jukebox.reset();
     fake.resolve("https://musica/velha.mp3");
