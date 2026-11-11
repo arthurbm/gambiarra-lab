@@ -365,3 +365,13 @@
   min-height: 2.9rem;
   padding: 0.4rem 0.6rem;
 }
+
+/* A bloco not chosen fits one line: its name, then "Marcar". */
+.admin-jury-blocos li[data-chosen="false"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.admin-jury-blocos li[data-chosen="false"] .admin-jury-actions button {
+  min-width: 6.5rem;
+}

@@ -2,12 +2,12 @@
 .desfile {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 10;
   display: grid;
   place-items: center;
   padding: clamp(1rem, 2.5vw, 3rem);
   overflow: hidden;
-  background: rgb(27 16 53 / 82%);
+  background: rgb(27 16 53 / 90%);
 }
 
 .desfile-empty {
@@ -272,7 +272,7 @@
   position: absolute;
   top: 1rem;
   right: 1rem;
-  z-index: 3;
+  z-index: 11;
   padding: 0.7em 1.4em;
   font: inherit;
   font-size: clamp(1.1rem, 1.6vw, 1.8rem);

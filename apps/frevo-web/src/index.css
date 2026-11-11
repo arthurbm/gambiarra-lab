@@ -438,6 +438,11 @@ a {
   border-radius: 12px;
 }
 
+/* The costume sticks out to the right of the boneco; keep the name clear. */
+.celular-avatar .boneco-sprite {
+  margin-right: calc(var(--boneco-size) / 2);
+}
+
 .celular-model {
   margin: 0.1rem 0 0;
   font-size: 0.9rem;

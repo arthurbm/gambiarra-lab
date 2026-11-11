@@ -13,6 +13,10 @@ import { blocoColor } from "./bloco-mark";
 import { panelEntries } from "./models-panel-rows";
 import "./desfile.css";
 
+function count(value: number | string, one: string, many: string): string {
+  return `${value} ${Number(value) === 1 ? one : many}`;
+}
+
 function labels(models: string[]): string {
   return models.map(modelLabel).join(", ");
 }
@@ -123,7 +127,8 @@ function FinalScreen({
         <p>
           {desfile.blocos.length} blocos ·{" "}
           {desfile.blocos.reduce((sum, bloco) => sum + bloco.members.length, 0)}{" "}
-          bonecos · {decisions} decisões de {entries.length} modelos
+          bonecos · {count(decisions, "decisão", "decisões")} de{" "}
+          {count(entries.length, "modelo", "modelos")}
         </p>
       </header>
       {chosen.length > 0 ? (
@@ -144,8 +149,9 @@ function FinalScreen({
         <ul aria-label="Resumo dos modelos" className="final-models">
           {entries.map((entry) => (
             <li key={entry.key}>
-              <strong>{entry.label}</strong> {entry.decisions} decisões ·{" "}
-              {entry.time} · {entry.failures} falhas
+              <strong>{entry.label}</strong>{" "}
+              {count(entry.decisions, "decisão", "decisões")} · {entry.time} ·{" "}
+              {count(entry.failures, "falha", "falhas")}
             </li>
           ))}
         </ul>
