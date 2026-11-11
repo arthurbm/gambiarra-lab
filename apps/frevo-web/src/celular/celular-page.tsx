@@ -1,16 +1,25 @@
-// The phone: the person's boneco, the model that thinks for it, its recent
-// thoughts and one question at a time with a countdown.
+// The phone. A first visit asks the person's name. After that, top to bottom:
+// the boneco, the row of phases, then one "now" card that says what is
+// happening and where to look, with the question inside when it is the
+// person's turn. Everything else (bloco, personality, talks, thoughts) comes
+// below, quieter, and the long lists start folded.
 
 import { modelLabel } from "@gambiarra-lab/frevo/models";
-import type { Talk, Thought } from "@gambiarra-lab/frevo/snapshot";
+import {
+  PERSON_NAME_MAX_LENGTH,
+  type Talk,
+  type Thought,
+} from "@gambiarra-lab/frevo/snapshot";
 import type { PhoneView as PrivateView } from "@gambiarra-lab/frevo/views";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { BonecoSprite } from "../art/boneco-sprite";
-import { phaseLine } from "../phase/phase-text";
+import { PhaseSteps } from "../phase/phase-steps";
+import { PHASE_ORDER, phaseLine } from "../phase/phase-text";
 import { blocoColor, blocoLabel } from "../telao/bloco-mark";
 import { ComporPanel } from "./compor-panel";
 import { otherModelLine, ownModelLabel } from "./model-line";
-import { type Reply, useCelular } from "./use-celular";
+import { LOOK_LABEL, nowCard } from "./now-text";
+import { type Replied, type Reply, useCelular } from "./use-celular";
 
 const TYPING_PING_MS = 4000;
 
@@ -41,7 +50,7 @@ function BonecoPortrait({
   );
 }
 
-/** The bloco's refrain in the desfile, and in the final whether it was chosen. */
+/** The bloco's name and refrain in the desfile and the final; the "now" card says how it went. */
 function DesfileResult({
   desfile,
   mark,
@@ -49,22 +58,12 @@ function DesfileResult({
   desfile: NonNullable<PrivateView["desfile"]>;
   mark: number;
 }) {
-  let line = desfile.onStage
-    ? "Seu bloco está desfilando no telão agora!"
-    : "Seu bloco desfila no telão.";
-  if (desfile.chosen) {
-    line = "Seu bloco foi escolhido pelo júri!";
-  } else if (desfile.phase === "final") {
-    line = "O desfile acabou. Seu bloco não foi escolhido desta vez.";
-  }
   return (
     <section
-      aria-live="polite"
       className="celular-desfile"
       data-chosen={desfile.chosen}
       style={{ "--bloco": blocoColor(mark) } as React.CSSProperties}
     >
-      <p className="celular-desfile-line">{line}</p>
       <h2>{desfile.name}</h2>
       <blockquote>
         {desfile.refrain.map((verse, index) => (
@@ -116,18 +115,24 @@ function Question({
 }: {
   ask: NonNullable<PrivateView["ask"]>;
   remainingMs: number;
-  reply: (askId: string, answer: Reply) => Promise<boolean>;
+  reply: (askId: string, answer: Reply) => Promise<Replied>;
   vote: boolean;
 }) {
   const [sent, setSent] = useState(false);
   const [text, setText] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
   const lastPing = useRef(0);
+  const writeId = useId();
+  /** A vote that also takes a written option: the bloco's name. */
+  const canWrite = ask.options.length > 0 && ask.textMaxLength !== null;
 
   function send(answer: Reply) {
     setSent(true);
-    reply(ask.id, answer).then((ok) => {
-      if (!ok) {
+    setProblem(null);
+    reply(ask.id, answer).then((replied) => {
+      if (!replied.ok) {
         setSent(false);
+        setProblem(replied.erro ?? null);
       }
     });
   }
@@ -147,7 +152,7 @@ function Question({
   }
 
   return (
-    <section aria-live="polite" className="celular-question">
+    <div className="celular-question">
       <p className="celular-question-text">{ask.question}</p>
       {ask.options.length > 0 ? (
         <div className="celular-options">
@@ -192,8 +197,33 @@ function Question({
           </div>
         </form>
       )}
+      {canWrite ? (
+        <form className="celular-write" onSubmit={submit}>
+          <label htmlFor={writeId}>Nenhum desses? Escreva outro nome:</label>
+          <div className="celular-write-row">
+            <input
+              disabled={sent}
+              enterKeyHint="send"
+              id={writeId}
+              maxLength={ask.textMaxLength ?? undefined}
+              onChange={(event) => typed(event.target.value)}
+              placeholder="Bloco do…"
+              type="text"
+              value={text}
+            />
+            <button disabled={sent || !text.trim()} type="submit">
+              Propor
+            </button>
+          </div>
+        </form>
+      ) : null}
+      {problem ? (
+        <p className="celular-question-problem" role="alert">
+          {problem}
+        </p>
+      ) : null}
       <Countdown remainingMs={remainingMs} totalMs={ask.totalMs} vote={vote} />
-    </section>
+    </div>
   );
 }
 
@@ -203,8 +233,8 @@ function Talks({ talks }: { talks: Talk[] }) {
     return null;
   }
   return (
-    <section className="celular-talks">
-      <h2>Com quem ele conversou</h2>
+    <details className="celular-fold celular-talks">
+      <summary>Com quem ele conversou ({talks.length})</summary>
       <ol>
         {[...talks].reverse().map((talk) => (
           <li key={`${talk.atMs}-${talk.with.id}`}>
@@ -223,7 +253,7 @@ function Talks({ talks }: { talks: Talk[] }) {
           </li>
         ))}
       </ol>
-    </section>
+    </details>
   );
 }
 
@@ -259,8 +289,8 @@ function ThoughtList({ thoughts }: { thoughts: Thought[] }) {
     return null;
   }
   return (
-    <section className="celular-thoughts">
-      <h2>O que ele anda pensando</h2>
+    <details className="celular-fold celular-thoughts">
+      <summary>O que ele anda pensando ({thoughts.length})</summary>
       <ol>
         {[...thoughts].reverse().map((thought) => (
           <li data-tone={thought.tone} key={`${thought.atMs}-${thought.text}`}>
@@ -271,23 +301,102 @@ function ThoughtList({ thoughts }: { thoughts: Thought[] }) {
           </li>
         ))}
       </ol>
-    </section>
+    </details>
   );
 }
 
-function Status({ view }: { view: PrivateView }) {
-  const { boneco, interview } = view;
-  if (interview && !interview.done) {
-    return (
-      <p className="celular-progress">
-        {interview.answered < interview.total
-          ? `Pergunta ${Math.min(interview.answered + 1, interview.total)} de ${interview.total}`
-          : "Última: uma pergunta aberta"}
-        {boneco.thinking ? " · pensando…" : ""}
-      </p>
-    );
+/** A first visit: the person says how they want to be called on the telão. */
+function Welcome({
+  error,
+  start,
+}: {
+  error: string | null;
+  start: (name: string | null) => Promise<void> | null;
+}) {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const nameId = useId();
+
+  function enter(chosen: string | null) {
+    setBusy(true);
+    Promise.resolve(start(chosen)).finally(() => setBusy(false));
   }
-  return null;
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    enter(name.trim() || null);
+  }
+
+  return (
+    <main className="celular celular-welcome">
+      <h1>Bloco de frevo</h1>
+      <p className="celular-welcome-lead">
+        Você ganha um boneco que pensa com uma IA. Ele entra na praça do telão,
+        acha um bloco para você e compõe um frevo.
+      </p>
+      <form className="celular-welcome-form" onSubmit={submit}>
+        <label htmlFor={nameId}>Como você quer aparecer no telão?</label>
+        <input
+          autoCapitalize="words"
+          autoComplete="given-name"
+          disabled={busy}
+          enterKeyHint="go"
+          id={nameId}
+          maxLength={PERSON_NAME_MAX_LENGTH}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Seu nome ou apelido"
+          type="text"
+          value={name}
+        />
+        {error ? (
+          <p className="celular-question-problem" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <button disabled={busy || !name.trim()} type="submit">
+          Entrar na praça
+        </button>
+        <button
+          className="celular-skip"
+          disabled={busy}
+          onClick={() => enter(null)}
+          type="button"
+        >
+          Prefiro um nome sorteado
+        </button>
+      </form>
+      <p className="celular-footer">Sem cadastro. Leva menos de um minuto.</p>
+    </main>
+  );
+}
+
+/** What is happening now and where to look, with the question when there is one. */
+function Now({
+  remainingMs,
+  reply,
+  view,
+}: {
+  remainingMs: number;
+  reply: (askId: string, answer: Reply) => Promise<Replied>;
+  view: PrivateView;
+}) {
+  const card = nowCard(view);
+  return (
+    <section aria-live="polite" className="celular-now" data-look={card.look}>
+      <p className="celular-now-look">{LOOK_LABEL[card.look]}</p>
+      <h2 className="celular-now-title">{card.title}</h2>
+      <p className="celular-now-text">{card.text}</p>
+      {view.ask ? (
+        <Question
+          ask={view.ask}
+          key={view.ask.id}
+          remainingMs={remainingMs}
+          reply={reply}
+          vote={view.ask.purpose === "voto"}
+        />
+      ) : null}
+    </section>
+  );
 }
 
 function Personality({ boneco }: { boneco: PrivateView["boneco"] }) {
@@ -310,7 +419,17 @@ function Personality({ boneco }: { boneco: PrivateView["boneco"] }) {
 }
 
 export function CelularPage() {
-  const { view, status, reply, receivedAt, expelled, full } = useCelular();
+  const {
+    view,
+    status,
+    reply,
+    receivedAt,
+    expelled,
+    full,
+    welcome,
+    nameError,
+    start,
+  } = useCelular();
   useTick(250);
 
   if (expelled) {
@@ -329,6 +448,10 @@ export function CelularPage() {
         <p>A praça lotou. Acompanhe pelo telão.</p>
       </main>
     );
+  }
+
+  if (welcome && !view) {
+    return <Welcome error={nameError} start={start} />;
   }
 
   if (!view) {
@@ -363,23 +486,19 @@ export function CelularPage() {
           <span className="celular-offline">reconectando…</span>
         )}
       </header>
-      <p className="celular-progress">{phaseLine(view.clock)}</p>
-      <Status view={view} />
-      {ask ? (
-        <Question
-          ask={ask}
-          key={ask.id}
-          remainingMs={remainingMs}
-          reply={reply}
-          vote={view.compor?.voting === true}
-        />
-      ) : null}
-      {!ask && boneco.thinking && !boneco.personality ? (
-        <p className="celular-thinking">Pensando na próxima pergunta…</p>
-      ) : null}
-      {view.compor ? <ComporPanel compor={view.compor} /> : null}
+      <nav aria-label="Etapas da brincadeira" className="celular-steps">
+        <PhaseSteps phase={view.clock.phase} />
+        <p className="celular-steps-line">
+          Etapa {PHASE_ORDER.indexOf(view.clock.phase) + 1} de{" "}
+          {PHASE_ORDER.length} · {phaseLine(view.clock)}
+        </p>
+      </nav>
+      <Now remainingMs={remainingMs} reply={reply} view={view} />
       {view.desfile && view.bloco ? (
         <DesfileResult desfile={view.desfile} mark={view.bloco.mark} />
+      ) : null}
+      {view.compor && !view.desfile ? (
+        <ComporPanel asking={ask?.purpose === "voto"} compor={view.compor} />
       ) : null}
       {view.bloco ? <BlocoMates bloco={view.bloco} /> : null}
       <Personality boneco={boneco} />

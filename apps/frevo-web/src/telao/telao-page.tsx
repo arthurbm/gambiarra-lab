@@ -1,6 +1,7 @@
 import type { PublicSnapshot } from "@gambiarra-lab/frevo/snapshot";
 import type { ReactNode } from "react";
 import { DesfileStage, SoundButton } from "./desfile-stage";
+import { EntradaGuide } from "./entrada-guide";
 import { EntradaQr } from "./entrada-qr";
 import { EventLog } from "./event-log";
 import { ModelsPanel } from "./models-panel";
@@ -63,6 +64,9 @@ export function TelaoPage() {
   const sound = useTelaoAudio(snapshot?.audio);
   const overlay = (
     <>
+      {snapshot?.phase === "entrada" ? (
+        <EntradaGuide people={snapshot.bonecos.length} />
+      ) : null}
       {snapshot?.desfile ? (
         <DesfileStage
           desfile={snapshot.desfile}

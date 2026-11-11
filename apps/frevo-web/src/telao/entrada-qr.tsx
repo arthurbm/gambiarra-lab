@@ -59,9 +59,7 @@ export function EntradaQr() {
         <path d={qrPath(qr.data)} fill="#000" />
       </svg>
       <p className="entrada-qr-url">{shown}</p>
-      <p className="entrada-qr-hint">
-        Aponte a câmera do celular e ganhe um boneco. Sem cadastro.
-      </p>
+      <p className="entrada-qr-hint">Sem cadastro, direto no navegador.</p>
     </section>
   );
 }

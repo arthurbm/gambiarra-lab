@@ -2,17 +2,6 @@
 // without a browser.
 import type { ComposeView } from "@gambiarra-lab/frevo/snapshot";
 
-const ROUND_TITLE: Record<ComposeView["round"], string> = {
-  nome: "Escolhendo o nome",
-  refrao: "Escolhendo o refrão",
-  ajuste: "Ajustando o refrão",
-  pronto: "Bloco pronto",
-};
-
-export function roundTitle(view: ComposeView): string {
-  return ROUND_TITLE[view.round];
-}
-
 /** What the bloco is doing now, in one line. */
 export function roundLine(view: ComposeView): string {
   if (view.round === "pronto") {
@@ -34,4 +23,20 @@ export function voteCount(view: ComposeView): string {
   }
   const people = view.voters === 1 ? "pessoa" : "pessoas";
   return `${view.votes} de ${view.voters} ${people} do bloco já votaram.`;
+}
+
+/** Who an option on the vote came from, under the option. */
+export function optionCredit(
+  option: ComposeView["options"][number],
+  round: ComposeView["round"]
+): string {
+  if (option.human) {
+    return option.by
+      ? `${option.by} escreveu no celular`
+      : "escrito por alguém do bloco";
+  }
+  if (option.by) {
+    return `proposta de ${option.by}`;
+  }
+  return round === "nome" ? "nome de reserva" : "o refrão de agora";
 }

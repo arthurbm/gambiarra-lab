@@ -9,7 +9,7 @@ import { trackText } from "./track-text";
 
 type Act = (route: string, body?: Record<string, unknown>) => Promise<boolean>;
 
-function SoundLine({ jury }: { jury: AdminState["jury"] }) {
+export function SoundLine({ jury }: { jury: AdminState["jury"] }) {
   const { generations } = jury;
   return (
     <>
@@ -30,17 +30,10 @@ function SoundLine({ jury }: { jury: AdminState["jury"] }) {
 export function AdminJury({ state, act }: { act: Act; state: AdminState }) {
   const { jury } = state;
   const { desfile } = jury;
+  // Before the desfile there is nothing to judge: the page keeps the sound
+  // line with the other settings and this card stays out of the way.
   if (!desfile) {
-    return (
-      <section className="admin-card">
-        <h2>Júri</h2>
-        <p className="admin-hint">
-          O júri começa no desfile: lá você marca até três blocos e toca a
-          música de cada um no telão.
-        </p>
-        <SoundLine jury={jury} />
-      </section>
-    );
+    return null;
   }
   const current =
     desfile.current === null ? null : desfile.blocos[desfile.current];

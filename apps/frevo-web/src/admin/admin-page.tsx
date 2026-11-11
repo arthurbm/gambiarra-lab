@@ -1,15 +1,21 @@
-// The host's controls, made for a phone on the stage: the phase and its clock
-// always on top, big buttons, and a second tap before anything that cannot
-// be undone. The link carries the secret as `/admin?k=<secret>`.
+// The host's controls, made for a phone on the stage. Top to bottom: the bar
+// with the five phases and the clock, always in sight; one "now" card that
+// says what is happening, what needs attention and holds the one big button
+// for the next step; the jury while the desfile runs; and everything the host
+// touches less often (durations, simulated people, moderation, models,
+// restart) folded below. A second tap comes before anything that cannot be
+// undone. The link carries the secret as `/admin?k=<secret>`.
 import type {
   AdminBoneco,
   AdminState,
   PhaseStatus,
 } from "@gambiarra-lab/frevo/views";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { PhaseSteps } from "../phase/phase-steps";
 import { clockText, nextPhase, PHASE_LABELS } from "../phase/phase-text";
-import { AdminJury } from "./admin-jury";
+import { AdminJury, SoundLine } from "./admin-jury";
 import { AdminModelsSection } from "./admin-models";
+import { adminNow } from "./admin-now";
 import { adminSecret, useAdmin } from "./use-admin";
 import "./admin.css";
 
@@ -78,6 +84,30 @@ function ConfirmButton({
   );
 }
 
+/** A section the host opens when needed; the summary says what is inside. */
+function Fold({
+  children,
+  className,
+  hint,
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** The section's key number, shown while it is folded. */
+  hint?: string;
+  title: string;
+}) {
+  return (
+    <details className={["admin-card admin-fold", className].join(" ")}>
+      <summary>
+        <span>{title}</span>
+        {hint ? <small>{hint}</small> : null}
+      </summary>
+      <div className="admin-fold-body">{children}</div>
+    </details>
+  );
+}
+
 function StatusBar({
   state,
   connection,
@@ -88,6 +118,7 @@ function StatusBar({
   const { clock, people, spending } = state;
   return (
     <header className="admin-bar" data-paused={clock.paused}>
+      <PhaseSteps phase={clock.phase} />
       <div className="admin-bar-phase">
         <span>{PHASE_LABELS[clock.phase]}</span>
         {clock.remainingMs === null ? null : (
@@ -118,11 +149,23 @@ function StatusBar({
   );
 }
 
-function PhaseControls({ clock, act }: { act: Act; clock: PhaseStatus }) {
+/** What is happening, what needs attention, and the button for the next step. */
+function NowCard({ state, act }: { act: Act; state: AdminState }) {
+  const { clock } = state;
   const next = nextPhase(clock.phase);
+  const now = adminNow(state);
   return (
-    <section className="admin-card">
-      <h2>Fase</h2>
+    <section aria-live="polite" className="admin-card admin-now">
+      <p className="admin-now-label">Agora</p>
+      <h2>{now.title}</h2>
+      <p>{now.text}</p>
+      {now.warnings.length > 0 ? (
+        <ul className="admin-now-warnings">
+          {now.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
       <div className="admin-main-buttons">
         {clock.phase === "entrada" ? (
           <button
@@ -130,18 +173,18 @@ function PhaseControls({ clock, act }: { act: Act; clock: PhaseStatus }) {
             onClick={() => act("iniciar")}
             type="button"
           >
-            Iniciar: {PHASE_LABELS.formar}
+            Iniciar a brincadeira
           </button>
-        ) : (
+        ) : null}
+        {clock.phase !== "entrada" && next ? (
           <button
             className="admin-primary"
-            disabled={next === null}
             onClick={() => act("avancar")}
             type="button"
           >
-            {next ? `Avançar para ${PHASE_LABELS[next]}` : "Última fase"}
+            Avançar para {PHASE_LABELS[next]}
           </button>
-        )}
+        ) : null}
         {clock.paused ? (
           <button onClick={() => act("retomar")} type="button">
             Retomar
@@ -158,8 +201,10 @@ function PhaseControls({ clock, act }: { act: Act; clock: PhaseStatus }) {
 
 function Durations({ clock, act }: { act: Act; clock: PhaseStatus }) {
   return (
-    <section className="admin-card">
-      <h2>Duração das fases</h2>
+    <Fold
+      hint={TIMED.map((phase) => clockText(clock.durations[phase])).join(" · ")}
+      title="Duração das fases"
+    >
       <ul className="admin-durations">
         {TIMED.map((phase) => {
           const value = clock.durations[phase];
@@ -190,15 +235,14 @@ function Durations({ clock, act }: { act: Act; clock: PhaseStatus }) {
           );
         })}
       </ul>
-    </section>
+    </Fold>
   );
 }
 
 function Simulated({ state, act }: { act: Act; state: AdminState }) {
   const [total, setTotal] = useState(DEFAULT_SIMULATED);
   return (
-    <section className="admin-card">
-      <h2>Bonecos simulados</h2>
+    <Fold hint={`${state.people.simulated} na praça`} title="Bonecos simulados">
       <p className="admin-hint">
         Pessoas de mentira que respondem e votam sozinhas. Os bonecos delas
         pensam com os modelos da sala.
@@ -227,7 +271,7 @@ function Simulated({ state, act }: { act: Act; state: AdminState }) {
           Remover simulados ({state.people.simulated})
         </button>
       </div>
-    </section>
+    </Fold>
   );
 }
 
@@ -270,8 +314,10 @@ function Bonecos({ state, act }: { act: Act; state: AdminState }) {
     (boneco) => showSimulated || !boneco.simulated
   );
   return (
-    <section className="admin-card">
-      <h2>Bonecos na praça ({state.bonecos.length})</h2>
+    <Fold
+      hint={`${state.bonecos.length} · silenciar ou expulsar`}
+      title="Bonecos na praça"
+    >
       {state.people.simulated > 0 ? (
         <label className="admin-check">
           <input
@@ -291,7 +337,7 @@ function Bonecos({ state, act }: { act: Act; state: AdminState }) {
           ))}
         </ul>
       )}
-    </section>
+    </Fold>
   );
 }
 
@@ -334,14 +380,31 @@ function AdminScreen({ secret }: { secret: string }) {
           {error}
         </p>
       ) : null}
-      <PhaseControls act={act} clock={state.clock} />
+      <NowCard act={act} state={state} />
       <AdminJury act={act} state={state} />
+      <h2 className="admin-group">Ajustes e moderação</h2>
       <Durations act={act} clock={state.clock} />
       <Simulated act={act} state={state} />
       <Bonecos act={act} state={state} />
-      <AdminModelsSection secret={secret} />
-      <section className="admin-card admin-restart">
-        <h2>Recomeçar</h2>
+      <Fold
+        hint={
+          state.spending
+            ? `${dollars.format(state.spending.spentUsd)} de ${dollars.format(state.spending.ceilingUsd)}`
+            : undefined
+        }
+        title="Modelos e gasto"
+      >
+        <AdminModelsSection secret={secret} />
+      </Fold>
+      {state.jury.desfile ? null : (
+        <Fold
+          hint={state.jury.sound.enabled ? "som ativado" : "som desativado"}
+          title="Som e música do telão"
+        >
+          <SoundLine jury={state.jury} />
+        </Fold>
+      )}
+      <Fold className="admin-restart" title="Recomeçar">
         <p className="admin-hint">
           Volta para a entrada com o QR, tira todos os bonecos e esquece o
           desfile e as escolhas do júri. As durações ficam.
@@ -352,7 +415,7 @@ function AdminScreen({ secret }: { secret: string }) {
           label="Reiniciar do zero…"
           onConfirm={() => act("reiniciar")}
         />
-      </section>
+      </Fold>
       <p className="admin-hint">
         Veja a praça no <a href="/telao">telão</a>.
       </p>

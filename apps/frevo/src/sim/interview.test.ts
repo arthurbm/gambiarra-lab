@@ -121,8 +121,11 @@ describe("the interview with a person who answers", () => {
     let world = after(arrived(), 300, writer);
     expect(phone(world).ask?.question).toBe("Frevo ou maracatu, rodada 1?");
     expect(phone(world).ask?.options).toEqual(["Frevo", "Maracatu", "Os dois"]);
-    expect(phone(world).ask?.remainingMs).toBeGreaterThan(11_000);
-    expect(phone(world).ask?.remainingMs).toBeLessThanOrEqual(12_000);
+    // Half a minute: people read the question on arrival, telão in sight.
+    expect(phone(world).ask?.remainingMs).toBeGreaterThan(29_000);
+    expect(phone(world).ask?.remainingMs).toBeLessThanOrEqual(30_000);
+    expect(phone(world).ask?.totalMs).toBe(30_000);
+    expect(phone(world).ask?.purpose).toBe("interview");
     // The question is the boneco's balloon on the telão.
     expect(publicSnapshot(world).bonecos[0]?.speech).toBe(
       "Frevo ou maracatu, rodada 1?"
@@ -236,14 +239,14 @@ describe("the interview with a person who answers", () => {
 });
 
 describe("the interview with a person who does not answer", () => {
-  test("after 12 seconds the boneco chooses alone and says so", () => {
+  test("after 30 seconds the boneco chooses alone and says so", () => {
     const world = after(arrived(), 300, writer);
     const options = phone(world).ask?.options as string[];
 
-    const waiting = after(world, 11_500, writer);
+    const waiting = after(world, 29_500, writer);
     expect(phone(waiting).ask?.question).toBe("Frevo ou maracatu, rodada 1?");
 
-    const alone = after(world, 12_300, writer);
+    const alone = after(world, 30_300, writer);
     expect(phone(alone).ask?.question).toBe("Frevo ou maracatu, rodada 2?");
     const notice = phone(alone).thoughts.find(
       (thought) => thought.tone === "aviso"
@@ -265,7 +268,7 @@ describe("the interview with a person who does not answer", () => {
             },
           }
         : undefined;
-    const alone = after(arrived(), 12_500, dotted);
+    const alone = after(arrived(), 30_500, dotted);
     const notice = phone(alone).thoughts.find(
       (thought) => thought.tone === "aviso"
     );
@@ -274,7 +277,7 @@ describe("the interview with a person who does not answer", () => {
 
   test("the whole interview finishes alone, open question included", () => {
     let personality: PersonalityRequest | undefined;
-    const world = after(arrived(), 60_000, (request) => {
+    const world = after(arrived(), 150_000, (request) => {
       if (request.kind === "personality") {
         personality = request;
       }
@@ -293,7 +296,7 @@ describe("the interview with a person who does not answer", () => {
       world = after(world, 300, writer);
     }
     const open = phone(world).ask?.id as string;
-    world = after(world, 10_000);
+    world = after(world, 25_000);
     world = send(world, {
       askId: open,
       typing: true,

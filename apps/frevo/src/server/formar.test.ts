@@ -40,6 +40,8 @@ beforeAll(async () => {
       meetCooldownMs: 200,
       meetRadius: 40,
       askMs: 3000,
+      interviewAskMs: 3000,
+      voteMs: 3000,
     },
     hubUrl: hub.url,
     roomName: ROOM_NAME,

@@ -63,7 +63,6 @@ export function AdminModelsSection({ secret }: { secret: string }) {
 
   return (
     <section className="admin-models">
-      <h2>Modelos e gasto</h2>
       {problem ? <p className="admin-warning">{problem}</p> : null}
       {state ? (
         <>

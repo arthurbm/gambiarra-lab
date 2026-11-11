@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { clockText, nextPhase, PHASE_LABELS, phaseLine } from "./phase-text";
+import {
+  clockText,
+  nextPhase,
+  PHASE_LABELS,
+  PHASE_ORDER,
+  PHASE_SHORT,
+  phaseLine,
+  phasePosition,
+  TELAO_GUIDE,
+} from "./phase-text";
 
 describe("the phase as people read it", () => {
   test("every phase has a name in plain Portuguese", () => {
@@ -10,6 +19,21 @@ describe("the phase as people read it", () => {
       desfile: "Desfile e júri",
       final: "Final",
     });
+  });
+
+  test("every phase has a place in the row of steps and a line for the telão", () => {
+    expect(PHASE_ORDER).toEqual([
+      "entrada",
+      "formar",
+      "compor",
+      "desfile",
+      "final",
+    ]);
+    expect(phasePosition("formar")).toBe("Etapa 2 de 5: Conhecer e formar");
+    for (const phase of PHASE_ORDER) {
+      expect(PHASE_SHORT[phase].length).toBeLessThanOrEqual(8);
+      expect(TELAO_GUIDE[phase].length).toBeGreaterThan(20);
+    }
   });
 
   test("the time left reads as minutes and seconds, rounding up", () => {
