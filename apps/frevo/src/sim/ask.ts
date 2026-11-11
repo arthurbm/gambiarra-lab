@@ -7,6 +7,8 @@ export interface Ask {
   /** Typing in an open question pushes the deadline to at most this. */
   capMs: number;
   deadlineMs: number;
+  /** The choice made when nobody answers; null lets the boneco draw one. */
+  defaultChoice: number | null;
   id: string;
   /** Who wrote the question, as shown to people; null when it is a fixed one. */
   model: string | null;
@@ -43,6 +45,8 @@ export interface HumanAnswer {
 }
 
 export interface AskSpec {
+  /** The choice made when nobody answers; without it the boneco draws one. */
+  defaultChoice?: number | null;
   model?: string | null;
   options: string[];
   purpose: string;
@@ -70,6 +74,7 @@ export function openAsk(
     options: spec.options,
     textMaxLength: spec.textMaxLength ?? null,
     model: spec.model ?? null,
+    defaultChoice: spec.defaultChoice ?? null,
     openedAtMs: nowMs,
     deadlineMs: nowMs + timing.askMs,
     capMs: nowMs + Math.max(timing.askMs, timing.askTypingCapMs),
@@ -132,14 +137,22 @@ export function answerAsk(
   return { error: "resposta inválida" };
 }
 
-/** The boneco's own choice when the time ran out; `roll` is in [0, 1). */
+/**
+ * The boneco's own choice when the time ran out: the ask's default when it has
+ * one, or a draw by `roll`, which is in [0, 1).
+ */
 export function decideAlone(ask: Ask, roll: number): AskOutcome {
+  let choice: number | null = null;
+  if (ask.defaultChoice !== null) {
+    choice = ask.defaultChoice;
+  } else if (ask.options.length > 0) {
+    choice = Math.floor(roll * ask.options.length);
+  }
   return {
     askId: ask.id,
     purpose: ask.purpose,
     by: "boneco",
-    choice:
-      ask.options.length > 0 ? Math.floor(roll * ask.options.length) : null,
+    choice,
     text: null,
   };
 }

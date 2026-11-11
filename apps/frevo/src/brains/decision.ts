@@ -2,8 +2,11 @@
 // with a single forced tool, and the model's tool call back into an action.
 // Each kind of decision has its own tool parameters and prompt.
 import type {
+  Acquaintance,
   Action,
   DecisionRequest,
+  EncounterRequest,
+  MaestroRequest,
   PersonalityRequest,
   QuestionRequest,
   WalkRequest,
@@ -114,8 +117,62 @@ function personalityTool(request: PersonalityRequest): FunctionTool {
   );
 }
 
+const ENCOUNTER_TOOL = tool(
+  "Fala com o boneco que você encontrou e diz se os humanos combinam. Sempre chame esta ferramenta.",
+  {
+    type: "object",
+    additionalProperties: false,
+    required: ["fala", "afinidade"],
+    properties: {
+      fala: {
+        type: "string",
+        description:
+          "O que você diz em voz alta para o outro boneco, em português, com até 80 caracteres.",
+      },
+      afinidade: {
+        type: "boolean",
+        description:
+          "true se o seu humano e o humano do outro boneco combinam para sair juntos num bloco.",
+      },
+    },
+  }
+);
+
+function maestroTool(request: MaestroRequest): FunctionTool {
+  return tool("Divide os foliões em blocos. Sempre chame esta ferramenta.", {
+    type: "object",
+    additionalProperties: false,
+    required: ["blocos", "fala"],
+    properties: {
+      blocos: {
+        type: "array",
+        minItems: request.sizes.length,
+        maxItems: request.sizes.length,
+        description:
+          "Os blocos, cada um com os nomes dos foliões que entram nele. Cada nome aparece em exatamente um bloco.",
+        items: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: request.people.map((person) => person.name),
+          },
+        },
+      },
+      fala: {
+        type: "string",
+        description:
+          "O que o maestro anuncia para a praça, em português, com até 100 caracteres.",
+      },
+    },
+  });
+}
+
 export function decisionTool(request: DecisionRequest): FunctionTool {
   switch (request.kind) {
+    case "encounter":
+      return ENCOUNTER_TOOL;
+    case "maestro":
+      return maestroTool(request);
     case "question":
       return QUESTION_TOOL;
     case "personality":
@@ -201,8 +258,64 @@ function personalityMessages(request: PersonalityRequest): ChatMessage[] {
   ];
 }
 
+function described(personality: string[] | null): string {
+  return personality
+    ? personality.join(" ")
+    : "ainda não se apresentou; é só um folião animado.";
+}
+
+function introduce(person: Acquaintance): string {
+  const instrument = person.instrument ? ` (leva ${person.instrument})` : "";
+  return `${person.name}${instrument}: ${described(person.personality)}`;
+}
+
+function encounterMessages(request: EncounterRequest): ChatMessage[] {
+  const { other } = request;
+  return [
+    { role: "system", content: persona(request.boneco.name) },
+    {
+      role: "user",
+      content: [
+        `Andando pela praça, você encontrou o boneco ${introduce(other)}`,
+        `Como você vê o seu humano: ${described(request.personality)}`,
+        `Diga uma fala curta para ${other.name}, puxando assunto pelo que os dois humanos têm (ou não) em comum.`,
+        "Depois diga se os dois humanos combinam para sair juntos num bloco de frevo.",
+      ].join("\n"),
+    },
+  ];
+}
+
+function maestroMessages(request: MaestroRequest): ChatMessage[] {
+  const sizes = request.sizes.join(", ");
+  return [
+    {
+      role: "system",
+      content: [
+        "Você é o maestro de um carnaval de frevo numa praça do Recife.",
+        "Você fala em português do Brasil simples, com humor leve.",
+        "A praça é um evento público: nada de palavrão, ofensa ou assunto pesado.",
+        `Responda só chamando a ferramenta ${DECISION_TOOL_NAME}.`,
+      ].join(" "),
+    },
+    {
+      role: "user",
+      content: [
+        "Estes foliões ficaram sem bloco:",
+        ...request.people.map((person) => `- ${introduce(person)}`),
+        `Divida todos em ${request.sizes.length} blocos com estes tamanhos: ${sizes}.`,
+        "Junte quem combina pelo jeito de cada um. Cada nome entra em exatamente um bloco.",
+        "Anuncie a divisão com uma fala curta para a praça.",
+      ].join("\n"),
+    },
+  ];
+}
+
 export function decisionMessages(request: DecisionRequest): ChatMessage[] {
   switch (request.kind) {
+    case "encounter":
+      return encounterMessages(request);
+    case "maestro":
+      return maestroMessages(request);
     case "question":
       return questionMessages(request);
     case "personality":
@@ -246,6 +359,36 @@ function toolArguments(
   }
 }
 
+function parseEncounter(args: Record<string, unknown>): Action | undefined {
+  const { fala, afinidade } = args;
+  if (typeof afinidade !== "boolean") {
+    return;
+  }
+  return {
+    type: "encounter",
+    speech: typeof fala === "string" ? fala : "",
+    affinity: afinidade,
+  };
+}
+
+function parseMaestro(args: Record<string, unknown>): Action | undefined {
+  const { blocos, fala } = args;
+  if (
+    !Array.isArray(blocos) ||
+    blocos.some(
+      (group) =>
+        !Array.isArray(group) || group.some((name) => typeof name !== "string")
+    )
+  ) {
+    return;
+  }
+  return {
+    type: "maestro",
+    groups: blocos as string[][],
+    speech: typeof fala === "string" ? fala : "",
+  };
+}
+
 /**
  * The action in a chat completion, or nothing when the model did not call
  * the tool or the arguments do not fit the request's kind.
@@ -259,6 +402,10 @@ export function parseDecision(
     return;
   }
   switch (request?.kind) {
+    case "encounter":
+      return parseEncounter(args);
+    case "maestro":
+      return parseMaestro(args);
     case "question": {
       const { pergunta, opcoes } = args;
       if (

@@ -1,6 +1,7 @@
 import type { PublicSnapshot } from "@gambiarra-lab/frevo/snapshot";
 import type { ReactNode } from "react";
 import { EntradaQr } from "./entrada-qr";
+import { EventLog } from "./event-log";
 import { ModelsPanel } from "./models-panel";
 import { PhaseClock } from "./phase-clock";
 import type { StreamStatus } from "./stream";
@@ -58,6 +59,7 @@ export function TelaoPage() {
       {snapshot?.clock ? <PhaseClock clock={snapshot.clock} /> : null}
       {snapshot?.phase === "entrada" ? <EntradaQr /> : null}
       <ModelsPanel rows={snapshot?.models ?? []} />
+      <EventLog events={snapshot?.events ?? []} />
     </TelaoLayout>
   );
 }

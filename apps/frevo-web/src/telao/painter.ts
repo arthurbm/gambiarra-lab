@@ -30,6 +30,8 @@ const UI = {
 };
 
 export interface Figure {
+  /** The colour of the boneco's bloco, drawn as a ring at its feet. */
+  blocoColor: string | null;
   facing: Facing;
   id: string;
   instrument: Instrument | null;
@@ -348,6 +350,31 @@ function drawNames(
   }
 }
 
+/** A filled ellipse at the feet in the bloco's colour, so blocos read at a glance. */
+function drawBlocoRing(
+  ctx: CanvasRenderingContext2D,
+  fit: WorldFit,
+  figure: Figure
+) {
+  ctx.save();
+  ctx.fillStyle = figure.blocoColor ?? "transparent";
+  ctx.strokeStyle = "#1b1035";
+  ctx.lineWidth = Math.max(1, fit.scale / 2);
+  ctx.beginPath();
+  ctx.ellipse(
+    Math.round(fit.originX + figure.x * fit.scale),
+    Math.round(fit.originY + figure.y * fit.scale),
+    9 * fit.scale,
+    4 * fit.scale,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** One frame: ground, then props and bonecos sorted by depth, then signs. */
 export function paintFrame(
   ctx: CanvasRenderingContext2D,
@@ -361,6 +388,9 @@ export function paintFrame(
   ctx.drawImage(ground, 0, 0);
   const shadow = art.images.get(UI.shadow);
   for (const figure of figures) {
+    if (figure.blocoColor) {
+      drawBlocoRing(ctx, fit, figure);
+    }
     blit(
       ctx,
       fit,

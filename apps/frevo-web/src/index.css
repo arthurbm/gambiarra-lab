@@ -345,6 +345,36 @@ a {
   opacity: 0.75;
 }
 
+/* The short log of what just happened, in the telão's side column. */
+.event-log {
+  padding: 0.8rem;
+  font-size: clamp(0.7rem, 1vw, 1rem);
+  background: var(--night-soft);
+  border-radius: 0.6rem;
+}
+
+.event-log h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1em;
+  color: var(--yellow);
+}
+
+.event-log ol {
+  display: grid;
+  gap: 0.35em;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.event-log li:first-child {
+  font-weight: 700;
+}
+
+.event-log li:not(:first-child) {
+  opacity: 0.75;
+}
+
 .admin-models {
   display: grid;
   gap: 0.8rem;
@@ -576,4 +606,46 @@ a {
   margin: 0.2rem 0 0;
   font-size: 0.9em;
   color: var(--yellow);
+}
+
+/* The phone's encounters and bloco. */
+.celular-talks ol,
+.celular-bloco ul {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.celular-talks li {
+  padding: 0.5rem 0.8rem;
+  background: var(--night-soft);
+  border-radius: 8px;
+}
+
+.celular-talks p {
+  margin: 0.15rem 0 0;
+}
+
+.celular-talks small {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.celular-bloco {
+  padding: 0.8rem;
+  background: var(--night-soft);
+  border: 3px solid var(--bloco, var(--yellow));
+  border-radius: 12px;
+}
+
+.celular-bloco h2 {
+  margin-top: 0;
+}
+
+.celular-bloco li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
 }

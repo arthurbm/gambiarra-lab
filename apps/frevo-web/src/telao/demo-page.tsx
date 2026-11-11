@@ -106,7 +106,7 @@ function useDemoWorld(count: number, blocos: boolean) {
     };
     const answer = (request: DecisionRequest) => {
       // Simulated bonecos only ever ask where to walk.
-      if (request.kind === "question" || request.kind === "personality") {
+      if (request.kind !== undefined && request.kind !== "walk") {
         answers.push({
           at: clock,
           result: { ok: false, requestId: request.id, reason: "demo" },
