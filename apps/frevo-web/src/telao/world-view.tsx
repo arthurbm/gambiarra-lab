@@ -19,7 +19,7 @@ import {
   paintGround,
 } from "./painter";
 import { fitWorld, type WorldFit } from "./scale";
-import { PX_PER_UNIT, WORLD_HEIGHT, WORLD_WIDTH } from "./scene";
+import { PX_PER_UNIT, SCENERY_ABOVE, WORLD_HEIGHT, WORLD_WIDTH } from "./scene";
 import { spreadOut } from "./spread";
 
 /** The look and costume arrive with the entrance; until then they may be missing. */
@@ -108,6 +108,7 @@ export function WorldView({ snapshot }: { snapshot: PublicSnapshot }) {
         fitWorld({
           width: WORLD_WIDTH,
           height: WORLD_HEIGHT,
+          above: SCENERY_ABOVE,
           stageWidth: box.width,
           stageHeight: box.height,
           devicePixelRatio: window.devicePixelRatio,

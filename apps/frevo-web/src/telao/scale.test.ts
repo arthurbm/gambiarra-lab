@@ -40,6 +40,40 @@ describe("fitting the world on the stage", () => {
     expect(fit.originY).toBe(0);
   });
 
+  test("a 720p projector moves the world down to show the scenery above", () => {
+    const fit = fitWorld({
+      ...WORLD,
+      above: 41,
+      stageWidth: 980,
+      stageHeight: 720,
+    });
+    expect(fit.scale).toBe(3);
+    // 41 art pixels above the world instead of the 30 that centring leaves.
+    expect(fit.originY).toBe(123);
+  });
+
+  test("a 1080p projector already shows it and stays centred", () => {
+    const fit = fitWorld({
+      ...WORLD,
+      above: 41,
+      stageWidth: 1500,
+      stageHeight: 1080,
+    });
+    expect(fit.originY).toBe(180);
+  });
+
+  test("the world never leaves the stage to make room above", () => {
+    const fit = fitWorld({
+      ...WORLD,
+      above: 41,
+      stageWidth: 1000,
+      stageHeight: 600,
+    });
+    expect(fit.scale).toBe(3);
+    // 60 spare pixels: all of them go above, none is invented.
+    expect(fit.originY).toBe(60);
+  });
+
   test("a stage smaller than the world still draws at 1", () => {
     const fit = fitWorld({ ...WORLD, stageWidth: 200, stageHeight: 100 });
     expect(fit.scale).toBe(1);
