@@ -72,6 +72,8 @@ export interface Spending {
 /** The jury's section of the admin. */
 export interface AdminJury {
   desfile: DesfileView | null;
+  /** Music generations used and allowed for the life of the server; null when off (no key). */
+  generations: { max: number; used: number } | null;
   /** The last command sent to the telão. */
   playing: PlayCommand | null;
   sound: SoundStatus;
@@ -154,6 +156,7 @@ export function adminState(
       playing: input.jury?.playing ?? null,
       sound: input.jury?.sound ?? { enabled: false, playing: null },
       tracks: input.jury?.tracks ?? {},
+      generations: input.jury?.generations ?? null,
     },
   };
 }

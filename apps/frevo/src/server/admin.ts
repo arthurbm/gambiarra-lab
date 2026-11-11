@@ -31,6 +31,8 @@ export interface AdminContext {
   /** The jury's music; without it the jury's audio routes answer 404. */
   jukebox?: Jukebox;
   log: (line: string) => void;
+  /** Music generations used and allowed; null or absent when generation is off. */
+  musicGenerations?: () => { max: number; used: number } | null;
   /** Routes other tickets add under /api/admin/*, after the secret was checked. */
   otherRoutes?: (
     request: Request,
@@ -106,6 +108,7 @@ export function createAdminApi(context: AdminContext): AdminApi {
               playing: context.jukebox.current(),
               sound: context.jukebox.sound(),
               tracks: context.jukebox.tracks(),
+              generations: context.musicGenerations?.() ?? null,
             },
           }
         : {}),

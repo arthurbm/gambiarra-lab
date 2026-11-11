@@ -11,6 +11,8 @@ import {
 } from "./generator";
 
 export interface TrackStatus {
+  /** Why it fell back to the embedded track, for the admin; null otherwise. */
+  reason: string | null;
   /** "reserva": the generator failed or was late; the embedded track plays. */
   state: "gerando" | "pronta" | "reserva";
   /** Null while it is being made. */
@@ -101,10 +103,14 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
       return;
     }
     const from = epoch;
-    tracks.set(bloco.blocoId, { state: "gerando", url: null });
+    tracks.set(bloco.blocoId, { state: "gerando", url: null, reason: null });
     const timer = setTimeout(() => {
       log(`Music for ${bloco.blocoId} is late: the embedded track plays`);
-      settle(bloco.blocoId, from, { state: "reserva", url: fallbackUrl });
+      settle(bloco.blocoId, from, {
+        state: "reserva",
+        url: fallbackUrl,
+        reason: `passou de ${Math.round(timeoutMs / 1000)} s`,
+      });
     }, timeoutMs);
     let made: Promise<{ url: string }>;
     try {
@@ -117,12 +123,20 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
       made = Promise.reject(error);
     }
     made
-      .then(({ url }) => settle(bloco.blocoId, from, { state: "pronta", url }))
+      .then(({ url }) =>
+        settle(bloco.blocoId, from, { state: "pronta", url, reason: null })
+      )
       .catch((error: unknown) => {
+        const reason =
+          error instanceof Error ? error.message : "erro desconhecido";
         log(
-          `Music for ${bloco.blocoId} failed (${error instanceof Error ? error.message : "unknown error"}): the embedded track plays`
+          `Music for ${bloco.blocoId} failed (${reason}): the embedded track plays`
         );
-        settle(bloco.blocoId, from, { state: "reserva", url: fallbackUrl });
+        settle(bloco.blocoId, from, {
+          state: "reserva",
+          url: fallbackUrl,
+          reason,
+        });
       })
       .finally(() => clearTimeout(timer));
   }

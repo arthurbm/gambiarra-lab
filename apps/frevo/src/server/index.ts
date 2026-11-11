@@ -1,11 +1,15 @@
 #!/usr/bin/env bun
 // The world server as a process. PORT, HOST, GAMBI_HUB_URL, FREVO_ROOM_NAME,
 // FREVO_BONECOS, FREVO_MAX_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL,
-// FREVO_WEB_DIST, FREVO_ADMIN_SECRET and FREVO_BUDGET_USD configure it.
+// FREVO_WEB_DIST, FREVO_ADMIN_SECRET, FREVO_BUDGET_USD, FAL_KEY and
+// FREVO_MUSIC_MAX_GENERATIONS configure it. Without FAL_KEY the chosen blocos
+// play the embedded track.
 import { randomBytes } from "node:crypto";
 import { exists } from "node:fs/promises";
 import { resolve } from "node:path";
 import { DEFAULT_HUB_URL, DEFAULT_ROOM_NAME } from "../model-host/config";
+import { DEFAULT_MAX_GENERATIONS, musicFromKey } from "../music/fal";
+import { createMusicFiles } from "../music/files";
 import { DEFAULT_RULES } from "../sim/world";
 import { startWorldServer } from "./app";
 
@@ -37,6 +41,18 @@ if (!(Number.isFinite(ceilingUsd) && ceilingUsd >= 0)) {
   throw new Error("FREVO_BUDGET_USD must be a number of dollars");
 }
 
+const musicFiles = createMusicFiles();
+// The key only reaches fal.ai's Authorization header, never a log.
+const music = musicFromKey(process.env.FAL_KEY?.trim() || undefined, {
+  files: musicFiles,
+  maxGenerations: integer(
+    "FREVO_MUSIC_MAX_GENERATIONS",
+    DEFAULT_MAX_GENERATIONS,
+    0
+  ),
+  log: (line) => console.log(line),
+});
+
 const server = startWorldServer({
   hubUrl: process.env.GAMBI_HUB_URL?.trim() || DEFAULT_HUB_URL,
   roomName: process.env.FREVO_ROOM_NAME?.trim() || DEFAULT_ROOM_NAME,
@@ -57,12 +73,22 @@ const server = startWorldServer({
   adminSecret,
   ceilingUsd,
   publicUrl: process.env.FREVO_PUBLIC_URL?.trim() || undefined,
+  music: music.generate,
+  musicFiles,
+  musicGenerations: music.generations,
+  musicTimeoutMs: music.deadlineMs,
   log: (line) => console.log(line),
 });
 
 console.log(`Frevo world listening on http://${host}:${server.port}`);
 console.log(
   webDist ? `Serving the web from ${webDist}` : "The web is not built"
+);
+const generations = music.generations();
+console.log(
+  generations
+    ? `Music: generated on fal.ai, up to ${generations.max} generations`
+    : "Music: no FAL_KEY, the chosen blocos play the embedded track"
 );
 if (!givenSecret) {
   // Only when the secret was drawn here: a configured one never reaches a log.
