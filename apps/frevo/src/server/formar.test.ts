@@ -1,18 +1,21 @@
-// Simulated phones against the world server, a real hub and a fake model:
-// three people arrive, are interviewed, the formar phase opens, their
-// bonecos meet and invite each other, the humans tap yes, and a bloco forms.
-// A fourth arrives late, the phase closes, and she lands in the bloco.
+// Phones against the world server, a real hub and a fake model: three people
+// arrive, are interviewed, the host starts the dynamic (the formar phase
+// opens), their bonecos meet and invite each other, the humans tap yes, and a
+// bloco forms. A fourth arrives late, the host advances (the phase closes),
+// and she lands in the bloco. Then the host restarts, fills the square with
+// simulated people and lets the phase clock close the formar phase.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
   type FakeUpstream,
   startFakeUpstream,
 } from "../model-host/fake-upstream";
 import { type ModelHost, startModelHost } from "../model-host/host";
-import type { PrivateView, PublicSnapshot } from "../sim/world";
+import type { PrivateView } from "../sim/world";
 import { type RunningHub, startHub } from "../testing/processes";
 import { openEventStream } from "../testing/sse";
 import { until } from "../testing/until";
 import { startWorldServer, type WorldServer } from "./app";
+import type { AdminState, TelaoSnapshot } from "./views";
 
 const ROOM_NAME = "bloco-de-frevo-formar";
 const ADMIN_SECRET = "segredo-do-formar";
@@ -68,12 +71,17 @@ afterAll(async () => {
   await hub.stop();
 });
 
-function post(path: string, body: unknown, admin = false) {
+/** The host's route, with the secret unless told otherwise. */
+function admin(route: string, body: unknown = {}, secret = true) {
+  return post(`/api/admin/${route}`, body, secret);
+}
+
+function post(path: string, body: unknown, withSecret = false) {
   return fetch(`${server.url}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(admin ? { Authorization: `Bearer ${ADMIN_SECRET}` } : {}),
+      ...(withSecret ? { Authorization: `Bearer ${ADMIN_SECRET}` } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -126,7 +134,7 @@ async function person() {
 
 describe("forming blocos through the world server", () => {
   test("phones answer, the formar phase opens and a bloco of three forms; a late arrival joins it", async () => {
-    const telao = await openEventStream<PublicSnapshot>(
+    const telao = await openEventStream<TelaoSnapshot>(
       `${server.url}/events/telao`
     );
     const people = await Promise.all([person(), person(), person()]);
@@ -136,10 +144,10 @@ describe("forming blocos through the world server", () => {
       20_000
     );
 
-    const unauthorized = await post("/api/admin/formar/abrir", {});
+    const unauthorized = await admin("iniciar", {}, false);
     expect(unauthorized.status).toBe(401);
-    const opened = await post("/api/admin/formar/abrir", {}, true);
-    expect(await opened.json()).toEqual({ phase: "formar" });
+    const opened = await admin("iniciar");
+    expect(((await opened.json()) as AdminState).clock.phase).toBe("formar");
 
     // Every phone ends up with the other two of its bloco.
     await until(
@@ -172,8 +180,8 @@ describe("forming blocos through the world server", () => {
 
     // A fourth arrives; the phase closes; she goes to the only bloco.
     const late = await person();
-    const closed = await post("/api/admin/formar/fechar", {}, true);
-    expect(closed.status).toBe(200);
+    const closed = await admin("avancar");
+    expect(((await closed.json()) as AdminState).clock.phase).toBe("compor");
     await until(
       async () => (late.view()?.bloco?.mates.length === 3 ? true : undefined),
       10_000
@@ -188,5 +196,39 @@ describe("forming blocos through the world server", () => {
 
     telao.close();
     await Promise.all([...people, late].map((one) => one.close()));
+  }, 60_000);
+
+  test("after a restart, simulated people answer the invitations and the phase clock leaves everyone in a bloco", async () => {
+    const telao = await openEventStream<TelaoSnapshot>(
+      `${server.url}/events/telao`
+    );
+    expect((await admin("reiniciar")).status).toBe(200);
+    // A new world: no bloco and no event from the dynamic before.
+    const restarted = await telao.find(
+      (snapshot) =>
+        snapshot.clock.phase === "entrada" && snapshot.bonecos.length === 0
+    );
+    expect(restarted.blocos).toEqual([]);
+    expect(restarted.events).toEqual([]);
+
+    await admin("simulados", { total: 7 });
+    await admin("duracoes", { formar: 12_000 });
+    expect((await admin("iniciar")).status).toBe(200);
+    const opened = await telao.find(
+      (snapshot) => snapshot.clock.phase === "formar"
+    );
+    expect(opened.bonecos).toHaveLength(7);
+
+    // The clock ends the phase; whoever is alone is grouped.
+    const grouped = await telao.find(
+      (snapshot) =>
+        snapshot.clock.phase === "compor" &&
+        snapshot.bonecos.every((boneco) => boneco.bloco !== null),
+      30_000
+    );
+    expect(grouped.bonecos).toHaveLength(7);
+    const members = grouped.blocos.flatMap((bloco) => bloco.members).sort();
+    expect(members).toEqual(grouped.bonecos.map((boneco) => boneco.id).sort());
+    telao.close();
   }, 60_000);
 });

@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { openAsk } from "../sim/ask";
-import { tick } from "../sim/phases";
+import { advancePhase, tick } from "../sim/phases";
 import {
   createWorld,
   join,
   privateView,
   publicSnapshot,
   type World,
+  type WorldMap,
 } from "../sim/world";
 import { createSimulatedHumans, type SimulatedHumans } from "./simulated";
 
@@ -108,6 +109,61 @@ describe("simulated humans", () => {
     expect(
       after?.thoughts.some((thought) => thought.text.startsWith("O tempo"))
     ).toBe(false);
+  });
+
+  test("answer the bloco invitations, and the formar phase ends with everyone in a bloco", () => {
+    // Everyone on the same spot, so they meet; no model, so on autopilot.
+    const roda: WorldMap = {
+      width: 20,
+      height: 20,
+      places: [{ id: "roda", name: "Roda", x: 10, y: 10 }],
+    };
+    const humans = createSimulatedHumans({ seed: 5, silentShare: 0 });
+    let { world } = humans.fill(
+      createWorld({ seed: 5, bonecos: 0, map: roda }),
+      7
+    );
+    world = run(world, humans, 90_000);
+    expect(
+      world.bonecos.every((boneco) => boneco.interview?.stage === "done")
+    ).toBe(true);
+
+    world = advancePhase(world);
+    expect(world.phase).toBe("formar");
+    // Each invitation, by id: its deadline and when it left the phone.
+    const invitations = new Map<
+      string,
+      { closedAtMs?: number; deadlineMs: number }
+    >();
+    for (let elapsed = 0; elapsed < 60_000; elapsed += TICK_MS) {
+      ({ world } = tick(world, { elapsedMs: TICK_MS }));
+      world = humans.act(world);
+      const open = new Set(world.bonecos.map((boneco) => boneco.ask?.id));
+      for (const boneco of world.bonecos) {
+        if (
+          boneco.ask?.purpose === "bloco" &&
+          !invitations.has(boneco.ask.id)
+        ) {
+          invitations.set(boneco.ask.id, { deadlineMs: boneco.ask.deadlineMs });
+        }
+      }
+      for (const [id, invitation] of invitations) {
+        if (invitation.closedAtMs === undefined && !open.has(id)) {
+          invitation.closedAtMs = world.timeMs;
+        }
+      }
+    }
+    expect(invitations.size).toBeGreaterThan(0);
+    // Every invitation closed before its countdown ran out: answered by hand.
+    for (const invitation of invitations.values()) {
+      expect(invitation.closedAtMs).toBeDefined();
+      expect(invitation.closedAtMs ?? 0).toBeLessThan(invitation.deadlineMs);
+    }
+
+    world = run(advancePhase(world), humans, 1000);
+    expect(world.phase).toBe("compor");
+    expect(world.bonecos).toHaveLength(7);
+    expect(world.bonecos.every((boneco) => boneco.blocoId !== null)).toBe(true);
   });
 
   test("are removed together, leaving the real people", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { expel } from "./admin";
 import { closeFormar, enterFormar, sizesFor } from "./formar";
 import { MEETING_SPOTS } from "./meeting-spots";
 import {
@@ -538,5 +539,62 @@ describe("where blocos gather", () => {
         expect(boneco?.y).toBe(bloco.spot.y);
       }
     }
+  });
+});
+
+describe("when the host expels someone", () => {
+  test("an expelled member leaves its bloco, and the others stay in it", () => {
+    const formed = after(square({ simulated: 3 }), 2000, { brain: friendly });
+    const [bloco] = publicSnapshot(formed).blocos;
+    expect([...(bloco?.members ?? [])].sort()).toEqual([
+      "boneco-1",
+      "boneco-2",
+      "boneco-3",
+    ]);
+    const { world } = expel(formed, "boneco-2");
+    const members = () => [...(world.blocos[0]?.members ?? [])].sort();
+    expect(members()).toEqual(["boneco-1", "boneco-3"]);
+    expect(publicSnapshot(world).blocos[0]?.members).not.toContain("boneco-2");
+    // The world keeps stepping without the one who left.
+    const stayed = after(world, 200, { brain: friendly });
+    expect(stayed.blocos[0]?.members).not.toContain("boneco-2");
+  });
+
+  test("an emptied bloco goes away and the next bloco does not reuse its mark", () => {
+    const formed = after(square({ simulated: 3 }), 2000, { brain: friendly });
+    let world = formed;
+    for (const id of ["boneco-1", "boneco-2", "boneco-3"]) {
+      ({ world } = expel(world, id));
+    }
+    expect(world.blocos).toEqual([]);
+    for (let index = 0; index < 3; index += 1) {
+      ({ world } = join(world, { sessionId: `nova-${index + 1}` }));
+    }
+    const yes: Human = (view) => {
+      if (!view.ask) {
+        return;
+      }
+      return view.ask.options.length > 0
+        ? { askId: view.ask.id, choice: 0 }
+        : { askId: view.ask.id, skip: true };
+    };
+    const again = after(world, 15_000, { brain: friendly, human: () => yes });
+    expect(again.blocos.map((bloco) => [bloco.id, bloco.mark])).toEqual([
+      ["bloco-2", 1],
+    ]);
+  });
+
+  test("an invitation with the expelled one is called off for the others", () => {
+    const asked = after(square({ humans: 3 }), 300, { brain: friendly });
+    expect(phone(asked, "sessao-2").ask).not.toBeNull();
+    const { world } = expel(asked, "boneco-1");
+    for (const session of ["sessao-2", "sessao-3"]) {
+      const view = phone(world, session);
+      expect(view.ask).toBeNull();
+      expect(view.thoughts.at(-1)?.text).toContain("O convite caiu");
+    }
+    // Closing the phase afterwards groups the two who are left.
+    const closed = after(closeFormar(world), 200, { brain: friendly });
+    expect(blocoSizes(closed)).toEqual([2]);
   });
 });

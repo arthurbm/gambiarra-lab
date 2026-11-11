@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { BONECO_REMOVED_HOOKS, expel, setSilenced } from "./admin";
+import { logEvent } from "./events";
 import {
   createWorld,
   join,
@@ -41,6 +42,28 @@ describe("moderation", () => {
     expect(speechOf(world, "boneco-1")).toBeNull();
     world = setSilenced(world, "boneco-1", false);
     expect(speechOf(world, "boneco-1")).toBe("Bora pro coreto!");
+  });
+
+  test("a silenced boneco's lines leave the telão's event log too, and only those", () => {
+    let world = createWorld({ seed: 1, bonecos: 2 });
+    world = logEvent(world, "Bloco 1 formado: Ana e Bia.");
+    world = logEvent(world, "Ana: bora pro coreto!", "boneco-1");
+    world = logEvent(world, "Bia: frevo é vida!", "boneco-2");
+    const texts = () => publicSnapshot(world).events.map((event) => event.text);
+    expect(texts()).toEqual([
+      "Bloco 1 formado: Ana e Bia.",
+      "Ana: bora pro coreto!",
+      "Bia: frevo é vida!",
+    ]);
+    world = setSilenced(world, "boneco-1", true);
+    expect(texts()).toEqual([
+      "Bloco 1 formado: Ana e Bia.",
+      "Bia: frevo é vida!",
+    ]);
+    ({ world } = step(world, { elapsedMs: 100 }));
+    expect(texts()).not.toContain("Ana: bora pro coreto!");
+    world = setSilenced(world, "boneco-1", false);
+    expect(texts()).toContain("Ana: bora pro coreto!");
   });
 
   test("an expelled boneco leaves the world and its phone no longer finds it", () => {

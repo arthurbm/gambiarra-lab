@@ -171,6 +171,40 @@ describe("the phases of the dynamic", () => {
     expect(privateView(world, "sessao-1")).toBeNull();
   });
 
+  test("the formar phase opens when the dynamic starts and closes when its time is up", () => {
+    let world = started();
+    expect(world.phase).toBe("formar");
+    expect(world.formar?.open).toBe(true);
+    expect(world.events.at(-1)?.text).toContain("Hora de formar os blocos");
+    // Three bonecos without a model: nobody meets, so the end groups them.
+    world = advancePhase(createWorld({ seed: 1, bonecos: 3 }));
+    world = run(setPhaseDurations(world, { formar: 1000 }), 1000);
+    expect(world.phase).toBe("compor");
+    expect(world.formar?.open).toBe(false);
+    expect(world.blocos).toHaveLength(1);
+    expect(publicSnapshot(world).bonecos.every((b) => b.bloco !== null)).toBe(
+      true
+    );
+  });
+
+  test("restarting empties the blocos and the event log, and the formar phase opens again", () => {
+    let world = advancePhase(createWorld({ seed: 1, bonecos: 3 }));
+    world = advancePhase(world);
+    expect(world.blocos).toHaveLength(1);
+    expect(world.events.length).toBeGreaterThan(0);
+    world = restartWorld(world);
+    expect(world.blocos).toEqual([]);
+    expect(world.events).toEqual([]);
+    expect(world.formar).toBeNull();
+    expect(publicSnapshot(world)).toMatchObject({ blocos: [], events: [] });
+    ({ world } = join(world, { sessionId: "sessao-1" }));
+    world = advancePhase(world);
+    expect(world.formar?.open).toBe(true);
+    expect(world.events.map((event) => event.text)).toEqual([
+      "Hora de formar os blocos! Os bonecos vão se conhecer.",
+    ]);
+  });
+
   test("phases run their hooks when they start and when they end", () => {
     const calls: string[] = [];
     PHASE_HOOKS.compor = {

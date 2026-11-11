@@ -346,8 +346,11 @@ a {
 }
 
 /* The short log of what just happened, in the telão's side column. */
+/* Last in the side column: when it runs out of room, the oldest lines go. */
 .event-log {
+  min-height: 0;
   padding: 0.8rem;
+  overflow: hidden;
   font-size: clamp(0.7rem, 1vw, 1rem);
   background: var(--night-soft);
   border-radius: 0.6rem;

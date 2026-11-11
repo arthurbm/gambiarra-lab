@@ -256,6 +256,8 @@ export interface Boneco {
 /** Something that just happened, for the short log on the telão. */
 export interface WorldEvent {
   atMs: number;
+  /** The boneco whose own line this is; hidden while it is silenced. */
+  bonecoId?: string;
   id: number;
   text: string;
 }
@@ -1155,8 +1157,15 @@ export function publicSnapshot(world: World): PublicSnapshot {
       members,
       spot,
     })),
-    events: world.events,
+    events: world.events.filter((event) => !silenced(world, event.bonecoId)),
   };
+}
+
+function silenced(world: World, bonecoId: string | undefined): boolean {
+  return (
+    bonecoId !== undefined &&
+    world.bonecos.some((boneco) => boneco.id === bonecoId && boneco.silenced)
+  );
 }
 
 /** A boneco as another person's phone shows it. */

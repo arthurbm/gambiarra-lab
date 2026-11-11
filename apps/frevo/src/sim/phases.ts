@@ -6,7 +6,9 @@
 //
 // What happens inside each phase is not here: a phase plugs its rules into
 // PHASE_HOOKS. The world only keeps the clock's data; this module moves it,
-// and `tick` is the step the server runs.
+// and `tick` is the step the server runs. The hooks are wired here, not in
+// each phase's module, so a phase imports the world and never this module.
+import { closeFormar, enterFormar } from "./formar";
 import {
   type BrainResult,
   createWorld,
@@ -35,8 +37,12 @@ export interface PhaseHooks {
   onExit?: (world: World) => World;
 }
 
-/** What each phase does when it starts and ends. The phases fill it in. */
-export const PHASE_HOOKS: Partial<Record<Phase, PhaseHooks | undefined>> = {};
+/** What each phase does when it starts and ends. */
+export const PHASE_HOOKS: Partial<Record<Phase, PhaseHooks | undefined>> = {
+  // The phase clock changes the phase; closing only ends the encounters and
+  // hands whoever is left to the maestro.
+  formar: { onEnter: enterFormar, onExit: closeFormar },
+};
 
 export interface PhaseStatus {
   /** Null for the phases without a clock. */

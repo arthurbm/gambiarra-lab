@@ -7,7 +7,9 @@
 // to the smallest bloco.
 //
 // The world calls `stepFormar` on every step; `enterFormar` and `closeFormar`
-// are the phase's hooks.
+// are the phase's hooks (wired in `phases.ts`), and `leaveFormar` runs when
+// the host expels a boneco.
+import { BONECO_REMOVED_HOOKS } from "./admin";
 import type { Ask, AskOutcome } from "./ask";
 import { filterModelText } from "./blocklist";
 import { logEvent } from "./events";
@@ -79,6 +81,8 @@ interface Maestro {
 export interface FormarState {
   /** Boneco id → the ids it declared affinity with, oldest first. */
   affinity: Record<string, string[]>;
+  /** Blocos made so far, emptied ones included: marks are never reused. */
+  blocosMade: number;
   encounters: Encounter[];
   /** Pair key → when the two last met. */
   lastMetMs: Record<string, number>;
@@ -128,6 +132,7 @@ export function enterFormar(world: World): World {
         affinity: {},
         proposals: [],
         proposalsMade: 0,
+        blocosMade: 0,
         refused: [],
         maestro: null,
       },
@@ -184,6 +189,64 @@ export function closeFormar(world: World): World {
   note(draft, "Acabou a roda. O maestro vai juntar quem ficou sem bloco.");
   return draft;
 }
+
+/**
+ * A boneco left the world (the host expelled it): it leaves its bloco (an
+ * empty bloco goes away), invitations with it are called off for the others,
+ * and the maestro no longer counts it.
+ */
+export function leaveFormar(world: World, bonecoId: string): World {
+  const inBloco = world.blocos.some((bloco) =>
+    bloco.members.includes(bonecoId)
+  );
+  if (!(inBloco || world.formar)) {
+    return world;
+  }
+  const draft = edit(world);
+  draft.blocos = draft.blocos.flatMap((bloco) => {
+    const members = bloco.members.filter((id) => id !== bonecoId);
+    return members.length > 0 ? [{ ...bloco, members }] : [];
+  });
+  const { formar } = draft;
+  if (!formar) {
+    return draft;
+  }
+  formar.proposals = formar.proposals.filter((proposal) => {
+    if (!proposal.members.includes(bonecoId)) {
+      return true;
+    }
+    closeAsks(draft, proposal);
+    for (const id of proposal.members) {
+      const boneco = find(draft, id);
+      if (boneco) {
+        put(
+          draft,
+          think(
+            { ...boneco, vote: null },
+            draft,
+            "O convite caiu: alguém saiu da praça. Sigo procurando.",
+            null,
+            "aviso"
+          )
+        );
+      }
+    }
+    return false;
+  });
+  const { maestro } = formar;
+  if (maestro?.leftovers.includes(bonecoId)) {
+    const leftovers = maestro.leftovers.filter((id) => id !== bonecoId);
+    formar.maestro = {
+      ...maestro,
+      leftovers,
+      sizes:
+        maestro.state === "wanted" ? sizesFor(leftovers.length) : maestro.sizes,
+    };
+  }
+  return draft;
+}
+
+BONECO_REMOVED_HOOKS.push(leaveFormar);
 
 /** Decisions the world leaves to this module instead of settling them. */
 export function holdsDecision(kind: DecisionKind): boolean {
@@ -799,7 +862,10 @@ function formBloco(world: World, ids: string[], formedBy: Bloco["formedBy"]) {
   if (ids.length === 0) {
     return;
   }
-  const mark = world.blocos.length;
+  // Marks are never reused, even after an emptied bloco went away.
+  const formar = world.formar as FormarState;
+  const mark = formar.blocosMade;
+  formar.blocosMade += 1;
   const bloco: Bloco = {
     id: `bloco-${mark + 1}`,
     mark,
