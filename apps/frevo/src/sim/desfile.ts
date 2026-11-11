@@ -216,3 +216,31 @@ export function enterFinal(world: World): World {
       : "Fim do desfile!"
   );
 }
+
+// --- What the host does from the admin ---------------------------------------
+
+/** Puts the bloco at `index` of the parade on stage, with a full share. */
+function putOnStage(world: World, index: number): World {
+  const count = parade(world).length;
+  if (!world.desfile || world.phase !== "desfile" || count === 0) {
+    return world;
+  }
+  return {
+    ...world,
+    desfile: {
+      ...world.desfile,
+      index: Math.min(count - 1, Math.max(0, index)),
+      sinceMs: world.phaseClock.elapsedMs,
+    },
+  };
+}
+
+export function nextBloco(world: World): World {
+  const current = currentIndex(world);
+  return current === null ? world : putOnStage(world, current + 1);
+}
+
+export function previousBloco(world: World): World {
+  const current = currentIndex(world);
+  return current === null ? world : putOnStage(world, current - 1);
+}
