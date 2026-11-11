@@ -68,15 +68,18 @@ export function useTelaoAudio(audio: TelaoAudio | null | undefined) {
     // Playing inside the tap unlocks the element for the commands to come.
     el.muted = true;
     el.src = audio?.fallbackUrl ?? "/audio/reserva-2.mp3";
+    // Only a play the browser accepted unlocks it. When it refuses (a click
+    // that was not a real tap), the button stays and the admin keeps saying
+    // the sound is off, instead of promising music that will not play.
     el.play()
       .then(() => {
         el.pause();
         el.muted = false;
+        setEnabled(true);
       })
       .catch(() => {
         el.muted = false;
-      })
-      .finally(() => setEnabled(true));
+      });
   }, [audio?.fallbackUrl, player]);
 
   useEffect(() => {
