@@ -315,7 +315,7 @@ function Bonecos({ state, act }: { act: Act; state: AdminState }) {
   );
   return (
     <Fold
-      hint={`${state.bonecos.length} · silenciar ou expulsar`}
+      hint={`${state.bonecos.length} · moderar`}
       title="Bonecos na praça"
     >
       {state.people.simulated > 0 ? (

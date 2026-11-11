@@ -14,9 +14,10 @@ Estado em 2026-11-11, dia da demonstração no Rec'n'Play. Confira se cada item 
 | O quê | Endereço |
 |---|---|
 | Mundo: telão em `/telao`, celular em `/`, admin em `/admin?k=<segredo>` | https://mundo-production-7b9b0ad9.up.railway.app |
-| Galeria de vídeos para compartilhar | https://bloco-de-frevo-videos.vercel.app |
+| Galeria de vídeos e telas para compartilhar | https://bloco-de-frevo-videos.vercel.app |
+| Guia do apresentador, com capturas, para abrir no celular | https://bloco-de-frevo-videos.vercel.app/guia-do-admin.html (texto em [`guia-do-admin.md`](guia-do-admin.md)) |
 
-A galeria não tem link para o mundo ao vivo nem para o admin, de propósito: um link público convidaria gente a entrar e gastar o teto de inferência.
+A galeria e o guia não têm link para o mundo ao vivo nem para o admin, de propósito: um link público convidaria gente a entrar e gastar o teto de inferência.
 
 ## Deploys
 
@@ -40,7 +41,7 @@ Os artefatos (vídeos, áudio, capturas, relatórios) ficam em `artifacts/bloco-
 | Pasta | Conteúdo |
 |---|---|
 | `artifacts/bloco-de-frevo/` (checkout principal) | Os quatro vídeos da demonstração, `musica/` (faixas de reserva, testes dos geradores e a faixa gerada pelo jukebox), `capturas*/`, os relatórios de carga (`carga-25-celulares.md`, `plano-b-compose-*.md`), a cópia da lista de conferência e as gravações brutas em `bruto/` |
-| `artifacts/bloco-de-frevo/bloco-de-frevo-videos/` (checkout principal) | Fonte da galeria da Vercel: `index.html`, `videos/`, `audio/`, `img/` |
+| `artifacts/bloco-de-frevo/bloco-de-frevo-videos/` (checkout principal) | Fonte da galeria da Vercel: `index.html`, `guia-do-admin.html`, `videos/`, `audio/`, `img/` (`img/telas/` são as capturas de 2026-11-11 das telas com etapas, de um ensaio local com modelos falsos) |
 | `~/.config/gambiarra-lab/` | `openrouter.key`, `fal.key`, `ai-gateway.key`, `admin.secret` e `admin-link.txt` (o link de admin completo). Nunca imprima o conteúdo |
 
 ## Limites que valem saber
