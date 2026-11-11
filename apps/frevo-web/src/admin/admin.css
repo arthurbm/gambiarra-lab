@@ -354,6 +354,11 @@
   opacity: 0.85;
 }
 
+.admin-jury-name .admin-jury-reason {
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
 .admin-jury-actions {
   display: grid;
   grid-auto-columns: 1fr;

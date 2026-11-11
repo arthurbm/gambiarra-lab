@@ -54,13 +54,14 @@ describe("the jukebox", () => {
     });
     expect(fake.calls[0]?.style).toContain("150 BPM");
     expect(jukebox.tracks()).toEqual({
-      "bloco-1": { state: "gerando", url: null },
+      "bloco-1": { state: "gerando", url: null, reason: null },
     });
     fake.resolve("https://musica/1.mp3");
     await Bun.sleep(0);
     expect(jukebox.tracks()["bloco-1"]).toEqual({
       state: "pronta",
       url: "https://musica/1.mp3",
+      reason: null,
     });
   });
 
@@ -97,6 +98,7 @@ describe("the jukebox", () => {
     expect(jukebox.tracks()["bloco-1"]).toEqual({
       state: "reserva",
       url: EMBEDDED_TRACK,
+      reason: "fal 504",
     });
 
     const slow = manual();
@@ -104,7 +106,7 @@ describe("the jukebox", () => {
     patient.prepare(BLOCO);
     await Bun.sleep(40);
     expect(patient.tracks()).toMatchObject({
-      "bloco-1": { state: "reserva" },
+      "bloco-1": { state: "reserva", reason: "passou de 0 s" },
     });
     slow.resolve("https://musica/tarde.mp3");
     await Bun.sleep(0);
