@@ -98,6 +98,10 @@ class StepFailure extends Error {
 
 const HTTP_URL = /^https?:\/\//;
 
+function ceilingReason(max: number): string {
+  return `teto de ${max} ${max === 1 ? "geração" : "gerações"} atingido`;
+}
+
 function audioUrlOf(body: unknown): string | null {
   const url = (body as { audio?: { url?: unknown } } | null)?.audio?.url;
   return typeof url === "string" && HTTP_URL.test(url) ? url : null;
@@ -256,9 +260,7 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
     const reasons: string[] = [];
     for (const step of steps(timeouts)) {
       if (used >= max) {
-        reasons.push(
-          `teto de ${max} ${max === 1 ? "geração" : "gerações"} atingido`
-        );
+        reasons.push(ceilingReason(max));
         break;
       }
       // Counted before the request, so blocos made at the same time never pass the ceiling.
