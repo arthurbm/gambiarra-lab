@@ -7,6 +7,7 @@ Estado em 2026-11-11, dia da demonstração no Rec'n'Play. Confira se cada item 
 - Spec: issue #10. Tickets: #11 a #21. PR de integração: #22 (branch `feat/bloco-de-frevo`).
 - Código: `apps/frevo`, `apps/frevo-web`, `scripts/frevo*.ts`, `deploy/frevo/`, `.railway/railway.ts`, `compose.yaml`.
 - Lista de conferência do palco: [`conferencia.md`](conferencia.md). Itens adiados do code-review: [`../next-steps.md`](../next-steps.md).
+- Notas de exploração de 2026-11-11, de antes ou durante a implementação, que podem estar desatualizadas (cada uma abre com o que mudou depois), em [`notas/`](notas/): [`gambi-sdk.md`](notas/gambi-sdk.md) (hub, Rooms, túnel, eventos), [`openrouter-modelos.md`](notas/openrouter-modelos.md) (modelos de palco, raciocínio, providers, custo), [`railway-deploy.md`](notas/railway-deploy.md) (Railway, rede privada, compose), [`musica-geradores.md`](notas/musica-geradores.md) (fal.ai, MiniMax e ElevenLabs) e [`arte-pixel.md`](notas/arte-pixel.md) (pacote Ninja Adventure, licença, renderização).
 
 ## Páginas públicas
 
