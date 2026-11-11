@@ -13,8 +13,8 @@ import {
 import { watchRoomLlmEvents } from "../gambi/room-events";
 import { modelEntry, modelLabel } from "../models/catalog";
 import { modelPanelRows } from "../models/panel";
-import type { MusicFiles } from "../music/files";
-import type { MusicGenerator } from "../music/generator";
+import { MUSIC_PATH, type MusicFiles } from "../music/files";
+import type { MusicGenerations, MusicGenerator } from "../music/generator";
 import { createJukebox } from "../music/jukebox";
 import { tick } from "../sim/phases";
 import {
@@ -54,7 +54,7 @@ export interface WorldServerOptions {
   /** The generated music's copies, served at their paths under /api/musica/. */
   musicFiles?: MusicFiles;
   /** Generations used and allowed, for the admin; null when generation is off. */
-  musicGenerations?: () => { max: number; used: number } | null;
+  musicGenerations?: () => MusicGenerations;
   /** Music not ready after this long becomes the embedded track. */
   musicTimeoutMs?: number;
   /** 0 asks the OS for a free port. */
@@ -541,7 +541,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   }
 
   async function api(request: Request, pathname: string): Promise<Response> {
-    if (pathname.startsWith("/api/musica/")) {
+    if (pathname.startsWith(MUSIC_PATH)) {
       return musicFile(request, pathname);
     }
     const route = routes[`${request.method} ${pathname}`];

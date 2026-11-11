@@ -3,6 +3,7 @@
 // closed. The state stream is read with fetch, so the secret never goes in a
 // URL the browser or a proxy might log.
 import { timingSafeEqual } from "node:crypto";
+import type { MusicGenerations } from "../music/generator";
 import type { Jukebox } from "../music/jukebox";
 import { expel, setSilenced } from "../sim/admin";
 import {
@@ -32,7 +33,7 @@ export interface AdminContext {
   jukebox?: Jukebox;
   log: (line: string) => void;
   /** Music generations used and allowed; null or absent when generation is off. */
-  musicGenerations?: () => { max: number; used: number } | null;
+  musicGenerations?: () => MusicGenerations;
   /** Routes other tickets add under /api/admin/*, after the secret was checked. */
   otherRoutes?: (
     request: Request,

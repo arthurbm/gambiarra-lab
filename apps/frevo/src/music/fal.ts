@@ -6,7 +6,7 @@
 // Authorization header: never into a log, an error or a URL.
 
 import type { MusicFile, MusicFiles } from "./files";
-import type { MusicGenerator } from "./generator";
+import type { MusicGenerations, MusicGenerator } from "./generator";
 
 type MusicInput = Parameters<MusicGenerator>[0];
 
@@ -92,7 +92,7 @@ export interface FalMusic {
   deadlineMs: number;
   generate: MusicGenerator;
   /** Null when music generation is off (no key). */
-  generations: () => { max: number; used: number } | null;
+  generations: () => MusicGenerations;
 }
 
 /** A failure whose message is safe for the admin's screen and the log. */

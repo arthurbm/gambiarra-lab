@@ -11,6 +11,9 @@ export type MusicGenerator = (input: {
   style: string;
 }) => Promise<{ url: string }>;
 
+/** Generations (fal.ai requests) used and allowed for the life of the server; null when off (no key). */
+export type MusicGenerations = { max: number; used: number } | null;
+
 /** Served by the web from `public/audio/`. */
 export const EMBEDDED_TRACK = "/audio/reserva-2.mp3";
 

@@ -1,6 +1,7 @@
 // What the world server sends to each screen, beyond the simulation's own
 // views: the phase clock on the telão and the phones, the phone's notices,
 // and the host's state on the admin. The web imports these types.
+import type { MusicGenerations } from "../music/generator";
 import type { PlayCommand, SoundStatus, TrackStatus } from "../music/jukebox";
 import {
   type DesfileView,
@@ -73,7 +74,7 @@ export interface Spending {
 export interface AdminJury {
   desfile: DesfileView | null;
   /** Music generations used and allowed for the life of the server; null when off (no key). */
-  generations: { max: number; used: number } | null;
+  generations: MusicGenerations;
   /** The last command sent to the telão. */
   playing: PlayCommand | null;
   sound: SoundStatus;
