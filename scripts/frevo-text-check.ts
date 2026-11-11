@@ -5,11 +5,20 @@
 // "Oxe" and invalid answers. Every text goes to a JSON file to be read by a
 // person, since nonsense ("Espetinho de espeto") has no regex.
 //
-//   bun scripts/frevo-text-check.ts [--questions 12] [--refrains 4] [--out file.json] [model:participants ...]
+//   bun run frevo:text-check [--questions 12] [--refrains 4] [--out file.json]
+//     [--burst 20 [--concurrency 10]] [--fake] [model:participants ...]
+//
+// --burst N then fires N decisions per model at once at the provider proxy
+// (the key and each model's request fields, without the hub's one request per
+// participant), at most --concurrency open per model (default N), and counts
+// failures per model under load: HTTP errors, answers without a usable tool
+// call, network errors. A model that passes one at a time can fail most calls
+// in a burst (OpenRouter routing it to another provider under load).
+// --fake runs the same against the fake models: no key, no spending.
 //
 // The key comes from OPENROUTER_API_KEY or ~/.config/gambiarra-lab/openrouter.key.
 // FREVO_REAL_CHECK_BUDGET_USD (default 0.15) stops it when the providers'
-// reported cost reaches it.
+// reported cost reaches it, the burst included.
 import { writeFile } from "node:fs/promises";
 import { decisionBody, readDecision } from "../apps/frevo/src/brains/scheduler";
 import {
@@ -18,10 +27,13 @@ import {
   roomInference,
 } from "../apps/frevo/src/gambi/room";
 import { modelHostConfig } from "../apps/frevo/src/model-host/config";
+import { startFakeUpstream } from "../apps/frevo/src/model-host/fake-upstream";
 import { startModelHost } from "../apps/frevo/src/model-host/host";
 import { startProviderProxy } from "../apps/frevo/src/model-host/provider-proxy";
 import {
+  DEFAULT_FAKE_MODELS,
   DEFAULT_REAL_MODELS,
+  modelEntry,
   parseModels,
 } from "../apps/frevo/src/models/catalog";
 import { isBlocked } from "../apps/frevo/src/sim/blocklist";
@@ -109,14 +121,27 @@ function flag(name: string, fallback: number): number {
 }
 const questions = flag("--questions", 12);
 const refrains = flag("--refrains", 4);
+const burst = flag("--burst", 0);
+const concurrency = Math.max(1, flag("--concurrency", burst));
+const fake = args.includes("--fake");
 const outIndex = args.indexOf("--out");
 const outFile = outIndex >= 0 ? args[outIndex + 1] : undefined;
+const WITH_VALUE = new Set([
+  "--questions",
+  "--refrains",
+  "--out",
+  "--burst",
+  "--concurrency",
+]);
 const named = args.filter(
-  (arg, index) => !(arg.startsWith("--") || args[index - 1]?.startsWith("--"))
+  (arg, index) =>
+    !(arg.startsWith("--") || WITH_VALUE.has(args[index - 1] ?? ""))
 );
-const specs = parseModels(
-  named.length > 0 ? named.join(",") : DEFAULT_REAL_MODELS
-);
+let fallbackModels = DEFAULT_REAL_MODELS;
+if (fake) {
+  fallbackModels = DEFAULT_FAKE_MODELS;
+}
+const specs = parseModels(named.length > 0 ? named.join(",") : fallbackModels);
 const budgetUsd = Number(process.env.FREVO_REAL_CHECK_BUDGET_USD || 0.15);
 
 function requestsFor(model: string): DecisionRequest[] {
@@ -265,26 +290,103 @@ async function ask(participantId: string, request: DecisionRequest) {
   };
 }
 
+interface BurstRow {
+  costUsd: number;
+  kind: string;
+  ms: number;
+  outcome: "valid" | "invalid" | "http" | "network";
+  reason: string;
+}
+
+/**
+ * N decisions for one model at once, straight at the provider proxy (which
+ * adds the key and the model's request fields), at most `concurrency` open.
+ */
+async function runBurst(model: string, endpoint: string): Promise<BurstRow[]> {
+  const pool = requestsFor(model);
+  const rows: BurstRow[] = [];
+  let next = 0;
+  const worker = async () => {
+    for (;;) {
+      const index = next;
+      next += 1;
+      if (index >= burst || spentUsd >= budgetUsd) {
+        return;
+      }
+      const request = pool[index % pool.length] as DecisionRequest;
+      const body = decisionBody(request, model);
+      const kind = request.kind ?? "walk";
+      const started = performance.now();
+      // biome-ignore lint/performance/noAwaitInLoops: each worker keeps one call open.
+      const row = await fetch(`${endpoint}/v1/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(60_000),
+      })
+        .then(async (response): Promise<BurstRow> => {
+          const ms = performance.now() - started;
+          const text = await response.text();
+          if (!response.ok) {
+            return {
+              kind,
+              ms,
+              costUsd: 0,
+              outcome: "http",
+              reason: `HTTP ${response.status}: ${text.slice(0, 80)}`,
+            };
+          }
+          const completion = JSON.parse(text) as { usage?: { cost?: unknown } };
+          const reported = Number(completion.usage?.cost ?? 0);
+          const costUsd = Number.isFinite(reported) ? reported : 0;
+          const read = readDecision(completion, body, request);
+          return read.ok
+            ? { kind, ms, costUsd, outcome: "valid", reason: "" }
+            : { kind, ms, costUsd, outcome: "invalid", reason: read.reason };
+        })
+        .catch(
+          (error): BurstRow => ({
+            kind,
+            ms: performance.now() - started,
+            costUsd: 0,
+            outcome: "network",
+            reason: error instanceof Error ? error.message : String(error),
+          })
+        );
+      spentUsd += row.costUsd;
+      rows.push(row);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, burst) }, () => worker())
+  );
+  return rows;
+}
+
 let spentUsd = 0;
 let infer: ReturnType<typeof roomInference> = () => {
   throw new Error("the hub is not up yet");
 };
 const results = new Map<string, Row[]>();
+const bursts = new Map<string, BurstRow[]>();
 const config = await modelHostConfig({
   ...process.env,
-  FREVO_MODEL_HOST_MODE: "openrouter",
+  FREVO_MODEL_HOST_MODE: fake ? "fake" : "openrouter",
   FREVO_MODELS: specs
     .map((spec) => `${spec.model}:${spec.participants}`)
     .join(","),
 });
-if (config.mode !== "openrouter") {
-  throw new Error("the text check needs the real provider");
-}
+const models = specs.map((spec) => spec.model);
 const hub = await startHub();
-const proxy = startProviderProxy({
-  models: specs.map((spec) => spec.model),
-  upstream: config.upstream,
-});
+const proxy =
+  config.mode === "openrouter"
+    ? startProviderProxy({ models, upstream: config.upstream })
+    : startFakeUpstream({
+        models,
+        profiles: Object.fromEntries(
+          models.map((model) => [model, modelEntry(model).fake])
+        ),
+      });
 try {
   const room = await ensureRoom(hub.url, ROOM_NAME);
   const host = startModelHost({
@@ -328,6 +430,13 @@ try {
   } finally {
     await host.stop();
   }
+  if (burst > 0) {
+    await Promise.all(
+      specs.map(async (spec) => {
+        bursts.set(spec.model, await runBurst(spec.model, proxy.endpoint));
+      })
+    );
+  }
 } finally {
   proxy.stop();
   await hub.stop();
@@ -363,11 +472,50 @@ for (const spec of specs) {
     }
   }
 }
+if (burst > 0) {
+  console.log("");
+  console.log(
+    `Rajada: ${burst} decisões por modelo, até ${concurrency} abertas por modelo, direto no proxy do provider`
+  );
+  console.log(
+    "| Modelo | Enviadas | Válidas | Sem ferramenta usável | Erro HTTP | Erro de rede | p50 | Máximo | US$ |"
+  );
+  console.log("|---|---|---|---|---|---|---|---|---|");
+  for (const spec of specs) {
+    const rows = bursts.get(spec.model) ?? [];
+    const count = (outcome: BurstRow["outcome"]) =>
+      rows.filter((row) => row.outcome === outcome).length;
+    const times = rows.map((row) => row.ms).sort((a, b) => a - b);
+    const p50 = times[Math.floor(times.length / 2)] ?? 0;
+    const max = times.at(-1) ?? 0;
+    const cost = rows.reduce((sum, row) => sum + row.costUsd, 0);
+    console.log(
+      `| ${spec.model} | ${rows.length} | ${count("valid")} | ${count("invalid")} | ${count("http")} | ${count("network")} | ${(p50 / 1000).toFixed(2)} s | ${(max / 1000).toFixed(2)} s | ${cost.toFixed(4)} |`
+    );
+    const reasons = new Map<string, number>();
+    for (const row of rows) {
+      if (row.outcome !== "valid") {
+        const reason = row.reason.slice(0, 100);
+        reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
+      }
+    }
+    for (const [reason, seen] of reasons) {
+      console.log(`    ${seen}x ${reason}`);
+    }
+  }
+}
 console.log(`spent US$ ${spentUsd.toFixed(5)} (budget US$ ${budgetUsd})`);
 if (outFile) {
   await writeFile(
     outFile,
-    JSON.stringify(Object.fromEntries(results), null, 2)
+    JSON.stringify(
+      {
+        sequential: Object.fromEntries(results),
+        burst: Object.fromEntries(bursts),
+      },
+      null,
+      2
+    )
   );
 }
 process.exit(0);

@@ -32,6 +32,18 @@ bun test apps/frevo/src apps/frevo-web/src
 
 `frevo:smoke` builds the web, starts everything on free ports and checks, one line per step: the Room and its model participants, the web served by the world, a boneco deciding by a model, the model host dying (autopilot) and coming back, the hub restarting (new Room, the host joins again) and the telão reconnecting. `FREVO_SMOKE_VERBOSE=1` streams the children's output.
 
+### What the models write
+
+```bash
+bun run frevo:text-check -- --fake --burst 12        # dry run with the fake models: no key, no spending
+bun run frevo:text-check                             # the stage models through a hub (spends money)
+bun run frevo:text-check -- --burst 20 --concurrency 10 --out texts.json
+```
+
+Run it whenever a prompt (`src/brains/`), the catalog (`src/models/catalog.ts`) or the filter (`src/sim/blocklist.ts`) changes. One model at a time per participant, as on stage, it asks each model for tap questions, refrains and one line of every other kind, and counts per model the valid answers, blocked terms, a leaked "Pergunta 2 de 3" before and after cleaning, and lines that open with "Oxe" or "Bora". `--out` keeps every text for a person to read, since nonsense has no regex. `--burst N` then sends N decisions per model at once to the provider proxy (at most `--concurrency` open per model) and counts HTTP errors, answers without a usable tool call and network errors, with the reasons: that is how a model that passes one call at a time shows it fails under load (MiniMax M3, routed to another provider under load, answered 16 of 21 calls of a burst without a tool call before anyone saw it). Models are named as `model:participants` after the flags; the default is the stage.
+
+Cost, estimated from the US$ 0.000125 per decision measured on 2026-11-11 (refrains cost more): the default run is about 110 decisions, a few cents; a burst of 20 per model adds about 100 decisions. `FREVO_REAL_CHECK_BUDGET_USD` (default 0.15) stops both when the providers' reported cost reaches it. Check the balance before and after with `frevo:spend`.
+
 ### What is left to spend
 
 ```bash
