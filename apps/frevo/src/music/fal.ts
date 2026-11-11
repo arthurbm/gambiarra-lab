@@ -194,6 +194,26 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
     return (await response.json()) as Queued;
   }
 
+  /** The queue's status, or null when it did not answer (HTTP, network, timeout or JSON). */
+  async function statusOf(
+    statusUrl: string,
+    clock: ReturnType<typeof stepClock>
+  ): Promise<string | null> {
+    try {
+      const status = await fetch(statusUrl, {
+        headers,
+        signal: clock.signal(),
+      });
+      if (!status.ok) {
+        return null;
+      }
+      const body = (await status.json()) as { status?: unknown } | null;
+      return typeof body?.status === "string" ? body.status : null;
+    } catch {
+      return null;
+    }
+  }
+
   /** Asks the status until COMPLETED; a status that does not answer is asked again. */
   async function completed(
     statusUrl: string,
@@ -205,14 +225,7 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
       if (clock.left() <= 0) {
         throw clock.late();
       }
-      const status = await fetch(statusUrl, {
-        headers,
-        signal: clock.signal(),
-      });
-      const body = status.ok
-        ? ((await status.json()) as { status?: string })
-        : null;
-      if (body?.status === "COMPLETED") {
+      if ((await statusOf(statusUrl, clock)) === "COMPLETED") {
         return;
       }
     }
@@ -265,8 +278,9 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
       queued = await submit(step, step.input(refrain, style), clock.signal());
       return await made(step, queued, clock);
     } catch (error) {
+      // Accepted and abandoned: stop it on fal.ai, so it is not made (and billed) for nothing.
+      cancel(queued.cancel_url);
       if (clock.left() <= 0) {
-        cancel(queued.cancel_url);
         throw clock.late();
       }
       throw error instanceof StepFailure

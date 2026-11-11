@@ -128,6 +128,43 @@ describe("when MiniMax does not deliver", () => {
     expect(lines.join("\n")).not.toContain(KEY);
   });
 
+  test("a status that breaks is asked again, and MiniMax still delivers", async () => {
+    const { fake, music } = setup({
+      minimax: { kind: "garbled", failures: 2 },
+      elevenlabs: { kind: "ok" },
+    });
+    const { url } = await music.generate(INPUT);
+    expect(url).toStartWith("/api/musica/");
+    expect(fake.requests.map((request) => request.endpoint)).toEqual([
+      "fal-ai/minimax-music/v2.6",
+    ]);
+    expect(fake.cancelled).toEqual([]);
+  });
+
+  test("a MiniMax whose status never answers is cancelled before ElevenLabs takes over", async () => {
+    const { fake, music } = setup(
+      {
+        minimax: { kind: "garbled", failures: Number.POSITIVE_INFINITY },
+        elevenlabs: { kind: "ok" },
+      },
+      { timeoutsMs: { minimax: 60, elevenlabs: 200 } }
+    );
+    await music.generate(INPUT);
+    await Bun.sleep(20);
+    expect(fake.cancelled).toEqual(["req-1"]);
+    expect(fake.requests[1]?.endpoint).toBe("fal-ai/elevenlabs/music");
+  });
+
+  test("a step abandoned after fal.ai accepted it is cancelled", async () => {
+    const { fake, music } = setup({
+      minimax: { kind: "error", status: 504 },
+      elevenlabs: { kind: "ok" },
+    });
+    await music.generate(INPUT);
+    await Bun.sleep(20);
+    expect(fake.cancelled).toEqual(["req-1"]);
+  });
+
   test("a refused request costs no generation", async () => {
     const { music } = setup({
       minimax: { kind: "refused", status: 422 },
