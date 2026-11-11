@@ -23,7 +23,7 @@
   },
   "scripts": {
     "board:e2e": "bun scripts/event.ts --fake --ephemeral",
-    "board:smoke": "bun scripts/board-smoke.ts",
+    "board:smoke": "bun scripts/heavy.ts bun scripts/board-smoke.ts",
     "build": "turbo run build",
     "check": "ultracite check",
     "check-types": "turbo run check-types",
@@ -35,10 +35,10 @@
     "event": "bun scripts/event.ts",
     "fix": "ultracite fix",
     "frevo:dev": "bun scripts/frevo.ts",
-    "frevo:load": "bun scripts/frevo-load.ts",
+    "frevo:load": "bun scripts/heavy.ts bun scripts/frevo-load.ts",
     "frevo:real-check": "bun scripts/frevo-real-check.ts",
-    "frevo:smoke": "bun scripts/frevo-smoke.ts",
-    "test": "bun test apps/board/src apps/frevo/src apps/frevo-web/src packages/agents scripts"
+    "frevo:smoke": "bun scripts/heavy.ts bun scripts/frevo-smoke.ts",
+    "test": "bun scripts/heavy.ts bun test apps/board/src apps/frevo/src apps/frevo-web/src packages/agents scripts"
   },
   "dependencies": {
     "zod": "catalog:"
