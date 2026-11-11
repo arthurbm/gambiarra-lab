@@ -13,7 +13,9 @@ import {
 import { watchRoomLlmEvents } from "../gambi/room-events";
 import { modelEntry, modelLabel } from "../models/catalog";
 import { modelPanelRows } from "../models/panel";
-import { phaseStatus, tick } from "../sim/phases";
+import type { MusicGenerator } from "../music/generator";
+import { createJukebox } from "../music/jukebox";
+import { tick } from "../sim/phases";
 import {
   answerHuman,
   type BrainResult,
@@ -26,7 +28,12 @@ import {
 } from "../sim/world";
 import { createAdminApi } from "./admin";
 import { createSimulatedHumans } from "./simulated";
-import { type PhoneEvent, telaoSnapshot as withPhaseClock } from "./views";
+import {
+  type PhoneEvent,
+  phoneView,
+  type TelaoAudio,
+  telaoSnapshot as withPhaseClock,
+} from "./views";
 
 export interface WorldServerOptions {
   /** `Authorization: Bearer <secret>` opens /api/admin/*; without it they stay closed. */
@@ -40,6 +47,10 @@ export interface WorldServerOptions {
   host?: string;
   hubUrl: string;
   log?: (line: string) => void;
+  /** Makes the music of a chosen bloco; the default answers with the embedded track. */
+  music?: MusicGenerator;
+  /** Music not ready after this long becomes the embedded track. */
+  musicTimeoutMs?: number;
   /** 0 asks the OS for a free port. */
   port?: number;
   /** The address people open from the QR; the telão falls back to its own. */
@@ -144,6 +155,16 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     onOpen: metrics.streamOpened,
   });
   let warnedCeiling = false;
+  const jukebox = createJukebox({
+    generator: options.music,
+    timeoutMs: options.musicTimeoutMs,
+    log,
+  });
+
+  function telaoAudio(): TelaoAudio | null {
+    const command = jukebox.current();
+    return command ? { ...command, ageMs: Date.now() - command.atMs } : null;
+  }
 
   function modelRows() {
     return modelPanelRows({
@@ -162,6 +183,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     warnedCeiling = budget.exceeded;
     return {
       ...withPhaseClock(world),
+      audio: telaoAudio(),
       models: modelRows().map(({ fromEvents: _, ...row }) => row),
     };
   }
@@ -264,9 +286,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
 
   /** A phone's view, or why it has none: expelled, or the world restarted. */
   function phoneEvent(sessionId: string): PhoneEvent {
-    const view = privateView(world, sessionId);
+    const view = phoneView(world, sessionId);
     if (view) {
-      return { ...view, clock: phaseStatus(world) };
+      return view;
     }
     return expelled.has(sessionId) ? { expulso: true } : { reiniciou: true };
   }
@@ -291,6 +313,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       world = next;
     },
     simulated,
+    jukebox,
     // The admin's stream counts as someone watching; simulated people do not.
     watch,
     connected: (sessionId) => (phones.get(sessionId)?.size ?? 0) > 0,
@@ -454,6 +477,21 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     return Response.json({ ok: true });
   }
 
+  /** A telão says whether its sound is on and what it plays, for the admin. */
+  async function soundReport(request: Request): Promise<Response> {
+    const body = await jsonBody(request);
+    const id = body?.telao;
+    if (!(typeof id === "string" && SESSION_ID.test(id))) {
+      return new Response("Telão inválido.", { status: 400 });
+    }
+    const playing =
+      typeof body?.tocando === "string" && body.tocando.length <= 64
+        ? body.tocando
+        : null;
+    jukebox.report(id, { enabled: body?.ativo === true, playing });
+    return Response.json({ ok: true });
+  }
+
   async function api(request: Request, pathname: string): Promise<Response> {
     try {
       if (request.method === "POST" && pathname === "/api/entrar") {
@@ -461,6 +499,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       }
       if (request.method === "POST" && pathname === "/api/responder") {
         return await respond(request);
+      }
+      if (request.method === "POST" && pathname === "/api/telao/som") {
+        return await soundReport(request);
       }
       if (request.method === "GET" && pathname === "/api/models") {
         return publicModels();
