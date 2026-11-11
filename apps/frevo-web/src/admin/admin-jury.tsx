@@ -15,12 +15,20 @@ const TRACK_TEXT: Record<TrackStatus["state"], string> = {
 };
 
 function SoundLine({ jury }: { jury: AdminState["jury"] }) {
+  const { generations } = jury;
   return (
-    <p className="admin-sound" data-on={jury.sound.enabled}>
-      {jury.sound.enabled
-        ? "Som do telão: ativado"
-        : "Som do telão: desativado. Toque em “Ativar som” no telão."}
-    </p>
+    <>
+      <p className="admin-sound" data-on={jury.sound.enabled}>
+        {jury.sound.enabled
+          ? "Som do telão: ativado"
+          : "Som do telão: desativado. Toque em “Ativar som” no telão."}
+      </p>
+      <p className="admin-hint">
+        {generations
+          ? `Música gerada no fal.ai: restam ${Math.max(0, generations.max - generations.used)} de ${generations.max} gerações.`
+          : "Música gerada desligada (sem FAL_KEY): os escolhidos tocam a faixa de reserva."}
+      </p>
+    </>
   );
 }
 
