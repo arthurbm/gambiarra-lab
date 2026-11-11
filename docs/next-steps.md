@@ -15,3 +15,7 @@ A segunda experiência é uma arena reconstruída sobre o Gambi, usando o Gambia
 - `apps/frevo/src/sim/world.ts` (1300 linhas) e `apps/frevo/src/server/app.ts` (700 linhas) mudam por razões demais.
 - `apps/frevo/src/sim/ask.ts`: a pergunta aberta estende o contador de 12 s até 60 s enquanto a pessoa digita (`askTypingCapMs`, decisão do #13), o que diverge do spec.
 - `apps/frevo/src/sim/blocklist.ts`: `filterModelText` corta as falas aos 140 caracteres (`speechMaxLength`) no meio da frase.
+- `apps/frevo/src/server/app.ts`: as quatro opções de música de `startWorldServer` (`music`, `musicFiles`, `musicGenerations`, `musicTimeoutMs`) andam juntas e pediriam um objeto só.
+- `apps/frevo/src/music/fal.ts`: os nomes `made`, `completed` e `run` dizem pouco do que cada passo faz.
+- `apps/frevo/src/music/fal.ts`, `apps/frevo/src/music/jukebox.ts`, `apps/frevo-web/src/admin/admin-jury.tsx`: os textos de plural ("geração"/"gerações") e de "passou de N s" estão duplicados entre servidor e web.
+- `apps/frevo/src/music/fal.ts`: um pedido que o fal.ai recusa (HTTP não-ok no envio) não conta como geração. Decisão mantida: nada foi feito nem cobrado; se o fal.ai um dia cobrar pedido recusado, o teto de seis passa a subestimar o gasto.
