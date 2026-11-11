@@ -11,7 +11,7 @@ Gambiarra Lab is where the Gambiarra Club builds social experiences on top of [G
 3. **A term or primitive enters `packages/agents` only when two experiences need it.** Until then it lives in the app that uses it. "Gambi Agents", if it ever exists, is extracted from what two experiences share. Meira et al. (*As Três Inteligências Revisitadas*) are an inspiration, not the specification.
 4. **`packages/agents` knows nothing about rounds, tiles or the city.** No import from `apps/*` and no event-specific vocabulary in its prompts. Keep this checkable by absence of imports.
 5. **Conventional Commits** on every commit (`type(scope): subject`, e.g. `feat(board): add round timer`).
-6. **Trusted local network only.** Gambi has no native auth; neither do these experiences.
+6. **Trusted local network only.** Gambi has no native auth; neither do these experiences. One exception: the Bloco de frevo (`apps/frevo`) runs in public on Railway, because the audience joins from their own phones over the internet. It stays within the spirit of the rule: the hub and the model host live only on Railway's private network (the hub never gets a public domain), the provider key exists only in the model host, and the admin needs a secret (`FREVO_ADMIN_SECRET`). The world server is the only public service. See `apps/frevo/README.md` ("Deploy").
 
 ## Commands
 
@@ -42,6 +42,7 @@ bun x ultracite fix          # format before committing
 | Orchestration library | `packages/agents/README.md` |
 | Board | `apps/board/README.md`, `apps/board-web/DESIGN.md` |
 | Bloco de frevo (world, model host, telão) | `apps/frevo/README.md`, spec in issue #10 |
+| Bloco de frevo deploy (Railway, docker compose) | `apps/frevo/README.md` ("Deploy"), `.railway/railway.ts`, `deploy/frevo/`, `compose.yaml` |
 
 ## Code style
 

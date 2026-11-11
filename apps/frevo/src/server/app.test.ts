@@ -35,6 +35,7 @@ interface Health {
   ok: boolean;
   participants: number;
   room: string | null;
+  viewers: number;
 }
 
 async function health(target: WorldServer): Promise<Health> {
@@ -98,8 +99,58 @@ describe("the world server", () => {
       room: ready.room,
       participants: 1,
       bonecos: 1,
+      viewers: 0,
     });
   });
+
+  test("asks no model while nobody watches, and asks again when a telão opens", async () => {
+    // Requests sent before the last telão left may still be answered.
+    await until(async () =>
+      (await health(server)).viewers === 0 ? true : undefined
+    );
+    await Bun.sleep(300);
+    const before = answered;
+    // Several decisions' worth of world time: rest is 60 ms, walks are short.
+    await Bun.sleep(1000);
+    expect(answered).toBe(before);
+
+    const stream = await openEventStream<PublicSnapshot>(
+      `${server.url}/events/telao`
+    );
+    try {
+      expect((await health(server)).viewers).toBe(1);
+      const walking = await stream.find((snapshot) => {
+        const boneco = firstBoneco(snapshot);
+        return boneco.brain === "autopilot" || boneco.brain === "model";
+      });
+      expect(walking.bonecos).toHaveLength(1);
+      await until(() => Promise.resolve(answered > before ? true : undefined));
+    } finally {
+      stream.close();
+    }
+    await until(async () =>
+      (await health(server)).viewers === 0 ? true : undefined
+    );
+  }, 20_000);
+
+  test("keeps the bonecos walking on autopilot while nobody watches", async () => {
+    await until(async () =>
+      (await health(server)).viewers === 0 ? true : undefined
+    );
+    // No telão: the world can only be seen through a stream, so open one and
+    // look at the first snapshot, which is the world as it was while unwatched.
+    await Bun.sleep(500);
+    const stream = await openEventStream<PublicSnapshot>(
+      `${server.url}/events/telao`
+    );
+    try {
+      const first = firstBoneco(await stream.next());
+      expect(first.brain).toBe("autopilot");
+      expect(first.model).toBeNull();
+    } finally {
+      stream.close();
+    }
+  }, 20_000);
 
   test("streams the telão: a boneco walking with a line a Room model decided", async () => {
     const stream = await openEventStream<PublicSnapshot>(
@@ -177,15 +228,16 @@ describe("the world server", () => {
     expect(recovered.room).not.toBeNull();
 
     // A boneco still showing an old decision proves nothing: the provider
-    // has to answer new requests that came through the new Room.
+    // has to answer new requests that came through the new Room. Models are
+    // asked only while someone watches.
     const before = answered;
-    await until(() =>
-      Promise.resolve(answered > before + 2 ? true : undefined)
-    );
     const stream = await openEventStream<PublicSnapshot>(
       `${server.url}/events/telao`
     );
     try {
+      await until(() =>
+        Promise.resolve(answered > before + 2 ? true : undefined)
+      );
       const decided = await stream.find(
         (snapshot) => firstBoneco(snapshot).brain === "model"
       );

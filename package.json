@@ -48,6 +48,7 @@
     "@types/bun": "catalog:",
     "gambi": "^0.7.2",
     "gambi-sdk": "^0.7.2",
+    "railway": "3.16.0",
     "turbo": "^2.11.7",
     "typescript": "catalog:",
     "ultracite": "8.0.0"

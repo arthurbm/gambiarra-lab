@@ -1,0 +1,103 @@
+# Plan B for the Bloco de frevo: the same three services as on Railway, on the
+# notebook. Details in apps/frevo/README.md ("Deploy").
+#
+#   docker compose up --build -d --wait    # telão at http://localhost:3001/telao
+#   docker compose down
+#
+# The keys come from local files in ~/.config/gambiarra-lab/ as compose
+# secrets (mounted read-only in /run/secrets). They never reach the image, the
+# repo or `docker inspect`, which shows only the path. The files hold the raw
+# value, without `NAME=`, hence `secrets` and not `env_file`; the images'
+# entrypoint turns FOO_FILE into FOO.
+#
+# Before the first run, create the admin secret if it does not exist:
+#   (umask 077; openssl rand -hex 24 > ~/.config/gambiarra-lab/admin.secret)
+name: bloco-de-frevo
+
+services:
+  hub:
+    build:
+      context: .
+      dockerfile: deploy/frevo/hub.Dockerfile
+    environment:
+      HUB_PORT: "3000"
+    # No `ports`: as in the cloud, the hub never leaves the internal network.
+    # To look at it from the host:
+    #   docker compose exec hub gambi room list --hub http://localhost:3000
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://localhost:3000/v1/health'); process.exit(r.ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  modelos:
+    build:
+      context: .
+      dockerfile: deploy/frevo/modelos.Dockerfile
+    depends_on:
+      hub:
+        condition: service_healthy
+    environment:
+      GAMBI_HUB_URL: http://hub:3000
+      FREVO_ROOM_NAME: bloco-de-frevo
+      FREVO_MODEL_HOST_PORT: "3002"
+      # `fake` runs with no key and no network: FREVO_MODEL_HOST_MODE=fake docker compose up
+      FREVO_MODEL_HOST_MODE: ${FREVO_MODEL_HOST_MODE:-openrouter}
+      FREVO_MODELS: ${FREVO_MODELS:-}
+      OPENROUTER_API_KEY_FILE: /run/secrets/openrouter_key
+    secrets:
+      - openrouter_key
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://localhost:3002/health'); process.exit(r.ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  mundo:
+    build:
+      context: .
+      dockerfile: deploy/frevo/mundo.Dockerfile
+    depends_on:
+      hub:
+        condition: service_healthy
+    environment:
+      GAMBI_HUB_URL: http://hub:3000
+      FREVO_ROOM_NAME: bloco-de-frevo
+      PORT: "3001"
+      FREVO_BONECOS: ${FREVO_BONECOS:-1}
+      # The address in the QR. On stage without the cloud: the notebook's IP.
+      FREVO_PUBLIC_URL: ${FREVO_PUBLIC_URL:-http://localhost:3001}
+      FREVO_ADMIN_SECRET_FILE: /run/secrets/admin_secret
+      FAL_KEY_FILE: /run/secrets/fal_key
+    secrets:
+      - admin_secret
+      - fal_key
+    ports:
+      # The only exposed service, on every interface so the room's phones reach
+      # the notebook. For this notebook only: "127.0.0.1:3001:3001".
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://localhost:3001/health'); process.exit(r.ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  default:
+    # IPv6 on, so the notebook looks like Railway's private network: a server
+    # listening only on 0.0.0.0 fails here before it fails there.
+    enable_ipv6: true
+
+secrets:
+  openrouter_key:
+    file: ${HOME}/.config/gambiarra-lab/openrouter.key
+  fal_key:
+    file: ${HOME}/.config/gambiarra-lab/fal.key
+  admin_secret:
+    file: ${HOME}/.config/gambiarra-lab/admin.secret

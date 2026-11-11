@@ -25,7 +25,8 @@ const webDist =
   ((await exists(resolve(defaultWebDist, "index.html")))
     ? defaultWebDist
     : undefined);
-const host = process.env.HOST?.trim() || "0.0.0.0";
+// `::` takes IPv6 and IPv4; Railway's private network needs IPv6.
+const host = process.env.HOST?.trim() || "::";
 
 const server = startWorldServer({
   hubUrl: process.env.GAMBI_HUB_URL?.trim() || DEFAULT_HUB_URL,

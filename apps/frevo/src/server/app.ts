@@ -9,6 +9,7 @@ import {
   roomInference,
 } from "../gambi/room";
 import {
+  type BrainResult,
   createWorld,
   DEFAULT_RULES,
   publicSnapshot,
@@ -113,14 +114,42 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   }, options.roomRefreshMs ?? 2000);
   refreshing = refreshRoom();
 
-  const telao = new Set<ReadableStreamDefaultController<Uint8Array>>();
+  /** Each open telão and the way it leaves. */
+  const telao = new Map<
+    ReadableStreamDefaultController<Uint8Array>,
+    () => void
+  >();
+
+  // The deploy stays up all day. With no stream open (telão, phone or admin)
+  // nobody can see a decision, so none goes to a paid model: the bonecos walk
+  // on autopilot until someone connects. Every SSE route calls `watch`.
+  let viewers = 0;
+  function watch(): () => void {
+    viewers += 1;
+    if (viewers === 1) {
+      log("Someone is watching: the bonecos ask the Room's models");
+    }
+    let left = false;
+    return () => {
+      if (left) {
+        return;
+      }
+      left = true;
+      viewers -= 1;
+      if (viewers === 0) {
+        log("Nobody is watching: the bonecos walk on autopilot");
+      }
+    };
+  }
+  /** Answers for requests nobody asked a model about; fed to the next step. */
+  let unwatched: BrainResult[] = [];
 
   function broadcast(chunk: Uint8Array) {
-    for (const controller of telao) {
+    for (const [controller, leave] of telao) {
       try {
         controller.enqueue(chunk);
       } catch {
-        telao.delete(controller);
+        leave();
       }
     }
   }
@@ -128,11 +157,20 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   const tickTimer = setInterval(() => {
     const next = step(world, {
       elapsedMs: tickMs,
-      results: scheduler.drain(),
+      results: [...unwatched, ...scheduler.drain()],
     });
     ({ world } = next);
+    unwatched = [];
     for (const request of next.requests) {
-      scheduler.submit(request);
+      if (viewers > 0) {
+        scheduler.submit(request);
+      } else {
+        unwatched.push({
+          ok: false,
+          requestId: request.id,
+          reason: "nobody is watching",
+        });
+      }
     }
   }, tickMs);
   const publishTimer = setInterval(
@@ -146,7 +184,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
 
   function telaoStream(request: Request): Response {
     let self: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const unwatch = watch();
     const leave = () => {
+      unwatch();
       if (self) {
         telao.delete(self);
       }
@@ -156,7 +196,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         self = controller;
         controller.enqueue(encoder.encode(`retry: ${SSE_RETRY_MS}\n\n`));
         controller.enqueue(sseEvent("snapshot", publicSnapshot(world)));
-        telao.add(controller);
+        telao.set(controller, leave);
       },
       cancel: leave,
     });
@@ -197,7 +237,8 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   }
 
   const server = Bun.serve({
-    hostname: options.host ?? "0.0.0.0",
+    // `::` takes IPv6 and IPv4; Railway's private network needs IPv6.
+    hostname: options.host ?? "::",
     port: options.port ?? 0,
     fetch(request, bunServer) {
       const { pathname } = new URL(request.url);
@@ -210,6 +251,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
           room: roomCode,
           participants: participantCount,
           bonecos: world.bonecos.length,
+          viewers,
         });
       }
       if (pathname === "/events/telao") {
@@ -238,7 +280,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       ]) {
         clearInterval(timer);
       }
-      for (const controller of telao) {
+      for (const controller of telao.keys()) {
         try {
           controller.close();
         } catch {
