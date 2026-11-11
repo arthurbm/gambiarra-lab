@@ -32,6 +32,16 @@ bun test apps/frevo/src apps/frevo-web/src
 
 `frevo:smoke` builds the web, starts everything on free ports and checks, one line per step: the Room and its model participants, the web served by the world, a boneco deciding by a model, the model host dying (autopilot) and coming back, the hub restarting (new Room, the host joins again) and the telão reconnecting. `FREVO_SMOKE_VERBOSE=1` streams the children's output.
 
+### What is left to spend
+
+```bash
+bun run frevo:spend   # account balance and this key's usage and limit; never prints a key
+```
+
+It prints the account's real balance (`GET /api/v1/credits`: purchased, used, remaining) and the key's usage and limit (`GET /api/v1/key`). They are different numbers: a key with a US$ 50 limit on an account with US$ 3.55 left stops at US$ 3.55, and reading the limit as the balance is how an agent once reported "US$ 49 left". The inference key comes as in `--real`. OpenRouter's documentation says `GET /credits` needs a management key: put one in `OPENROUTER_MANAGEMENT_KEY` or `~/.config/gambiarra-lab/openrouter-management.key` (`OPENROUTER_MANAGEMENT_KEY_FILE` moves it). Without the balance the script says "unknown" and exits 1.
+
+To cap what one agent or one rehearsal can spend, give it its own key with a limit instead of the event's key. With a management key, OpenRouter's key API (checked against its API reference on 2026-11-11) creates one: `POST https://openrouter.ai/api/v1/keys` with `Authorization: Bearer <management key>` and a body like `{ "name": "agente-ensaio", "limit": 0.5, "limit_reset": null, "expires_at": "2026-11-12T23:59:59Z" }` (`name` is required; `limit` is in US$; `limit_reset` is `daily`, `weekly`, `monthly` or null; `expires_at` needs seconds). The answer carries the plaintext `key` once, at the top level, and `data.hash`; `DELETE /api/v1/keys/<hash>` removes it. Write the key to a file with mode 600 and point `OPENROUTER_API_KEY_FILE` at it, never into a chat or a log. The key's limit still sits under the account balance.
+
 ## The three processes
 
 | Process | Entry | What it does |

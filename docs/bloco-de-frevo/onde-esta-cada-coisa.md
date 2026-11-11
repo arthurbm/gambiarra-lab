@@ -45,7 +45,7 @@ Os artefatos (vídeos, áudio, capturas, relatórios) ficam em `artifacts/bloco-
 ## Limites que valem saber
 
 - O mundo limita uma sessão a US$ 1 de inferência, 30 bonecos e 6 gerações de música por vida do servidor.
-- O saldo real do OpenRouter sai de `GET https://openrouter.ai/api/v1/credits`. O limite de uma key não é o saldo da conta.
+- O saldo real do OpenRouter sai de `GET https://openrouter.ai/api/v1/credits`; `bun run frevo:spend` mostra o saldo e, separado, o uso e o limite da key. O limite de uma key não é o saldo da conta.
 - Sem ninguém conectado (telão, celular ou admin), o mundo não chama modelo nenhum.
 
 ## Trabalho pesado numa máquina de 16 GB

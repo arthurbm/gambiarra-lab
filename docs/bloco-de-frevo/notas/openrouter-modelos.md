@@ -6,7 +6,7 @@
 
 - O MiniMax M3 vai hoje com `reasoning: { effort: "none" }` e provider fixo (`order: ["coreweave", "minimax"]`, `require_parameters: true`), não com o corpo da seção 2. Sob carga o OpenRouter o roteou para a Venice, que raciocinava até `max_tokens` e respondia sem chamada de ferramenta (16 de 21 numa rajada). O corpo que vale é o de `apps/frevo/src/models/catalog.ts`.
 - O hub repassa `reasoning`, `provider` e `tool_choice` até o upstream (testado em `apps/frevo/src/model-host/host.test.ts`), e o hospedeiro seguiu o padrão sugerido no fim da seção 8: um proxy local mescla o corpo por modelo e põe o `Authorization`.
-- O saldo e o uso da seção 5 são de 2026-11-11. Para o saldo de hoje, `GET https://openrouter.ai/api/v1/credits`.
+- O saldo e o uso da seção 5 são de 2026-11-11. Para o saldo de hoje, `bun run frevo:spend` (a documentação de hoje diz que `GET /credits` pede uma management key).
 - A sonda (`openrouter-probe.ts`) e as 785 chamadas registradas não vieram para o repositório; a seção 10 descreve um script que não está aqui. Para medir pelo hub, `bun run frevo:real-check` e `scripts/frevo-text-check.ts`.
 
 Notas para o ticket #18 (spec #10, seção "Como os bonecos pensam"). Medido em 2026-11-11 entre 05:05 e 05:16 UTC (02:05 a 02:16 no Recife), direto contra `https://openrouter.ai/api/v1/chat/completions`, sem passar pelo hub do Gambi.

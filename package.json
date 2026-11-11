@@ -38,6 +38,7 @@
     "frevo:load": "bun scripts/heavy.ts bun scripts/frevo-load.ts",
     "frevo:real-check": "bun scripts/frevo-real-check.ts",
     "frevo:smoke": "bun scripts/heavy.ts bun scripts/frevo-smoke.ts",
+    "frevo:spend": "bun scripts/frevo-spend.ts",
     "test": "bun scripts/heavy.ts bun test apps/board/src apps/frevo/src apps/frevo-web/src packages/agents scripts"
   },
   "dependencies": {
