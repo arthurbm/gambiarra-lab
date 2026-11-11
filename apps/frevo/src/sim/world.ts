@@ -13,6 +13,15 @@ import {
 } from "./ask";
 import { filterModelText } from "./blocklist";
 import {
+  type Bloco,
+  blocoAnswered,
+  canWander,
+  type FormarState,
+  holdsDecision,
+  stepFormar,
+  talksOf,
+} from "./formar";
+import {
   acceptPersonality,
   acceptQuestion,
   fallbackPersonality,
@@ -31,6 +40,7 @@ import {
 } from "./interview";
 
 export type { Ask, AskOutcome, HumanAnswer } from "./ask";
+export type { Bloco } from "./formar";
 export { INSTRUMENTS, type Instrument } from "./interview";
 
 /** The phases of the dynamic, in order. */
@@ -80,7 +90,24 @@ export interface PersonalityAction {
   summary: string;
   type: "personality";
 }
-export type Action = PersonalityAction | QuestionAction | WalkAction;
+/** What a boneco says to another it met, and whether their humans match. */
+export interface EncounterAction {
+  affinity: boolean;
+  speech: string;
+  type: "encounter";
+}
+/** How the maestro splits the bonecos left without a bloco, by name. */
+export interface MaestroAction {
+  groups: string[][];
+  speech: string;
+  type: "maestro";
+}
+export type Action =
+  | EncounterAction
+  | MaestroAction
+  | PersonalityAction
+  | QuestionAction
+  | WalkAction;
 
 interface RequestBase {
   boneco: { id: string; name: string };
@@ -117,8 +144,34 @@ export interface PersonalityRequest extends RequestBase {
   kind: "personality";
 }
 
+/** Someone the boneco meets or the maestro groups, as a model sees them. */
+export interface Acquaintance {
+  instrument: string | null;
+  name: string;
+  /** The two lines from the interview; null when there was none. */
+  personality: string[] | null;
+}
+
+/** Two bonecos met: one line to the other and whether their humans match. */
+export interface EncounterRequest extends RequestBase {
+  instrument: string | null;
+  kind: "encounter";
+  other: Acquaintance;
+  personality: string[] | null;
+}
+
+/** The maestro, at the end of the formar phase, groups whoever is left. */
+export interface MaestroRequest extends RequestBase {
+  kind: "maestro";
+  people: Acquaintance[];
+  /** The size of each bloco to make, in order. */
+  sizes: number[];
+}
+
 /** A decision the simulation wants from a brain before `deadlineMs`. */
 export type DecisionRequest =
+  | EncounterRequest
+  | MaestroRequest
   | PersonalityRequest
   | QuestionRequest
   | WalkRequest;
@@ -147,11 +200,12 @@ export interface Thought {
   tone: "aviso" | "fala";
 }
 
-interface Boneco {
+export interface Boneco {
   ask: Ask | null;
   asks: number;
   /** The model the boneco was given on arrival. */
   assignedModel: string | null;
+  blocoId: string | null;
   brain: BrainSource | null;
   decisions: number;
   facing: Facing;
@@ -173,8 +227,17 @@ interface Boneco {
   speech: { text: string; untilMs: number } | null;
   target: Place | null;
   thoughts: Thought[];
+  /** The human's answer to joining a bloco, until the bloco reads it. */
+  vote: { askId: string; yes: boolean } | null;
   x: number;
   y: number;
+}
+
+/** Something that just happened, for the short log on the telão. */
+export interface WorldEvent {
+  atMs: number;
+  id: number;
+  text: string;
 }
 
 export interface WorldRules {
@@ -184,8 +247,16 @@ export interface WorldRules {
   askTypingCapMs: number;
   /** How long a boneco waits for its brain before going on autopilot. */
   decisionTimeoutMs: number;
+  /** Events the telão's log keeps. */
+  eventsKept: number;
   /** How long the interview waits for the model before a fixed question. */
   interviewThinkMs: number;
+  /** How long the maestro may think before the square groups by distance. */
+  maestroMs: number;
+  /** The same two bonecos meet again only after this long. */
+  meetCooldownMs: number;
+  /** Two bonecos this close (in map units) meet. */
+  meetRadius: number;
   /** Pause at a place before the next decision. */
   restMs: number;
   speechMaxLength: number;
@@ -196,7 +267,11 @@ export interface WorldRules {
 }
 
 export interface World {
+  blocos: Bloco[];
   bonecos: Boneco[];
+  events: WorldEvent[];
+  /** The formar phase's encounters and proposals; null before it starts. */
+  formar: FormarState | null;
   map: WorldMap;
   /** The models of the Room, for spreading bonecos evenly among them. */
   models: string[];
@@ -210,6 +285,8 @@ export interface World {
 export interface PublicBoneco {
   /** Waiting for its human to answer on the phone. */
   asking: boolean;
+  /** The bloco it belongs to, when it has one. */
+  bloco: string | null;
   brain: BrainSource | null;
   facing: Facing;
   id: string;
@@ -224,12 +301,45 @@ export interface PublicBoneco {
   y: number;
 }
 
+/** A bloco as the telão shows it. */
+export interface PublicBloco {
+  id: string;
+  /** Index of the bloco's colour or mark, in formation order. */
+  mark: number;
+  /** Boneco ids. */
+  members: string[];
+  /** Where the bloco gathers. */
+  spot: { x: number; y: number };
+}
+
 /** What the telão may show. */
 export interface PublicSnapshot {
+  blocos: PublicBloco[];
   bonecos: PublicBoneco[];
+  /** The newest last. */
+  events: WorldEvent[];
   map: WorldMap;
   phase: Phase;
   timeMs: number;
+}
+
+/** A boneco as another person's phone shows it. */
+export interface Mate {
+  id: string;
+  instrument: Instrument | null;
+  look: number;
+  name: string;
+}
+
+/** One encounter, as the phone of one of the two shows it. */
+export interface Talk {
+  atMs: number;
+  /** Whether this boneco felt its human and the other's match; null while it thinks. */
+  liked: boolean | null;
+  /** What this boneco said; null when it said nothing. */
+  mine: string | null;
+  theirs: string | null;
+  with: Mate;
 }
 
 /** What one person's phone shows. Never the free text. */
@@ -243,12 +353,16 @@ export interface PrivateView {
     textMaxLength: number | null;
     totalMs: number;
   } | null;
+  /** The boneco's bloco and the others in it. */
+  bloco: { id: string; mark: number; mates: Mate[] } | null;
   boneco: PublicBoneco & {
     assignedModel: string | null;
     personality: string[] | null;
   };
   interview: { answered: number; done: boolean; total: number } | null;
   phase: Phase;
+  /** Encounters, oldest first. */
+  talks: Talk[];
   thoughts: Thought[];
   timeMs: number;
 }
@@ -257,7 +371,11 @@ export const DEFAULT_RULES: WorldRules = {
   askMs: 12_000,
   askTypingCapMs: 60_000,
   decisionTimeoutMs: 12_000,
+  eventsKept: 12,
   interviewThinkMs: 8000,
+  maestroMs: 10_000,
+  meetCooldownMs: 30_000,
+  meetRadius: 8,
   restMs: 1500,
   speechMaxLength: 140,
   speechMs: 6000,
@@ -340,7 +458,7 @@ function random(state: number): { next: number; value: number } {
 }
 
 /** Draws from the world's generator, advancing it. */
-function roll(world: World): number {
+export function roll(world: World): number {
   const drawn = random(world.rng);
   world.rng = drawn.next;
   return drawn.value;
@@ -374,6 +492,8 @@ function newBoneco(world: World, id: string, sessionId: string | null): Boneco {
     instrument: null,
     sessionId,
     assignedModel: leastUsedModel(world.models, world.bonecos),
+    blocoId: null,
+    vote: null,
     x,
     y,
     facing: "down",
@@ -423,7 +543,10 @@ export function createWorld(options: {
   seed: number;
 }): World {
   const world: World = {
+    blocos: [],
     bonecos: [],
+    events: [],
+    formar: null,
     map: options.map ?? PRACA,
     models: [],
     phase: "entrada",
@@ -457,7 +580,7 @@ export function join(
   return { world: next, bonecoId: boneco.id, created: true };
 }
 
-function think(
+export function think(
   boneco: Boneco,
   world: World,
   text: string,
@@ -471,7 +594,7 @@ function think(
   return { ...boneco, thoughts };
 }
 
-function say(boneco: Boneco, world: World, text: string | null): Boneco {
+export function say(boneco: Boneco, world: World, text: string | null): Boneco {
   return {
     ...boneco,
     speech: text
@@ -560,7 +683,7 @@ function autopilot(boneco: Boneco, world: World): Boneco {
 
 // --- Asking the human ------------------------------------------------------
 
-function askHuman(
+export function askHuman(
   boneco: Boneco,
   world: World,
   spec: Parameters<typeof openAsk>[0]
@@ -579,6 +702,7 @@ const ASK_HANDLERS: Record<
   (boneco: Boneco, world: World, ask: Ask, outcome: AskOutcome) => Boneco
 > = {
   interview: interviewAnswered,
+  bloco: blocoAnswered,
 };
 
 function closeAsk(boneco: Boneco, world: World, outcome: AskOutcome): Boneco {
@@ -863,7 +987,11 @@ function nextRequest(
   if (inInterview(boneco)) {
     return interviewRequest(boneco, world);
   }
-  if (!boneco.target && world.timeMs >= boneco.restUntilMs) {
+  if (
+    !boneco.target &&
+    world.timeMs >= boneco.restUntilMs &&
+    canWander(boneco, world)
+  ) {
     return walkRequest(boneco, world);
   }
 }
@@ -892,14 +1020,20 @@ function stepBoneco(
   elapsedMs: number
 ): { boneco: Boneco; request?: DecisionRequest } {
   let boneco = previous;
-  const answer = boneco.pending
-    ? results.get(boneco.pending.requestId)
-    : undefined;
+  // Decisions of the formar phase are settled by `stepFormar`.
+  const answer =
+    boneco.pending && !holdsDecision(boneco.pending.kind)
+      ? results.get(boneco.pending.requestId)
+      : undefined;
   if (answer?.ok) {
     boneco = applyAnswer(boneco, world, answer) ?? boneco;
   }
   // Still waiting: a failed or unusable answer, or the deadline, ends it.
-  if (boneco.pending && (answer || world.timeMs >= boneco.pending.deadlineMs)) {
+  if (
+    boneco.pending &&
+    !holdsDecision(boneco.pending.kind) &&
+    (answer || world.timeMs >= boneco.pending.deadlineMs)
+  ) {
     boneco = fallback(boneco, world);
   }
   if (boneco.ask && world.timeMs >= boneco.ask.deadlineMs) {
@@ -944,7 +1078,8 @@ export function step(
     }
     return stepped.boneco;
   });
-  return { world: next, requests };
+  const formed = stepFormar(next, results);
+  return { world: formed.world, requests: [...requests, ...formed.requests] };
 }
 
 // --- Views -----------------------------------------------------------------
@@ -961,6 +1096,7 @@ function publicBoneco(world: World, boneco: Boneco): PublicBoneco {
     walking: boneco.target !== null,
     thinking: boneco.pending !== null,
     asking: boneco.ask !== null,
+    bloco: boneco.blocoId,
     speech:
       boneco.speech && boneco.speech.untilMs > world.timeMs
         ? boneco.speech.text
@@ -976,7 +1112,36 @@ export function publicSnapshot(world: World): PublicSnapshot {
     phase: world.phase,
     map: world.map,
     bonecos: world.bonecos.map((boneco) => publicBoneco(world, boneco)),
+    blocos: world.blocos.map(({ id, mark, members, spot }) => ({
+      id,
+      mark,
+      members,
+      spot,
+    })),
+    events: world.events,
   };
+}
+
+/** A boneco as another person's phone shows it. */
+export function mateOf(boneco: Boneco): Mate {
+  return {
+    id: boneco.id,
+    name: boneco.name,
+    look: boneco.look,
+    instrument: boneco.instrument,
+  };
+}
+
+function blocoOf(world: World, boneco: Boneco): PrivateView["bloco"] {
+  const bloco = world.blocos.find((other) => other.id === boneco.blocoId);
+  if (!bloco) {
+    return null;
+  }
+  const mates = bloco.members.flatMap((id) => {
+    const mate = world.bonecos.find((other) => other.id === id);
+    return mate && mate.id !== boneco.id ? [mateOf(mate)] : [];
+  });
+  return { id: bloco.id, mark: bloco.mark, mates };
 }
 
 /** One person's phone, by session; null for a session the world does not know. */
@@ -998,6 +1163,8 @@ export function privateView(
       personality: boneco.personality,
     },
     thoughts: boneco.thoughts,
+    talks: talksOf(world, boneco.id),
+    bloco: blocoOf(world, boneco),
     ask: ask
       ? {
           id: ask.id,
