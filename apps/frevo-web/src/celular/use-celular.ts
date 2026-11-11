@@ -89,7 +89,8 @@ export function useCelular() {
         if ("reiniciou" in next) {
           // The host started over: come back with a new boneco.
           setView(null);
-          if (!reentering.current) {
+          // Several notices may arrive before the new boneco does.
+          if (reentering.current === false) {
             reentering.current = true;
             enter(session)
               .catch(() => undefined)

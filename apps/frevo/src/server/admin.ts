@@ -149,94 +149,85 @@ export function createAdminApi(context: AdminContext): AdminApi {
       : null;
   }
 
-  async function action(
-    request: Request,
-    route: string
-  ): Promise<Response | undefined> {
-    const world = context.world();
-    switch (route) {
-      case "iniciar":
-        return world.phase === "entrada"
-          ? change(setPaused(advancePhase(world), false), "started")
-          : Response.json(state());
-      case "pausar":
-        return change(setPaused(world, true), "paused");
-      case "retomar":
-        return change(setPaused(world, false), "resumed");
-      case "avancar":
-        return change(advancePhase(world), `advanced from ${world.phase}`);
-      case "duracoes": {
-        const input = await body(request);
-        const durations: Partial<Record<TimedPhase, number>> = {};
-        for (const phase of TIMED) {
-          if (typeof input[phase] === "number") {
-            durations[phase] = input[phase] as number;
-          }
-        }
-        return change(
-          setPhaseDurations(world, durations),
-          "changed the durations"
-        );
-      }
-      case "reiniciar": {
-        context.simulated.reset();
-        const response = change(restartWorld(world), "restarted from zero");
-        context.restarted();
-        return response;
-      }
-      case "simulados": {
-        const input = await body(request);
-        const total =
-          typeof input.total === "number" && Number.isInteger(input.total)
-            ? Math.min(MAX_SIMULATED_TOTAL, Math.max(0, input.total))
-            : 25;
-        const filled = context.simulated.fill(world, total);
-        return change(filled.world, `${filled.added} simulated people joined`);
-      }
-      case "simulados/remover": {
-        const removed = context.simulated.removeAll(world);
-        return change(
-          removed.world,
-          `${removed.removed} simulated people left`
-        );
-      }
-      case "expulsar": {
-        const id = bonecoOf(await body(request));
-        if (!id) {
-          return Response.json(
-            { erro: "boneco não encontrado" },
-            { status: 404 }
-          );
-        }
-        const result = expel(world, id);
-        const response = change(result.world, `expelled ${id}`);
-        if (
-          result.sessionId &&
-          !context.simulated.isSimulated(result.sessionId)
-        ) {
-          context.expelled(result.sessionId);
-        }
-        return response;
-      }
-      case "silenciar": {
-        const input = await body(request);
-        const id = bonecoOf(input);
-        if (!id) {
-          return Response.json(
-            { erro: "boneco não encontrado" },
-            { status: 404 }
-          );
-        }
-        const silenced = input.silenciado !== false;
-        return change(
-          setSilenced(world, id, silenced),
-          `${silenced ? "silenced" : "unsilenced"} ${id}`
-        );
-      }
-      default:
-        return;
-    }
+  function notFound() {
+    return Response.json({ erro: "boneco não encontrado" }, { status: 404 });
   }
+
+  function durationsOf(input: Record<string, unknown>) {
+    const durations: Partial<Record<TimedPhase, number>> = {};
+    for (const phase of TIMED) {
+      if (typeof input[phase] === "number") {
+        durations[phase] = input[phase] as number;
+      }
+    }
+    return durations;
+  }
+
+  function totalOf(input: Record<string, unknown>) {
+    return typeof input.total === "number" && Number.isInteger(input.total)
+      ? Math.min(MAX_SIMULATED_TOTAL, Math.max(0, input.total))
+      : 25;
+  }
+
+  /** Each action by route, with the JSON body (empty when there is none). */
+  const actions: Record<
+    string,
+    (world: World, input: Record<string, unknown>) => Response
+  > = {
+    iniciar: (world) =>
+      world.phase === "entrada"
+        ? change(setPaused(advancePhase(world), false), "started")
+        : Response.json(state()),
+    pausar: (world) => change(setPaused(world, true), "paused"),
+    retomar: (world) => change(setPaused(world, false), "resumed"),
+    avancar: (world) =>
+      change(advancePhase(world), `advanced from ${world.phase}`),
+    duracoes: (world, input) =>
+      change(
+        setPhaseDurations(world, durationsOf(input)),
+        "changed the durations"
+      ),
+    reiniciar: (world) => {
+      context.simulated.reset();
+      const response = change(restartWorld(world), "restarted from zero");
+      context.restarted();
+      return response;
+    },
+    simulados: (world, input) => {
+      const filled = context.simulated.fill(world, totalOf(input));
+      return change(filled.world, `${filled.added} simulated people joined`);
+    },
+    "simulados/remover": (world) => {
+      const removed = context.simulated.removeAll(world);
+      return change(removed.world, `${removed.removed} simulated people left`);
+    },
+    expulsar: (world, input) => {
+      const id = bonecoOf(input);
+      if (!id) {
+        return notFound();
+      }
+      const result = expel(world, id);
+      const response = change(result.world, `expelled ${id}`);
+      if (
+        result.sessionId &&
+        !context.simulated.isSimulated(result.sessionId)
+      ) {
+        context.expelled(result.sessionId);
+      }
+      return response;
+    },
+    silenciar: (world, input) => {
+      const id = bonecoOf(input);
+      if (!id) {
+        return notFound();
+      }
+      const silenced = input.silenciado !== false;
+      return change(
+        setSilenced(world, id, silenced),
+        `${silenced ? "silenced" : "unsilenced"} ${id}`
+      );
+    },
+  };
 
   return {
     publish,
@@ -261,11 +252,9 @@ export function createAdminApi(context: AdminContext): AdminApi {
       if (request.method === "GET" && route === "eventos") {
         return stream(request);
       }
-      if (request.method === "POST") {
-        const response = await action(request, route);
-        if (response) {
-          return response;
-        }
+      const run = actions[route];
+      if (request.method === "POST" && run && Object.hasOwn(actions, route)) {
+        return run(context.world(), await body(request));
       }
       const other = await context.otherRoutes?.(request, pathname);
       if (other) {

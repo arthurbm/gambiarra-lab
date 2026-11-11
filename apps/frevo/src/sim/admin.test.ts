@@ -37,7 +37,7 @@ describe("moderation", () => {
     expect(speechOf(world, "boneco-1")).toBe("Bora pro coreto!");
     world = setSilenced(world, "boneco-1", true);
     expect(speechOf(world, "boneco-1")).toBeNull();
-    world = step(world, { elapsedMs: 100 }).world;
+    ({ world } = step(world, { elapsedMs: 100 }));
     expect(speechOf(world, "boneco-1")).toBeNull();
     world = setSilenced(world, "boneco-1", false);
     expect(speechOf(world, "boneco-1")).toBe("Bora pro coreto!");
@@ -49,7 +49,7 @@ describe("moderation", () => {
     ({ world, bonecoId } = join(world, { sessionId: "sessao-1" }));
     const result = expel(world, bonecoId);
     expect(result.sessionId).toBe("sessao-1");
-    world = result.world;
+    ({ world } = result);
     expect(publicSnapshot(world).bonecos.map((boneco) => boneco.id)).toEqual([
       "boneco-1",
     ]);

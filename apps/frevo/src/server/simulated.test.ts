@@ -27,7 +27,7 @@ describe("simulated humans", () => {
     ({ world } = join(world, { sessionId: "pessoa-real-1" }));
     const filled = humans.fill(world, 25);
     expect(filled.added).toBe(24);
-    world = filled.world;
+    ({ world } = filled);
     expect(publicSnapshot(world).bonecos).toHaveLength(25);
     const simulated = world.bonecos.filter(
       (boneco) => boneco.sessionId && humans.isSimulated(boneco.sessionId)
@@ -42,12 +42,12 @@ describe("simulated humans", () => {
 
   test("answer their interview after a human delay, and usually in time", () => {
     const humans = createSimulatedHumans({ seed: 7 });
-    let world = humans.fill(createWorld({ seed: 2, bonecos: 0 }), 12).world;
+    let { world } = humans.fill(createWorld({ seed: 2, bonecos: 0 }), 12);
     const sessions = world.bonecos.map((boneco) => boneco.sessionId ?? "");
     const firstAsk = new Map<string, { id: string; atMs: number }>();
     const answeredAt: number[] = [];
     for (let elapsed = 0; elapsed < 90_000; elapsed += TICK_MS) {
-      world = tick(world, { elapsedMs: TICK_MS }).world;
+      ({ world } = tick(world, { elapsedMs: TICK_MS }));
       for (const session of sessions) {
         const ask = privateView(world, session)?.ask;
         if (ask && !firstAsk.has(session)) {
@@ -80,7 +80,7 @@ describe("simulated humans", () => {
 
   test("answer any question without knowing what it is for", () => {
     const humans = createSimulatedHumans({ seed: 3 });
-    let world = humans.fill(createWorld({ seed: 4, bonecos: 0 }), 1).world;
+    let { world } = humans.fill(createWorld({ seed: 4, bonecos: 0 }), 1);
     const [boneco] = world.bonecos;
     // A vote some later phase might open: an unknown purpose.
     world = {
@@ -114,7 +114,7 @@ describe("simulated humans", () => {
     const humans = createSimulatedHumans({ seed: 1 });
     let world = createWorld({ seed: 1, bonecos: 0 });
     ({ world } = join(world, { sessionId: "pessoa-real-1" }));
-    world = humans.fill(world, 6).world;
+    ({ world } = humans.fill(world, 6));
     const removed = humans.removeAll(world);
     expect(removed.removed).toBe(5);
     expect(removed.world.bonecos.map((other) => other.sessionId)).toEqual([
