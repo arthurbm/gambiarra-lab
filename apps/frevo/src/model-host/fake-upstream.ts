@@ -150,6 +150,38 @@ export function startFakeUpstream(options: FakeUpstreamOptions): FakeUpstream {
     state = (state * 48_271) % 2_147_483_647;
     return (state - 1) / 2_147_483_646;
   };
+  async function answerChat(body: Record<string, unknown>) {
+    // The SDK probes the endpoint with an empty body before joining.
+    if (!Array.isArray(body.messages)) {
+      return Response.json(
+        { error: { message: "messages is required" } },
+        { status: 400 }
+      );
+    }
+    options.onRequest?.(body);
+    sequence += 1;
+    const model = String(body.model);
+    const profile = options.profiles?.[model];
+    const [low, high] = profile?.latencyMs ?? [0, 0];
+    const latencyMs = options.latencyMs ?? low + draw() * (high - low);
+    if (latencyMs > 0) {
+      await Bun.sleep(latencyMs);
+    }
+    if (profile && draw() < profile.errorRate) {
+      return Response.json(
+        { error: { message: "the fake provider failed on purpose" } },
+        { status: 500 }
+      );
+    }
+    let answer: "invalid" | "silent" | "valid" = "valid";
+    if (options.silent) {
+      answer = "silent";
+    } else if (profile && draw() < profile.invalidRate) {
+      answer = "invalid";
+    }
+    return Response.json(completion(model, body, sequence, answer));
+  }
+
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -166,39 +198,9 @@ export function startFakeUpstream(options: FakeUpstreamOptions): FakeUpstream {
         });
       }
       if (request.method === "POST" && pathname === "/v1/chat/completions") {
-        const body = (await request.json().catch(() => ({}))) as Record<
-          string,
-          unknown
-        >;
-        // The SDK probes the endpoint with an empty body before joining.
-        if (!Array.isArray(body.messages)) {
-          return Response.json(
-            { error: { message: "messages is required" } },
-            { status: 400 }
-          );
-        }
-        options.onRequest?.(body);
-        sequence += 1;
-        const model = String(body.model);
-        const profile = options.profiles?.[model];
-        const [low, high] = profile?.latencyMs ?? [0, 0];
-        const latencyMs = options.latencyMs ?? low + draw() * (high - low);
-        if (latencyMs > 0) {
-          await Bun.sleep(latencyMs);
-        }
-        if (profile && draw() < profile.errorRate) {
-          return Response.json(
-            { error: { message: "the fake provider failed on purpose" } },
-            { status: 500 }
-          );
-        }
-        let answer: "invalid" | "silent" | "valid" = "valid";
-        if (options.silent) {
-          answer = "silent";
-        } else if (profile && draw() < profile.invalidRate) {
-          answer = "invalid";
-        }
-        return Response.json(completion(model, body, sequence, answer));
+        return answerChat(
+          (await request.json().catch(() => ({}))) as Record<string, unknown>
+        );
       }
       return new Response("Not Found", { status: 404 });
     },

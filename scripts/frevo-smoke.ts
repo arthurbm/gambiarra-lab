@@ -8,6 +8,10 @@
 import { exists, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import {
+  DEFAULT_FAKE_MODELS,
+  parseModels,
+} from "../apps/frevo/src/models/catalog";
 import type { PublicSnapshot } from "../apps/frevo/src/sim/world";
 import { openEventStream } from "../apps/frevo/src/testing/sse";
 import { until } from "../apps/frevo/src/testing/until";
@@ -19,6 +23,10 @@ const STEP_TIMEOUT_MS = 45_000;
 const TAIL_LINES = 40;
 const VERBOSE = process.env.FREVO_SMOKE_VERBOSE === "1";
 const LLM_EVENT = /\[gambi\] (llm\.\w+)/;
+const FAKE_PARTICIPANTS = parseModels(DEFAULT_FAKE_MODELS).reduce(
+  (sum, spec) => sum + spec.participants,
+  0
+);
 
 class StepFailure extends Error {}
 
@@ -200,6 +208,7 @@ async function scenario() {
         FREVO_BONECOS: "1",
         FREVO_DECISION_TIMEOUT_MS: "3000",
         FREVO_FAKE_LATENCY_MS: "200",
+        FREVO_FAKE_FAILURES: "0",
         FREVO_WEB_DIST: join(temporary as string, "web"),
       },
       host: "127.0.0.1",
@@ -216,7 +225,9 @@ async function scenario() {
   await step("the Room has the model participants", async () => {
     const ready = await until(async () => {
       const current = await health();
-      return current.room && current.participants === 2 ? current : undefined;
+      return current.room && current.participants === FAKE_PARTICIPANTS
+        ? current
+        : undefined;
     }, STEP_TIMEOUT_MS);
     firstRoom = ready.room as string;
     return `room ${ready.room}, ${ready.participants} participants, ${ready.bonecos} boneco`;
@@ -259,6 +270,22 @@ async function scenario() {
     return `${completions()} llm.complete, 0 llm.error`;
   });
 
+  await step("the telão's panel counts the model", async () => {
+    const stream = await openEventStream<
+      PublicSnapshot & { models?: { decisions: number; label: string }[] }
+    >(`${frevo().worldUrl}/events/telao`);
+    try {
+      const counted = await stream.find(
+        (snapshot) => (snapshot.models ?? []).some((row) => row.decisions > 0),
+        STEP_TIMEOUT_MS
+      );
+      const rows = (counted.models ?? []).filter((row) => row.decisions > 0);
+      return rows.map((row) => `${row.label} ${row.decisions}`).join(", ");
+    } finally {
+      stream.close();
+    }
+  });
+
   await step("model host dies: autopilot", async () => {
     await frevo().killModelHost();
     const walking = await watchBoneco(
@@ -282,7 +309,7 @@ async function scenario() {
       const current = await health();
       return current.room &&
         current.room !== firstRoom &&
-        current.participants === 2
+        current.participants === FAKE_PARTICIPANTS
         ? current
         : undefined;
     }, STEP_TIMEOUT_MS);

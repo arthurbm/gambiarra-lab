@@ -46,6 +46,16 @@ function toEvent(data: string): HubLlmEvent | undefined {
   }
 }
 
+/** The inference event in one server-sent event block, if it is one. */
+function blockEvent(block: string): HubLlmEvent | undefined {
+  const data = block
+    .split("\n")
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+  return data ? toEvent(data) : undefined;
+}
+
 export function watchRoomLlmEvents(
   options: RoomEventsOptions
 ): RoomEventsWatch {
@@ -80,16 +90,9 @@ export function watchRoomLlmEvents(
         if (done) {
           return;
         }
-        pending += value;
-        const blocks = pending.split("\n\n");
+        const blocks = `${pending}${value}`.split("\n\n");
         pending = blocks.pop() ?? "";
-        for (const block of blocks) {
-          const data = block
-            .split("\n")
-            .filter((line) => line.startsWith("data:"))
-            .map((line) => line.slice(5).trimStart())
-            .join("\n");
-          const event = data ? toEvent(data) : undefined;
+        for (const event of blocks.map(blockEvent)) {
           if (event) {
             options.onEvent(event);
           }

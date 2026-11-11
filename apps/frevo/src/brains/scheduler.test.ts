@@ -111,9 +111,9 @@ function room(
     /** Answers the oldest unanswered call to `participantId`. */
     async answer(participantId: string, completion?: unknown) {
       const index = calls.findIndex(
-        (call) =>
-          call.participantId === participantId &&
-          !(call as { done?: boolean }).done
+        (entry) =>
+          entry.participantId === participantId &&
+          !(entry as { done?: boolean }).done
       );
       const call = calls[index];
       if (!call) {

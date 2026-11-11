@@ -33,9 +33,9 @@ export function fakeClock(start = 0) {
     async advance(ms: number) {
       const target = now + ms;
       for (;;) {
-        const due = [...timers.entries()]
+        const [due] = [...timers.entries()]
           .filter(([, timer]) => timer.at <= target)
-          .sort((a, b) => a[1].at - b[1].at)[0];
+          .sort((a, b) => a[1].at - b[1].at);
         if (!due) {
           break;
         }

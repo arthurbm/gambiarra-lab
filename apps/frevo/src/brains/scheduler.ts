@@ -261,6 +261,21 @@ export function createBrainScheduler(
     }
   }
 
+  function failedCall(attempt: number, error: unknown, durationMs: number) {
+    const refused = refusedByHub(error);
+    const status = (error as { status?: unknown } | null)?.status;
+    metrics.end(attempt, {
+      dispatched: refused === undefined,
+      status: typeof status === "number" ? status : 0,
+      valid: false,
+      durationMs,
+    });
+    const reason = error instanceof Error ? error.message : String(error);
+    return refused === undefined
+      ? ({ kind: "failed", reason } as const)
+      : ({ kind: "refused", status: refused, reason } as const);
+  }
+
   async function call(participant: RoomParticipant, body: ChatCompletionBody) {
     const attempt = metrics.begin(participant.id, participant.model);
     const startedAt = clock.now();
@@ -291,22 +306,11 @@ export function createBrainScheduler(
             reason: checked.ok ? "the action does not fit" : checked.reason,
           } as const);
     } catch (error) {
-      const refused = refusedByHub(error);
-      const status = (error as { status?: unknown } | null)?.status;
-      metrics.end(attempt, {
-        dispatched: refused === undefined,
-        status: typeof status === "number" ? status : 0,
-        valid: false,
-        durationMs: clock.now() - startedAt,
-      });
       if (abort.signal.aborted) {
         // The hub still holds the participant until its upstream answers.
         leftBehind.add(participant.id);
       }
-      const reason = error instanceof Error ? error.message : String(error);
-      return refused === undefined
-        ? ({ kind: "failed", reason } as const)
-        : ({ kind: "refused", status: refused, reason } as const);
+      return failedCall(attempt, error, clock.now() - startedAt);
     } finally {
       clock.clearTimeout(timer);
     }
@@ -347,7 +351,7 @@ export function createBrainScheduler(
         }
         return;
       }
-      reason = outcome.reason;
+      ({ reason } = outcome);
       if (queued.finished || exceeded()) {
         return;
       }

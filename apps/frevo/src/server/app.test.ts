@@ -7,6 +7,7 @@ import {
   startFakeUpstream,
 } from "../model-host/fake-upstream";
 import { type ModelHost, startModelHost } from "../model-host/host";
+import type { ModelPanelRow } from "../models/panel";
 import type { PublicSnapshot } from "../sim/world";
 import { type RunningHub, startHub } from "../testing/processes";
 import { openEventStream } from "../testing/sse";
@@ -14,6 +15,7 @@ import { until } from "../testing/until";
 import { startWorldServer, type WorldServer } from "./app";
 
 const ROOM_NAME = "bloco-de-frevo-servidor";
+const ADMIN_SECRET = "segredo-do-host";
 // A fast world, so the tests see whole walks in well under a second.
 const FAST = {
   tickMs: 20,
@@ -69,6 +71,7 @@ beforeAll(async () => {
     bonecos: 1,
     seed: 1,
     webDist,
+    adminSecret: ADMIN_SECRET,
   });
   host = startModelHost({
     hubUrl: hub.url,
@@ -194,6 +197,157 @@ describe("the world server", () => {
       stream.close();
     }
   }, 60_000);
+});
+
+type TelaoSnapshot = PublicSnapshot & { models: ModelPanelRow[] };
+
+function admin(path: string, init: RequestInit = {}, secret = ADMIN_SECRET) {
+  return fetch(`${server.url}/api/admin${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${secret}`,
+    },
+  });
+}
+
+describe("the models of the Room", () => {
+  test("are listed for whoever gives bonecos a model", async () => {
+    const listed = await until(async () => {
+      const body = (await (await fetch(`${server.url}/api/models`)).json()) as {
+        models: unknown[];
+      };
+      return body.models.length > 0 ? body : undefined;
+    });
+    expect(listed).toEqual({
+      models: [
+        {
+          model: "fake-frevo",
+          label: "fake-frevo",
+          participants: 1,
+          enabled: true,
+        },
+      ],
+    });
+  });
+
+  test("show on the telão with decisions, response time and failures", async () => {
+    const stream = await openEventStream<TelaoSnapshot>(
+      `${server.url}/events/telao`
+    );
+    try {
+      const counted = await stream.find(
+        (snapshot) => (snapshot.models[0]?.decisions ?? 0) > 0
+      );
+      expect(counted.models[0]).toMatchObject({
+        model: "fake-frevo",
+        label: "fake-frevo",
+        enabled: true,
+        failures: 0,
+      });
+      expect(counted.models[0]?.avgMs).toBeGreaterThanOrEqual(0);
+    } finally {
+      stream.close();
+    }
+  });
+
+  test("are kept from anyone without the admin secret", async () => {
+    expect((await fetch(`${server.url}/api/admin/models`)).status).toBe(401);
+    expect((await admin("/models", {}, "outro")).status).toBe(401);
+  });
+
+  test("give the admin the spending, counted from the hub's events too", async () => {
+    // The hub's event stream opens a moment after the Room is known.
+    const state = await until(async () => {
+      const current = (await (await admin("/models")).json()) as {
+        models: (ModelPanelRow & { fromEvents: number })[];
+        spending: { ceilingUsd: number; exceeded: boolean; spentUsd: number };
+      };
+      return (current.models[0]?.fromEvents ?? 0) > 0 ? current : undefined;
+    });
+    expect(state.spending.ceilingUsd).toBe(1);
+    expect(state.spending.exceeded).toBe(false);
+    expect(state.spending.spentUsd).toBeGreaterThan(0);
+    expect(state.models[0]?.fromEvents).toBeGreaterThan(0);
+  });
+
+  test("can be switched off by the admin, and on again", async () => {
+    const off = await admin("/models", {
+      method: "POST",
+      body: JSON.stringify({ model: "fake-frevo", enabled: false }),
+    });
+    expect(off.status).toBe(200);
+    const stream = await openEventStream<TelaoSnapshot>(
+      `${server.url}/events/telao`
+    );
+    try {
+      const switched = await stream.find(
+        (snapshot) => snapshot.models[0]?.enabled === false
+      );
+      expect(switched.models[0]?.model).toBe("fake-frevo");
+      // With its only model off, the boneco walks on autopilot.
+      await stream.find(
+        (snapshot) => firstBoneco(snapshot).brain === "autopilot",
+        10_000
+      );
+    } finally {
+      stream.close();
+    }
+    const on = await admin("/models", {
+      method: "POST",
+      body: JSON.stringify({ model: "fake-frevo", enabled: true }),
+    });
+    expect(on.status).toBe(200);
+    expect(
+      ((await on.json()) as { models: ModelPanelRow[] }).models[0]?.enabled
+    ).toBe(true);
+  });
+});
+
+describe("the session's spending ceiling", () => {
+  test("puts every boneco on autopilot and warns the admin", async () => {
+    const thrifty = startWorldServer({
+      ...FAST,
+      hubUrl: hub.url,
+      roomName: ROOM_NAME,
+      host: "127.0.0.1",
+      port: 0,
+      bonecos: 2,
+      seed: 4,
+      adminSecret: ADMIN_SECRET,
+      ceilingUsd: 0.000_000_1,
+    });
+    try {
+      const warned = await until(async () => {
+        const state = (await (
+          await fetch(`${thrifty.url}/api/admin/models`, {
+            headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
+          })
+        ).json()) as { spending: { exceeded: boolean } };
+        return state.spending.exceeded ? state : undefined;
+      }, 20_000);
+      expect(warned.spending.exceeded).toBe(true);
+      const stream = await openEventStream<TelaoSnapshot>(
+        `${thrifty.url}/events/telao`
+      );
+      try {
+        await stream.find(
+          (snapshot) =>
+            snapshot.bonecos.every((boneco) => boneco.brain === "autopilot"),
+          10_000
+        );
+      } finally {
+        stream.close();
+      }
+      const reset = await fetch(`${thrifty.url}/api/admin/spending/reset`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
+      });
+      expect(reset.status).toBe(200);
+    } finally {
+      await thrifty.stop();
+    }
+  }, 40_000);
 });
 
 describe("the world server without any model", () => {
