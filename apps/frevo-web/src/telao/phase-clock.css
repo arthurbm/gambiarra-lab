@@ -1,10 +1,8 @@
 .phase-clock {
   display: grid;
-  gap: 0.1rem;
-  justify-items: center;
-  width: clamp(11rem, 18vw, 20rem);
-  padding: 0.6rem 0.8rem;
-  text-align: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  font-size: clamp(0.7rem, 1vw, 1.05rem);
   background: var(--night-soft);
   border-radius: 12px;
 }
@@ -13,14 +11,23 @@
   margin: 0;
 }
 
+.phase-clock-now {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.8rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
 .phase-clock-name {
-  font-size: clamp(1rem, 1.6vw, 1.6rem);
+  font-size: clamp(1.1rem, 1.7vw, 1.8rem);
   font-weight: 800;
+  line-height: 1.1;
   color: var(--yellow);
 }
 
 .phase-clock-time {
-  font-size: clamp(2rem, 4vw, 4rem);
+  font-size: clamp(1.8rem, 3vw, 3.2rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -39,4 +46,11 @@
   letter-spacing: 0.08em;
   background: var(--yellow);
   border-radius: 999px;
+}
+
+/* What is happening and what the audience does, readable from the room. */
+.phase-clock-guide {
+  font-size: clamp(0.85rem, 1.15vw, 1.25rem);
+  font-weight: 600;
+  line-height: 1.25;
 }

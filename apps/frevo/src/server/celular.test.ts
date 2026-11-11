@@ -84,6 +84,27 @@ function phone(sessao: string) {
 }
 
 describe("a phone in the world server", () => {
+  test("a person who gives a name sees it on their boneco; a blocked one is refused", async () => {
+    const refused = await post("/api/entrar", { nome: "Zé Porra" });
+    expect(refused.status).toBe(422);
+    expect(await refused.json()).toMatchObject({ nomeRecusado: true });
+
+    const response = await post("/api/entrar", { nome: "  Dona   Flor " });
+    expect(response.status).toBe(200);
+    const { sessao } = (await response.json()) as { sessao: string };
+    const stream = await phone(sessao);
+    try {
+      const view = await stream.find(() => true);
+      expect(view.boneco.name).toBe("Dona Flor");
+    } finally {
+      stream.close();
+    }
+    // Coming back, even with a name the filter refuses, keeps the boneco.
+    const back = await post("/api/entrar", { sessao, nome: "Zé Porra" });
+    expect(back.status).toBe(200);
+    expect(await back.json()).toMatchObject({ created: false });
+  }, 20_000);
+
   // No telão open: the phone alone is someone watching, from the moment it
   // enters, so its boneco's first question is written by a model.
   test("a phone alone gets its interview from a model", async () => {
@@ -121,7 +142,7 @@ describe("a phone in the world server", () => {
     expect(first.boneco.id).toBe(entered.boneco);
     expect(first.boneco.assignedModel).toBe("fake-frevo");
     expect(first.ask?.options.length).toBeGreaterThanOrEqual(2);
-    expect(first.ask?.remainingMs).toBeLessThanOrEqual(12_000);
+    expect(first.ask?.remainingMs).toBeLessThanOrEqual(30_000);
 
     const answered = await post("/api/responder", {
       sessao: entered.sessao,

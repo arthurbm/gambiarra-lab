@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
+  acceptPersonName,
   createWorld,
   join,
+  PERSON_NAME_MAX_LENGTH,
   PHASES,
   privateView,
   publicSnapshot,
@@ -103,6 +105,41 @@ describe("the entrance", () => {
     const third = joined(world, "sessao-1");
     expect(third.created).toBe(true);
     expect(joined(third.world, "sessao-2").full).toBe(true);
+  });
+
+  test("a person who gives a name gets a boneco called that", () => {
+    const start = createWorld({ seed: 1, bonecos: 0 });
+    const { world } = join(start, { sessionId: "sessao-1", name: "Arthur" });
+    expect(publicSnapshot(world).bonecos[0]?.name).toBe("Arthur");
+    // The name is the session's: coming back with another keeps the first.
+    const again = join(world, { sessionId: "sessao-1", name: "Outro" });
+    expect(again.created).toBe(false);
+    expect(publicSnapshot(again.world).bonecos[0]?.name).toBe("Arthur");
+  });
+
+  test("two people with the same name are told apart by a number", () => {
+    let world = createWorld({ seed: 1, bonecos: 0 });
+    for (const [index, name] of ["Ana", "ana", "Ana"].entries()) {
+      ({ world } = join(world, { sessionId: `sessao-${index + 1}`, name }));
+    }
+    expect(publicSnapshot(world).bonecos.map((boneco) => boneco.name)).toEqual([
+      "Ana",
+      "ana 2",
+      "Ana 3",
+    ]);
+  });
+
+  test("a typed name goes through the telão's filter", () => {
+    expect(acceptPersonName("  Maria   Clara ")).toBe("Maria Clara");
+    expect(acceptPersonName("Zé do Frevo")).toBe("Zé do Frevo");
+    expect(acceptPersonName("")).toBeNull();
+    expect(acceptPersonName("   ")).toBeNull();
+    expect(acceptPersonName(42)).toBeNull();
+    // Refused, not cut: the person picks a shorter one.
+    expect(acceptPersonName("x".repeat(PERSON_NAME_MAX_LENGTH))).not.toBeNull();
+    expect(acceptPersonName("x".repeat(PERSON_NAME_MAX_LENGTH + 1))).toBeNull();
+    expect(acceptPersonName("Zé Porra")).toBeNull();
+    expect(acceptPersonName("名前")).toBeNull();
   });
 
   test("an unknown session has no private view", () => {

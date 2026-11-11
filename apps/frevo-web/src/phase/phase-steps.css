@@ -1,0 +1,74 @@
+/* Sized in em: each screen sets the font size where it places the steps. */
+.phase-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.3em;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.phase-steps li {
+  position: relative;
+  display: grid;
+  gap: 0.25em;
+  justify-items: center;
+  min-width: 0;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* The line that joins a step to the next one. */
+.phase-steps li:not(:last-child)::after {
+  position: absolute;
+  top: 0.85em;
+  left: calc(50% + 1.1em);
+  width: calc(100% - 2.2em + 0.3em);
+  height: 0.16em;
+  content: "";
+  background: rgb(255 248 231 / 25%);
+  border-radius: 999px;
+}
+
+.phase-steps li[data-state="done"]:not(:last-child)::after {
+  background: var(--yellow);
+}
+
+.phase-steps-dot {
+  display: grid;
+  place-items: center;
+  width: 1.7em;
+  height: 1.7em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  border: 0.16em solid rgb(255 248 231 / 35%);
+  border-radius: 999px;
+}
+
+.phase-steps-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.78em;
+  white-space: nowrap;
+}
+
+.phase-steps li[data-state="next"] {
+  opacity: 0.55;
+}
+
+.phase-steps li[data-state="done"] .phase-steps-dot {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+.phase-steps li[data-state="current"] .phase-steps-dot {
+  color: var(--ink);
+  background: var(--yellow);
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 0.22em rgb(255 210 63 / 30%);
+}
+
+.phase-steps li[data-state="current"] .phase-steps-label {
+  color: var(--yellow);
+}

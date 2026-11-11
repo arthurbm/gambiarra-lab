@@ -18,6 +18,7 @@ import type { MusicGenerations, MusicGenerator } from "../music/generator";
 import { createJukebox } from "../music/jukebox";
 import { tick } from "../sim/phases";
 import {
+  acceptPersonName,
   answerHuman,
   type BrainResult,
   createWorld,
@@ -443,7 +444,21 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         { status: 403 }
       );
     }
-    const joined = join(world, { sessionId });
+    // The name counts only for a new boneco; a known session keeps its own.
+    const known = privateView(world, sessionId) !== null;
+    const asked = typeof body.nome === "string" ? body.nome.trim() : "";
+    const name = known || !asked ? null : acceptPersonName(asked);
+    if (asked && !known && !name) {
+      return Response.json(
+        {
+          ok: false,
+          nomeRecusado: true,
+          erro: "Esse nome não pode ir para o telão. Tente outro.",
+        },
+        { status: 422 }
+      );
+    }
+    const joined = join(world, { sessionId, name });
     if (joined.full) {
       return Response.json(
         {

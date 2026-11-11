@@ -5,6 +5,11 @@
 // time left, one more round lets the bonecos rework the chosen refrain, with
 // keeping it as the first option.
 //
+// In the name vote a human may write another name instead of picking one: it
+// joins the options on the other phones of the bloco and counts as that
+// human's vote. So the name always goes to a vote when the bloco has a human,
+// even with a single proposal.
+//
 // Votes: the most voted option wins, a tie is drawn by the world's generator,
 // and with no vote the first proposal wins. A boneco whose model does not
 // propose is left out of the round; with no proposal at all the bloco gets a
@@ -43,6 +48,7 @@ export const VERSE_MAX_LENGTH = 60;
 export const REFRAIN_MIN_LINES = 2;
 export const REFRAIN_MAX_LINES = 4;
 const COMMON_MAX_LENGTH = 100;
+const QUOTES = /["«»“”]/g;
 /** Map units between bonecos standing at their bloco's spot. */
 const SPACING = 5;
 /** Slack on top of one proposal and one vote before a rework round starts. */
@@ -53,6 +59,8 @@ export type ComporRound = "ajuste" | "nome" | "refrao";
 interface Offer {
   /** Boneco id; null for keeping the current refrain. */
   by: string | null;
+  /** Written by the boneco's human on the phone, not by a model. */
+  human?: boolean;
   lines: string[];
   model: string | null;
 }
@@ -86,7 +94,7 @@ export interface ComporState {
 export interface ComposeView {
   name: string | null;
   /** What is on the vote, in the same order on every phone; empty while proposing. */
-  options: { by: string | null; lines: string[] }[];
+  options: { by: string | null; human: boolean; lines: string[] }[];
   /** Proposals that arrived so far in this round. */
   proposals: number;
   refrain: string[] | null;
@@ -202,7 +210,18 @@ export function votoAnswered(
       ballot: { askId: ask.id, choice: null },
     };
   }
-  return { ...boneco, ballot: { askId: ask.id, choice: outcome.choice } };
+  return {
+    ...boneco,
+    ballot: { askId: ask.id, choice: outcome.choice, text: outcome.text },
+  };
+}
+
+/**
+ * A bloco name a human wrote, as the telão may show it: without quotes,
+ * through the same filter and limit as a model's. Null when it cannot be used.
+ */
+export function acceptHumanName(text: string): string | null {
+  return nameOrVerse(text.replace(QUOTES, ""), NAME_MAX_LENGTH);
 }
 
 /** The compor panel of one boneco's phone; null outside a bloco or before the phase. */
@@ -316,6 +335,7 @@ function acquaintance(boneco: Boneco): Acquaintance {
 function optionView(world: World) {
   return (offer: Offer) => ({
     by: offer.by ? (find(world, offer.by)?.name ?? null) : null,
+    human: offer.human === true,
     lines: offer.lines,
   });
 }
@@ -526,10 +546,7 @@ function accepted(
     if (action.type !== "nome") {
       return null;
     }
-    const name = nameOrVerse(
-      action.name.replace(/["«»“”]/g, ""),
-      NAME_MAX_LENGTH
-    );
+    const name = nameOrVerse(action.name.replace(QUOTES, ""), NAME_MAX_LENGTH);
     return name ? [name] : null;
   }
   if (action.type !== "refrao") {
@@ -595,10 +612,17 @@ function openVote(world: World, track: Track, bloco: Bloco) {
         `Os modelos do ${label(bloco)} ficaram calados: entrou ${track.round === "nome" ? "um nome" : "um refrão"} de reserva.`
       );
     }
-    settle(world, track, bloco, 0);
-    return;
+    if (track.round !== "nome") {
+      settle(world, track, bloco, 0);
+      return;
+    }
   }
-  if (track.offers.length === 1) {
+  // A single option needs no vote, except for the name: a human may still
+  // write another one.
+  const mayWrite =
+    track.round === "nome" &&
+    bloco.members.some((id) => (find(world, id)?.sessionId ?? null) !== null);
+  if (track.offers.length === 1 && !mayWrite) {
     settle(world, track, bloco, 0);
     return;
   }
@@ -627,6 +651,9 @@ function openBallots(world: World, track: Track, bloco: Bloco) {
       question: QUESTIONS[track.round as ComporRound],
       options,
       defaultChoice: null,
+      durationMs: world.rules.voteMs,
+      // Only a name may be written: a refrain comes from the bonecos.
+      textMaxLength: track.round === "nome" ? NAME_MAX_LENGTH : null,
     });
     put(world, asked);
     const askId = asked.ask?.id ?? "";
@@ -639,10 +666,56 @@ function collectBallots(world: World, track: Track, bloco: Bloco) {
   for (const id of bloco.members) {
     const boneco = find(world, id);
     if (boneco?.ballot && boneco.ballot.askId === track.askIds[id]) {
-      track.votes[id] = boneco.ballot.choice;
+      const { choice, text } = boneco.ballot;
       put(world, { ...boneco, ballot: null });
+      track.votes[id] =
+        text && track.round === "nome"
+          ? writeIn(world, track, bloco, id, text)
+          : choice;
     }
   }
+}
+
+/**
+ * A name a human wrote instead of picking one: it becomes an option, also on
+ * the phones of the bloco still voting, and is that human's vote. Returns the
+ * option's index.
+ */
+function writeIn(
+  world: World,
+  track: Track,
+  bloco: Bloco,
+  bonecoId: string,
+  name: string
+): number {
+  const existing = track.offers.findIndex(
+    (offer) => offer.lines.join("\n").toLowerCase() === name.toLowerCase()
+  );
+  if (existing >= 0) {
+    return existing;
+  }
+  track.offers.push({ by: bonecoId, human: true, lines: [name], model: null });
+  for (const id of bloco.members) {
+    const other = find(world, id);
+    if (other?.ask && other.ask.id === track.askIds[id]) {
+      put(world, {
+        ...other,
+        ask: { ...other.ask, options: [...other.ask.options, name] },
+      });
+    }
+  }
+  const author = find(world, bonecoId);
+  if (author) {
+    let next = say(author, world, `Que tal «${name}»?`);
+    next = think(next, world, `Você propôs o nome «${name}».`, null, "aviso");
+    put(world, next);
+    note(
+      world,
+      `${author.name} escreveu um nome para o ${label(bloco)}: «${name}».`,
+      bonecoId
+    );
+  }
+  return track.offers.length - 1;
 }
 
 /** Counts the votes: most votes wins, a tie is drawn, no vote is the first. */
@@ -745,7 +818,7 @@ function tell(world: World, bloco: Bloco, text: string) {
 function timeForRework(world: World): boolean {
   const left = world.phaseClock.durations.compor - world.phaseClock.elapsedMs;
   return (
-    left >= world.rules.decisionTimeoutMs + world.rules.askMs + REWORK_SLACK_MS
+    left >= world.rules.decisionTimeoutMs + world.rules.voteMs + REWORK_SLACK_MS
   );
 }
 

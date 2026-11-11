@@ -13,6 +13,7 @@ import {
 } from "./ask";
 import { filterModelText } from "./blocklist";
 import {
+  acceptHumanName,
   type ComporState,
   type ComposeView,
   composeView,
@@ -268,8 +269,11 @@ export interface Boneco {
   asks: number;
   /** The model the boneco was given on arrival. */
   assignedModel: string | null;
-  /** The human's vote in the bloco's current round, until the round reads it. */
-  ballot: { askId: string; choice: number | null } | null;
+  /**
+   * The human's vote in the bloco's current round, until the round reads it;
+   * `text` is a name the human wrote instead of picking one.
+   */
+  ballot: { askId: string; choice: number | null; text?: string | null } | null;
   blocoId: string | null;
   brain: BrainSource | null;
   decisions: number;
@@ -312,7 +316,7 @@ export interface WorldEvent {
 }
 
 export interface WorldRules {
-  /** Countdown of every question a boneco asks its human. */
+  /** Countdown of a question a boneco asks its human, unless it has its own. */
   askMs: number;
   /** Typing in an open question never stretches its wait past this. */
   askTypingCapMs: number;
@@ -320,6 +324,8 @@ export interface WorldRules {
   decisionTimeoutMs: number;
   /** Events the telão's log keeps. */
   eventsKept: number;
+  /** Countdown of each interview question: people read it on arrival. */
+  interviewAskMs: number;
   /** How long the interview waits for the model before a fixed question. */
   interviewThinkMs: number;
   /** How long the maestro may think before the square groups by distance. */
@@ -337,6 +343,8 @@ export interface WorldRules {
   /** Map units per second. */
   speed: number;
   thoughtsKept: number;
+  /** Countdown of a vote on the bloco's name or refrain. */
+  voteMs: number;
 }
 
 export interface World {
@@ -434,9 +442,12 @@ export interface PrivateView {
   ask: {
     id: string;
     options: string[];
+    /** What the question is for: "interview", "bloco" or "voto". */
+    purpose: string;
     question: string;
     /** Left on the countdown, so the phone does not depend on its clock. */
     remainingMs: number;
+    /** With options too, the human may write another one instead of picking. */
     textMaxLength: number | null;
     totalMs: number;
   } | null;
@@ -461,6 +472,7 @@ export const DEFAULT_RULES: WorldRules = {
   askTypingCapMs: 60_000,
   decisionTimeoutMs: 12_000,
   eventsKept: 12,
+  interviewAskMs: 30_000,
   interviewThinkMs: 8000,
   maestroMs: 10_000,
   maxBonecos: 30,
@@ -471,6 +483,7 @@ export const DEFAULT_RULES: WorldRules = {
   speechMs: 6000,
   speed: 14,
   thoughtsKept: 8,
+  voteMs: 25_000,
 };
 
 /** The square, in a 16:9 space so the telão shows it without scrolling. */
@@ -561,11 +574,38 @@ function drawUnused<T>(world: World, pool: readonly T[], taken: T[]): T {
   return from[Math.floor(roll(world) * from.length)] as T;
 }
 
-function newBoneco(world: World, id: string, sessionId: string | null): Boneco {
+/** Longest name a person may give their boneco; it is drawn under it on the telão. */
+export const PERSON_NAME_MAX_LENGTH = 16;
+
+/**
+ * The name a person typed on arrival, as the telão may show it: one line,
+ * through the same filter as model text. Null when empty, too long or blocked.
+ */
+export function acceptPersonName(name: unknown): string | null {
+  if (typeof name !== "string") {
+    return null;
+  }
+  const clean = name.replace(/\s+/g, " ").trim();
+  if (clean.length > PERSON_NAME_MAX_LENGTH) {
+    return null;
+  }
+  return filterModelText(clean, PERSON_NAME_MAX_LENGTH);
+}
+
+function newBoneco(
+  world: World,
+  id: string,
+  sessionId: string | null,
+  chosenName?: string | null
+): Boneco {
   const taken = world.bonecos.map((boneco) => boneco.name);
-  let name = drawUnused(world, NAMES, taken);
-  if (taken.includes(name)) {
-    name = `${name} ${taken.filter((other) => other.startsWith(name)).length + 1}`;
+  const lower = (text: string) => text.toLocaleLowerCase("pt-BR");
+  const base = chosenName ?? drawUnused(world, NAMES, taken);
+  let name = base;
+  // Two people may ask for the same name: the second is "Ana 2".
+  for (let count = 2; taken.some((other) => lower(other) === lower(name)); ) {
+    name = `${base} ${count}`;
+    count += 1;
   }
   const looks = Array.from({ length: LOOKS }, (_, index) => index);
   const look = drawUnused(
@@ -671,8 +711,13 @@ export function squareFull(world: World): boolean {
 /**
  * A person arriving from the phone. The same session always gets the same
  * boneco back, so a reload resumes where it was, even with the square full.
+ * `name` is what the person asked to be called (already through
+ * `acceptPersonName`); without it the boneco gets a drawn name.
  */
-export function join(world: World, input: { sessionId: string }): JoinResult {
+export function join(
+  world: World,
+  input: { name?: string | null; sessionId: string }
+): JoinResult {
   const known = world.bonecos.find(
     (other) => other.sessionId === input.sessionId
   );
@@ -683,7 +728,12 @@ export function join(world: World, input: { sessionId: string }): JoinResult {
     return { world, bonecoId: null, created: false, full: true };
   }
   const next: World = { ...world, bonecos: [...world.bonecos] };
-  const boneco = newBoneco(next, nextBonecoId(next), input.sessionId);
+  const boneco = newBoneco(
+    next,
+    nextBonecoId(next),
+    input.sessionId,
+    input.name
+  );
   next.bonecos.push(boneco);
   return { world: next, bonecoId: boneco.id, created: true, full: false };
 }
@@ -814,6 +864,14 @@ const ASK_HANDLERS: Record<
   voto: votoAnswered,
 };
 
+/**
+ * Text a human writes for an ask of this purpose reaches the telão, so it is
+ * checked on the way in: the clean text, or null to refuse the answer.
+ */
+const ASK_TEXT_CHECKS: Record<string, (text: string) => string | null> = {
+  voto: acceptHumanName,
+};
+
 function closeAsk(boneco: Boneco, world: World, outcome: AskOutcome): Boneco {
   const ask = boneco.ask as Ask;
   let next: Boneco = { ...boneco, ask: null };
@@ -848,10 +906,24 @@ export function answerHuman(
     return { world, error: result.error };
   }
   const next: World = { ...world, bonecos: [...world.bonecos] };
-  next.bonecos[index] =
-    "ask" in result
-      ? { ...boneco, ask: result.ask }
-      : closeAsk(boneco, next, result.outcome);
+  if ("ask" in result) {
+    next.bonecos[index] = { ...boneco, ask: result.ask };
+    return { world: next };
+  }
+  let { outcome } = result;
+  const check = ASK_TEXT_CHECKS[boneco.ask.purpose];
+  if (check && typeof input.text === "string") {
+    // The text as written: a name over the limit is refused, not cut.
+    const text = check(input.text);
+    if (!text) {
+      return {
+        world,
+        error: "Esse nome não pode ir para o telão. Tente outro.",
+      };
+    }
+    outcome = { ...outcome, text };
+  }
+  next.bonecos[index] = closeAsk(boneco, next, outcome);
   return { world: next };
 }
 
@@ -889,6 +961,7 @@ function askOpenQuestion(boneco: Boneco, world: World): Boneco {
     question: OPEN_QUESTION,
     options: [],
     textMaxLength: OPEN_TEXT_MAX_LENGTH,
+    durationMs: world.rules.interviewAskMs,
   });
 }
 
@@ -903,6 +976,7 @@ function askTap(
     question: question.question,
     options: question.options,
     model,
+    durationMs: world.rules.interviewAskMs,
   });
   if (model) {
     // Only text a model wrote goes to the balloon on the telão.
@@ -1302,11 +1376,12 @@ export function privateView(
     ask: ask
       ? {
           id: ask.id,
+          purpose: ask.purpose,
           question: ask.question,
           options: ask.options,
           textMaxLength: ask.textMaxLength,
           remainingMs: Math.max(0, ask.deadlineMs - world.timeMs),
-          totalMs: world.rules.askMs,
+          totalMs: ask.totalMs,
         }
       : null,
     interview: interview

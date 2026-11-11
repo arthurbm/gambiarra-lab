@@ -20,6 +20,8 @@ export interface Ask {
   question: string;
   /** Free text up to this length is accepted; null means choices only. */
   textMaxLength: number | null;
+  /** The countdown this ask started with. */
+  totalMs: number;
 }
 
 export interface AskOutcome {
@@ -47,6 +49,8 @@ export interface HumanAnswer {
 export interface AskSpec {
   /** The choice made when nobody answers; without it the boneco draws one. */
   defaultChoice?: number | null;
+  /** This ask's own countdown; without it, `askMs`. */
+  durationMs?: number;
   model?: string | null;
   options: string[];
   purpose: string;
@@ -67,6 +71,7 @@ export function openAsk(
   nowMs: number,
   timing: AskTiming
 ): Ask {
+  const totalMs = spec.durationMs ?? timing.askMs;
   return {
     id,
     purpose: spec.purpose,
@@ -76,8 +81,9 @@ export function openAsk(
     model: spec.model ?? null,
     defaultChoice: spec.defaultChoice ?? null,
     openedAtMs: nowMs,
-    deadlineMs: nowMs + timing.askMs,
-    capMs: nowMs + Math.max(timing.askMs, timing.askTypingCapMs),
+    totalMs,
+    deadlineMs: nowMs + totalMs,
+    capMs: nowMs + Math.max(totalMs, timing.askTypingCapMs),
   };
 }
 

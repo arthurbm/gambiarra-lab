@@ -154,6 +154,69 @@ a {
   opacity: 0.85;
 }
 
+/* How to join, along the bottom of the square while the entrance is open. */
+.entrada-guide {
+  position: absolute;
+  right: 1.2vw;
+  bottom: 1.2vw;
+  left: 1.2vw;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.4vw 1.6vw;
+  align-items: center;
+  padding: 0.9vw 1.4vw;
+  color: var(--paper);
+  background: rgb(27 16 53 / 92%);
+  border: 0.25vw solid var(--yellow);
+  border-radius: 1vw;
+  box-shadow: 0 0.4vw 0 rgb(27 16 53 / 45%);
+}
+
+.entrada-guide h2 {
+  display: grid;
+  margin: 0;
+  font-size: clamp(1.2rem, 2.1vw, 2.6rem);
+  line-height: 1.1;
+  color: var(--yellow);
+}
+
+.entrada-guide h2 small {
+  font-size: 0.5em;
+  font-weight: 600;
+  color: var(--paper);
+}
+
+.entrada-guide ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.2vw;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.entrada-guide li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7vw;
+  align-items: center;
+  font-size: clamp(0.9rem, 1.35vw, 1.7rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.entrada-guide-number {
+  display: grid;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+  font-size: 1.15em;
+  color: var(--ink);
+  background: var(--yellow);
+  border-radius: 999px;
+}
+
 /* The square: a canvas covering the stage, balloons in the DOM above it. */
 .world {
   position: absolute;
@@ -457,27 +520,186 @@ a {
   border-radius: 999px;
 }
 
-.celular-progress,
-.celular-thinking,
 .celular-footer {
   margin: 0;
   font-size: 0.9rem;
   opacity: 0.85;
 }
 
+/* A first visit: the name, then in. */
+.celular-welcome {
+  align-content: center;
+  text-align: center;
+}
+
+.celular-welcome h1 {
+  font-size: 2.2rem;
+}
+
+.celular-welcome-lead {
+  margin: 0;
+}
+
+.celular-welcome-form {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+  color: var(--ink);
+  text-align: left;
+  background: var(--paper);
+  border-radius: 14px;
+}
+
+.celular-welcome-form label,
+.celular-write label {
+  font-weight: 700;
+}
+
+.celular-welcome-form label {
+  font-size: 1.2rem;
+}
+
+.celular-welcome-form input,
+.celular-write input {
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+}
+
+/* Where the dynamic is: the five phases and the clock. */
+.celular-steps {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.7rem 0.6rem 0.6rem;
+  font-size: 0.85rem;
+  background: var(--night-soft);
+  border-radius: 14px;
+}
+
+.celular-steps-line {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* The one card to read: what is happening and where to look. */
+.celular-now {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--night-soft);
+  border: 3px solid #3bceac;
+  border-radius: 14px;
+}
+
+.celular-now[data-look="espera"] {
+  border-color: rgb(255 248 231 / 35%);
+}
+
+/* The person's turn: the card turns to paper, like the telão's balloons. */
+.celular-now[data-look="celular"] {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 4px rgb(255 210 63 / 35%);
+}
+
+.celular-now-look {
+  justify-self: start;
+  padding: 0.15rem 0.7rem;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: #3bceac;
+  border-radius: 999px;
+}
+
+.celular-now[data-look="espera"] .celular-now-look {
+  background: rgb(255 248 231 / 75%);
+}
+
+.celular-now[data-look="celular"] .celular-now-look {
+  color: var(--paper);
+  background: var(--red);
+}
+
+.celular .celular-now-title {
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.celular-now-text {
+  margin: 0;
+}
+
 .celular-question {
   display: grid;
   gap: 0.8rem;
-  padding: 1rem;
-  color: var(--ink);
-  background: var(--paper);
-  border-radius: 14px;
+  padding-top: 0.8rem;
+  margin-top: 0.3rem;
+  border-top: 2px dashed rgb(27 16 53 / 25%);
 }
 
 .celular-question-text {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
+}
+
+.celular-question-problem {
+  padding: 0.5rem 0.7rem;
+  margin: 0;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--red);
+  border-radius: 10px;
+}
+
+/* Writing another name for the bloco, under the ones on the vote. */
+.celular-write {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.7rem;
+  border-top: 2px dashed rgb(27 16 53 / 25%);
+}
+
+.celular-write-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.celular .celular-write button {
+  background: var(--paper);
+}
+
+/* Long lists start folded: they are for whoever wants to dig. */
+.celular-fold summary {
+  min-height: 2.75rem;
+  padding: 0.6rem 0.8rem;
+  font-weight: 700;
+  color: var(--yellow);
+  cursor: pointer;
+  background: var(--night-soft);
+  border-radius: 12px;
+}
+
+.celular-fold[open] summary {
+  margin-bottom: 0.5rem;
 }
 
 .celular-options {
@@ -711,12 +933,6 @@ a {
 .celular-desfile[data-chosen="true"] {
   background: #3a2470;
   border-color: var(--yellow);
-}
-
-.celular-desfile-line {
-  margin: 0;
-  font-weight: 700;
-  color: var(--yellow);
 }
 
 .celular-desfile h2 {

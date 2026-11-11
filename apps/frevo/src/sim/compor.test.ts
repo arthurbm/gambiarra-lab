@@ -292,7 +292,7 @@ describe("the name round", () => {
   test("with no vote, the first proposal wins", () => {
     const world = composing({ humans: 3 });
     const [first] = names(world) as [string];
-    const { world: after, views } = run(world, 15_000, {
+    const { world: after, views } = run(world, 30_000, {
       human: () => silent,
     });
     expect(bloco(after)?.name).toBe(`Bloco de ${first}`);
@@ -337,9 +337,117 @@ describe("the name round", () => {
       }
       return composer(request);
     };
-    const after = run(world, 8000, { brain, human: () => silent }).world;
-    // Only one proposal was left: it wins without a vote.
+    const { world: after, views } = run(world, 30_000, {
+      brain,
+      human: () => silent,
+    });
+    // Only one proposal was left. It still goes to the phones, where a human
+    // may write another name, and wins when nobody does.
+    const options = views.find((view) => view.compor?.voting)?.compor?.options;
+    expect(options?.map((option) => option.by)).toEqual([third]);
     expect(bloco(after)?.name).toBe(`Bloco de ${third}`);
+  });
+
+  test("a bloco with no human settles a single proposal without a vote", () => {
+    const world = composing({ humans: 0, simulated: 3 });
+    const [, , third] = names(world) as [string, string, string];
+    const brain: Brain = (request) =>
+      request.kind === "nome" && request.boneco.name !== third
+        ? { ok: false, requestId: request.id, reason: "erro do provedor" }
+        : composer(request);
+    const after = run(world, 1000, { brain }).world;
+    expect(bloco(after)?.name).toBe(`Bloco de ${third}`);
+  });
+});
+
+describe("a name a human writes", () => {
+  /** Writes `name` in the name vote; votes like `otherwise` in the others. */
+  function writes(name: string, otherwise: Human = silent): Human {
+    return (view) =>
+      view.ask && view.compor?.voting && view.compor.round === "nome"
+        ? { askId: view.ask.id, text: name }
+        : otherwise(view);
+  }
+
+  test("the name vote takes a written name; a refrain vote does not", () => {
+    const world = untilVoting(composing({ humans: 3 }));
+    const { ask } = privateView(world, "pessoa-1") as PrivateView;
+    expect(ask?.purpose).toBe("voto");
+    expect(ask?.options).toHaveLength(3);
+    expect(ask?.textMaxLength).toBe(NAME_MAX_LENGTH);
+    expect(ask?.totalMs).toBe(25_000);
+    const [first] = names(world) as [string];
+    const { views } = run(world, 40_000, { human: () => votesFor(first) });
+    const refrain = views.find(
+      (view) => view.ask && view.compor?.round === "refrao"
+    );
+    expect(refrain?.ask?.textMaxLength).toBeNull();
+  });
+
+  test("it joins the options on the other phones, counts as a vote and may win", () => {
+    const world = composing({ humans: 3 });
+    const [first] = names(world) as [string];
+    // pessoa-1 writes a name; the others wait to see it and vote for it.
+    const follows: Human = (view) => {
+      if (!(view.ask && view.compor?.voting)) {
+        return answersInterview(view);
+      }
+      const index = view.ask.options.indexOf("Bloco da Tapioca Quente");
+      return index < 0 ? undefined : { askId: view.ask.id, choice: index };
+    };
+    const { world: after, views } = run(world, 8000, {
+      human: (session) =>
+        session === "pessoa-1"
+          ? writes("  «Bloco da Tapioca  Quente» ")
+          : follows,
+    });
+    const shown = views.find(
+      (view) => view.compor?.voting && view.compor.options.length === 4
+    );
+    expect(shown?.compor?.options.at(-1)).toEqual({
+      by: first,
+      human: true,
+      lines: ["Bloco da Tapioca Quente"],
+    });
+    expect(bloco(after)?.name).toBe("Bloco da Tapioca Quente");
+    const log = publicSnapshot(after).events.map((event) => event.text);
+    expect(log.some((text) => text.includes(`${first} escreveu um nome`))).toBe(
+      true
+    );
+  });
+
+  test("a name already on the vote is a vote for it, not a new option", () => {
+    const world = composing({ humans: 3 });
+    const [, second] = names(world) as [string, string];
+    const { world: after, views } = run(world, 8000, {
+      human: (session) =>
+        session === "pessoa-1"
+          ? writes(`bloco de ${second.toLowerCase()}`)
+          : votesFor(second),
+    });
+    expect(views.every((view) => (view.compor?.options.length ?? 0) <= 3)).toBe(
+      true
+    );
+    expect(bloco(after)?.name).toBe(`Bloco de ${second}`);
+  });
+
+  test("a blocked, empty or too long name is refused and the question stays open", () => {
+    const world = untilVoting(composing({ humans: 3 }));
+    const askId = privateView(world, "pessoa-1")?.ask?.id as string;
+    for (const text of [
+      "Bloco da Porra",
+      "   ",
+      "x".repeat(NAME_MAX_LENGTH + 1),
+    ]) {
+      const refused = answerHuman(world, {
+        sessionId: "pessoa-1",
+        askId,
+        text,
+      });
+      expect(refused.error).toContain("Tente outro");
+      expect(refused.world).toBe(world);
+    }
+    expect(privateView(world, "pessoa-1")?.ask?.id).toBe(askId);
   });
 });
 
@@ -384,7 +492,7 @@ describe("the refrain round", () => {
         lines: lines[request.boneco.name],
       });
     };
-    const after = run(world, 25_000, { brain, human: () => silent }).world;
+    const after = run(world, 45_000, { brain, human: () => silent }).world;
     expect(bloco(after)?.refrain).toEqual([
       "Verso um",
       "Verso dois",

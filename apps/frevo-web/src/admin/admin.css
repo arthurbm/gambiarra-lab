@@ -75,6 +75,10 @@
   border-bottom-color: var(--red);
 }
 
+.admin-bar .phase-steps {
+  font-size: 0.8rem;
+}
+
 .admin-bar-phase {
   display: flex;
   gap: 0.6rem;
@@ -132,6 +136,103 @@
   padding: 0.9rem;
   background: var(--night-soft);
   border-radius: 14px;
+}
+
+/* The card the host reads first: the state in words and the next step. */
+.admin-now {
+  border: 3px solid var(--yellow);
+}
+
+.admin-now-label {
+  justify-self: start;
+  padding: 0.1rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--yellow);
+  border-radius: 999px;
+}
+
+.admin .admin-now h2 {
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: var(--paper);
+}
+
+.admin-now-warnings {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-now-warnings li {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--yellow);
+  border-radius: 10px;
+}
+
+/* Everything below the fold line is for now and then. */
+.admin .admin-group {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--paper);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+/* A folded section is one line: its name and its key number. */
+.admin .admin-fold {
+  display: block;
+}
+
+.admin-fold summary {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  min-height: 1.6rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--yellow);
+  cursor: pointer;
+  list-style: none;
+}
+
+.admin-fold summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-fold summary::before {
+  flex: none;
+  font-size: 0.8em;
+  content: "▶";
+  transition: transform 120ms ease-out;
+}
+
+.admin-fold[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.admin-fold summary small {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--paper);
+  text-align: right;
+  opacity: 0.85;
+}
+
+.admin-fold-body {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
 }
 
 .admin-main-buttons {
@@ -242,13 +343,10 @@
   display: grid;
 }
 
-/* The models section comes from the models ticket; fit it to the card look. */
+/* The models section comes from the models ticket; it sits inside a fold. */
 .admin .admin-models {
   min-width: 0;
   max-width: none;
-  padding: 0.9rem;
-  background: var(--night-soft);
-  border-radius: 14px;
 }
 
 /* One model per row, so the list fits a phone without scrolling sideways. */
