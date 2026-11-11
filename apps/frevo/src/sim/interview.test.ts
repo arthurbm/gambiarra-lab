@@ -16,6 +16,7 @@ import {
 } from "./world";
 
 const TICK_MS = 100;
+const ALONE_WITH_ONE_DOT = /sozinho: (Vou no passo|Fico aqui)\.$/;
 const SESSION = "sessao-1";
 
 type Brain = (request: DecisionRequest) => BrainResult | undefined;
@@ -249,6 +250,26 @@ describe("the interview with a person who does not answer", () => {
     );
     expect(notice?.text).toContain("escolhi sozinho");
     expect(options.some((option) => notice?.text.includes(option))).toBe(true);
+  });
+
+  test("the notice reads well when the option ends with punctuation", () => {
+    const dotted: Brain = (request) =>
+      request.kind === "question"
+        ? {
+            requestId: request.id,
+            ok: true,
+            action: {
+              type: "question",
+              question: "Bora?",
+              options: ["Vou no passo.", "Fico aqui!"],
+            },
+          }
+        : undefined;
+    const alone = after(arrived(), 12_500, dotted);
+    const notice = phone(alone).thoughts.find(
+      (thought) => thought.tone === "aviso"
+    );
+    expect(notice?.text).toMatch(ALONE_WITH_ONE_DOT);
   });
 
   test("the whole interview finishes alone, open question included", () => {

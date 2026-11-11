@@ -12,7 +12,8 @@
   "dependencies": {
     "@gambiarra-lab/frevo": "workspace:*",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "uqr": "0.1.3"
   },
   "devDependencies": {
     "@gambiarra-lab/config": "workspace:*",

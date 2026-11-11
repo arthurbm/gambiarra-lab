@@ -145,9 +145,15 @@ export function decideAlone(ask: Ask, roll: number): AskOutcome {
 }
 
 /** What the boneco tells its human when it decided alone. */
+const END_PUNCTUATION = /[\s.!?…]+$/u;
+
 export function decidedAloneNotice(ask: Ask, outcome: AskOutcome): string {
   if (outcome.choice === null) {
     return "O tempo acabou. Tudo bem, sigo sem essa resposta.";
   }
-  return `O tempo acabou, então escolhi sozinho: ${ask.options[outcome.choice]}.`;
+  const option = (ask.options[outcome.choice] ?? "").replace(
+    END_PUNCTUATION,
+    ""
+  );
+  return `O tempo acabou, então escolhi sozinho: ${option}.`;
 }

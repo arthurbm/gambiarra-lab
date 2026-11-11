@@ -195,7 +195,7 @@ function personalityMessages(request: PersonalityRequest): ChatMessage[] {
         answered(request.answers),
         ...free,
         "Escreva em duas linhas curtas como você vê o seu humano, com carinho e humor leve, sem repetir literalmente o que ele escreveu e sem dados pessoais.",
-        "Escolha o instrumento de frevo que combina com ele e diga uma fala curta para a praça.",
+        "Escolha o instrumento de frevo que combina com ele e diga uma fala curta para a praça. A fala aparece no telão para todo mundo: não conte nada do que o humano escreveu.",
       ].join("\n"),
     },
   ];
