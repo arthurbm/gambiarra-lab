@@ -69,15 +69,17 @@ export function AdminModelsSection({ secret }: { secret: string }) {
         <>
           <p>
             Gasto estimado: {dollars.format(state.spending.spentUsd)} de{" "}
-            {dollars.format(state.spending.ceilingUsd)}
+            {dollars.format(state.spending.ceilingUsd)}{" "}
+            {/* Always here: the spending adds up across rehearsals until the
+                server restarts, so the host zeroes it before each round. */}
+            <button onClick={() => run("/spending/reset", {})} type="button">
+              Zerar o gasto
+            </button>
           </p>
           {state.spending.exceeded ? (
             <p className="admin-warning" role="alert">
               O teto de gasto foi atingido: todos os bonecos estão no piloto
-              automático.{" "}
-              <button onClick={() => run("/spending/reset", {})} type="button">
-                Zerar o gasto
-              </button>
+              automático. Zere o gasto para os modelos voltarem.
             </p>
           ) : null}
           <ul className="admin-models-list">

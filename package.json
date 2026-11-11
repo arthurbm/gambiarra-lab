@@ -35,6 +35,7 @@
     "event": "bun scripts/event.ts",
     "fix": "ultracite fix",
     "frevo:dev": "bun scripts/frevo.ts",
+    "frevo:load": "bun scripts/frevo-load.ts",
     "frevo:real-check": "bun scripts/frevo-real-check.ts",
     "frevo:smoke": "bun scripts/frevo-smoke.ts",
     "test": "bun test apps/board/src apps/frevo/src apps/frevo-web/src packages/agents scripts"
