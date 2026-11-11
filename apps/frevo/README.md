@@ -118,6 +118,8 @@ The web keeps the data flow apart from the drawing: `telao/stream.ts` keeps the 
 
 Three services from this repository, on Railway (project `bloco-de-frevo`, environment `production`, region `us-east4-eqdc4a`) and in `docker compose` on a notebook as plan B.
 
+The Bloco de frevo is the one exception to the lab's trusted-local-network rule (`AGENTS.md`, rule 6): it runs in public because the audience joins from their own phones over the internet. It keeps to the rule's spirit: the hub and the model host live only on Railway's private network (the hub never gets a public domain), the inference provider's key (OpenRouter) exists only in the model host, and the world server, the only public service, holds only the admin's secret (`FREVO_ADMIN_SECRET`, which the admin needs) and the fal.ai key for the music (`FAL_KEY`).
+
 | Service | Dockerfile | Network | Health | Secrets |
 |---|---|---|---|---|
 | `hub` | `deploy/frevo/hub.Dockerfile` | private only, `hub.railway.internal:3000` | `/v1/health` | none |
