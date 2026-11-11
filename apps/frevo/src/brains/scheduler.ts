@@ -138,6 +138,34 @@ function usageOf(completion: unknown): Usage | undefined {
   };
 }
 
+/** The chat/completions body for one decision, addressed to a participant. */
+export function decisionBody(
+  request: DecisionRequest,
+  participantId: string,
+  maxTokens = 400
+): ChatCompletionBody {
+  return {
+    model: participantId,
+    stream: false,
+    max_tokens: maxTokens,
+    messages: decisionMessages(request),
+    tools: [decisionTool(request)],
+    tool_choice: "required",
+  };
+}
+
+/** The action in a completion, when its tool call passes the tool's schema. */
+export function readDecision(completion: unknown, body: ChatCompletionBody) {
+  const checked = toolArguments(completion, body.tools[0] as FunctionTool);
+  if (!checked.ok) {
+    return { ok: false as const, reason: checked.reason };
+  }
+  const action = parseDecision(completion);
+  return action
+    ? { ok: true as const, action }
+    : { ok: false as const, reason: "the action does not fit" };
+}
+
 export function createBrainScheduler(
   options: BrainSchedulerOptions
 ): BrainScheduler {
@@ -290,8 +318,8 @@ export function createBrainScheduler(
         body,
         abort.signal
       );
-      const checked = toolArguments(completion, body.tools[0] as FunctionTool);
-      const action = checked.ok ? parseDecision(completion) : undefined;
+      const read = readDecision(completion, body);
+      const action = read.ok ? read.action : undefined;
       metrics.end(attempt, {
         dispatched: true,
         status: 200,
@@ -303,7 +331,7 @@ export function createBrainScheduler(
         ? ({ kind: "decided", action } as const)
         : ({
             kind: "unusable",
-            reason: checked.ok ? "the action does not fit" : checked.reason,
+            reason: read.ok ? "" : read.reason,
           } as const);
     } catch (error) {
       if (abort.signal.aborted) {
@@ -317,15 +345,7 @@ export function createBrainScheduler(
   }
 
   async function decide(participant: RoomParticipant, queued: Queued) {
-    const tool = decisionTool(queued.request);
-    const body: ChatCompletionBody = {
-      model: participant.id,
-      stream: false,
-      max_tokens: maxTokens,
-      messages: decisionMessages(queued.request),
-      tools: [tool],
-      tool_choice: "required",
-    };
+    const body = decisionBody(queued.request, participant.id, maxTokens);
     let reason = "no answer";
     for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
       // biome-ignore lint/performance/noAwaitInLoops: the repeat only happens after the first answer came back unusable.
