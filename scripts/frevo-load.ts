@@ -141,6 +141,7 @@ const TRAILING_SLASHES = /\/+$/;
 const SENTENCE_END = /[.!?…"”)]$/;
 const COMBINING_MARKS = /[\u0300-\u036f]/g;
 const NOT_LETTERS = /[^a-z]+/;
+const OXE = /^\W*oxe\b/i;
 
 /** The `data:` payloads of complete SSE blocks, and what is left over. */
 export function parseSse(pending: string): { data: string[]; rest: string } {
@@ -660,11 +661,15 @@ function words(text: string): string[] {
     .filter((word) => word.length > 3 && !STOPWORDS.has(word));
 }
 
-/** Public lines sharing two or more content words with a free text. */
+/**
+ * Public lines sharing two or more content words with a free text, leaving
+ * out the words of the tap questions (they offer "bolo de rolo" too).
+ */
 export function possibleParaphrases(report: LoadReport) {
   const found: { speech: string; text: string }[] = [];
+  const offered = new Set(report.questions.flatMap(words));
   for (const text of report.freeTexts) {
-    const own = new Set(words(text));
+    const own = new Set(words(text).filter((word) => !offered.has(word)));
     for (const speech of report.speeches) {
       const shared = words(speech).filter((word) => own.has(word));
       if (new Set(shared).size >= 2) {
@@ -743,6 +748,8 @@ export function formatReport(report: LoadReport): string {
     `Falas públicas distintas: ${report.speeches.length}. Com cara de cortadas no limite (140 caracteres, sem pontuação final): ${cut.length}.`,
     "",
     ...cut.map((speech) => `- ${speech}`),
+    "",
+    `Falas que abrem com "Oxe": ${report.speeches.filter((speech) => OXE.test(speech)).length}.`,
     "",
     `Falas que repetem duas ou mais palavras de um texto livre (possível paráfrase): ${paraphrases.length}.`,
     "",

@@ -244,7 +244,7 @@ export function decisionTool(request: DecisionRequest): FunctionTool {
 function persona(name: string): string {
   return [
     `Você é ${name}, um boneco de um bloco de frevo numa praça do Recife.`,
-    "Você fala em português do Brasil simples, com humor leve e sotaque do Recife (oxe, visse, bora, tu).",
+    "Você fala em português do Brasil simples, com humor leve e sotaque do Recife (tu, bora). Use oxe e visse só de vez em quando, nunca para abrir a frase: todos os bonecos falam no mesmo telão e a repetição cansa.",
     "A praça é um evento público: nada de palavrão, ofensa ou assunto pesado.",
     `Responda só chamando a ferramenta ${DECISION_TOOL_NAME}.`,
   ].join(" ");
