@@ -43,6 +43,9 @@ bun x ultracite fix          # format before committing
 | Board | `apps/board/README.md`, `apps/board-web/DESIGN.md` |
 | Bloco de frevo (world, model host, telão) | `apps/frevo/README.md`, spec in issue #10 |
 | Bloco de frevo deploy (Railway, docker compose) | `apps/frevo/README.md` ("Deploy"), `.railway/railway.ts`, `deploy/frevo/`, `compose.yaml` |
+| Bloco de frevo: public URLs, deploys, where videos and secrets live, running heavy jobs | `docs/bloco-de-frevo/onde-esta-cada-coisa.md` |
+
+Anything a later session needs to remember goes in this repo, under `docs/`, with a row in the table above. Keep it out of a harness's private memory.
 
 ## Code style
 
