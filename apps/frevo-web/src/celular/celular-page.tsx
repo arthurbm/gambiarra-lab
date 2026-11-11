@@ -1,7 +1,10 @@
 // The phone: the person's boneco, the model that thinks for it, its recent
 // thoughts and one question at a time with a countdown.
+
+import { modelLabel } from "@gambiarra-lab/frevo/models";
 import type { PrivateView, Thought } from "@gambiarra-lab/frevo/snapshot";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { otherModelLine, ownModelLabel } from "./model-line";
 import { type Reply, useCelular } from "./use-celular";
 
 const TYPING_PING_MS = 4000;
@@ -151,7 +154,9 @@ function ThoughtList({ thoughts }: { thoughts: Thought[] }) {
         {[...thoughts].reverse().map((thought) => (
           <li data-tone={thought.tone} key={`${thought.atMs}-${thought.text}`}>
             <p>{thought.text}</p>
-            {thought.model ? <small>pensado por {thought.model}</small> : null}
+            {thought.model ? (
+              <small>pensado por {modelLabel(thought.model)}</small>
+            ) : null}
           </li>
         ))}
       </ol>
@@ -219,8 +224,11 @@ export function CelularPage() {
           <h1>{boneco.name}</h1>
           <p className="celular-model">
             Quem pensa por mim:{" "}
-            <strong>{boneco.assignedModel ?? "esperando um modelo…"}</strong>
+            <strong>{ownModelLabel(boneco) ?? "esperando um modelo…"}</strong>
           </p>
+          {otherModelLine(boneco) ? (
+            <p className="celular-model-other">{otherModelLine(boneco)}</p>
+          ) : null}
         </div>
         {status === "live" ? null : (
           <span className="celular-offline">reconectando…</span>

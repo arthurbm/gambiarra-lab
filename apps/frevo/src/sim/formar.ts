@@ -463,6 +463,7 @@ function meet(world: World, a: Boneco, b: Boneco): EncounterRequest[] {
         requestId: request.id,
         deadlineMs: request.deadlineMs,
         kind: "encounter",
+        sinceMs: world.timeMs,
       },
     });
   }
