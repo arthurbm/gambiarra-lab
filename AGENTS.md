@@ -22,6 +22,7 @@ bun run dev:board            # board server
 bun run dev:board-web        # board web
 bun run board:e2e            # full event with fake harnesses, ephemeral DB
 bun run check-types
+bun run test
 bun x ultracite fix          # format before committing
 ```
 
