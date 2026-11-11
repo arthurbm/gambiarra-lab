@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { expel } from "./admin";
+import { expel, setSilenced } from "./admin";
 import { NAME_MAX_LENGTH, VERSE_MAX_LENGTH } from "./compor";
 import { advancePhase, setPhaseDurations, tick } from "./phases";
 import {
@@ -10,6 +10,7 @@ import {
   type HumanAnswer,
   join,
   type PrivateView,
+  type PublicSnapshot,
   privateView,
   publicSnapshot,
   type World,
@@ -119,9 +120,11 @@ function run(world: World, ms: number, options: RunOptions = {}) {
   let results: BrainResult[] = [];
   const requests: DecisionRequest[] = [];
   const views: PrivateView[] = [];
+  const snapshots: PublicSnapshot[] = [];
   for (let elapsed = 0; elapsed < ms; elapsed += TICK_MS) {
     const next = tick(current, { elapsedMs: TICK_MS, results });
     current = next.world;
+    snapshots.push(publicSnapshot(current));
     requests.push(...next.requests);
     results = next.requests.flatMap((request) => brain(request) ?? []);
     for (const session of sessions(current)) {
@@ -136,7 +139,7 @@ function run(world: World, ms: number, options: RunOptions = {}) {
       }
     }
   }
-  return { world: current, requests, views };
+  return { world: current, requests, views, snapshots };
 }
 
 /** Runs until the bloco's first vote opens, nobody voting. */
@@ -222,6 +225,31 @@ describe("the name round", () => {
     expect(bloco(after)?.name).toBe(`Bloco de ${third}`);
     const log = publicSnapshot(after).events.map((event) => event.text);
     expect(log.some((text) => text.includes(`«Bloco de ${third}»`))).toBe(true);
+  });
+
+  test("a silenced boneco's proposal stays off the telão, and the name the bloco chose stays the bloco's", () => {
+    let world = composing({ humans: 3 });
+    const [first] = names(world) as [string];
+    const silencedId = world.bonecos[0]?.id as string;
+    world = setSilenced(world, silencedId, true);
+    const { world: after, snapshots } = run(world, 8000, {
+      human: () => votesFor(first),
+    });
+    expect(bloco(after)?.name).toBe(`Bloco de ${first}`);
+    const shown = snapshots.flatMap((snapshot) => [
+      ...snapshot.bonecos.flatMap((boneco) => boneco.speech ?? []),
+      ...snapshot.events.map((event) => event.text),
+    ]);
+    expect(shown.some((text) => text.includes(`Bloco de ${first}`))).toBe(
+      false
+    );
+    // Allowed to speak again, its lines are back in the log.
+    const allowed = setSilenced(after, silencedId, false);
+    expect(
+      publicSnapshot(allowed).events.some((event) =>
+        event.text.includes(`Bloco de ${first}`)
+      )
+    ).toBe(true);
   });
 
   test("the phones show how many voted, also to who already voted", () => {

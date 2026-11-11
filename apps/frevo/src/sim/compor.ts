@@ -296,8 +296,9 @@ function blocoOf(world: World, track: Track): Bloco | undefined {
   return world.blocos.find((bloco) => bloco.id === track.blocoId);
 }
 
-function note(world: World, text: string) {
-  world.events = logEvent(world, text).events;
+/** `by` is the boneco whose proposal the line quotes; the telão hides it while silenced. */
+function note(world: World, text: string, by?: string | null) {
+  world.events = logEvent(world, text, by ?? undefined).events;
 }
 
 function label(bloco: Bloco): string {
@@ -668,11 +669,15 @@ function settle(world: World, track: Track, bloco: Bloco, winner: number) {
   if (offer && round === "nome") {
     const before = label(bloco);
     bloco.name = offer.lines[0] ?? null;
-    note(world, `${before} agora se chama ${label(bloco)}.`);
+    note(world, `${before} agora se chama ${label(bloco)}.`, offer.by);
     tell(world, bloco, `Nosso bloco agora é ${label(bloco)}!`);
   } else if (offer && round === "refrao") {
     bloco.refrain = offer.lines;
-    note(world, `Refrão do ${label(bloco)}: ${offer.lines.join(" / ")}`);
+    note(
+      world,
+      `Refrão do ${label(bloco)}: ${offer.lines.join(" / ")}`,
+      offer.by
+    );
     tell(world, bloco, `Nosso refrão: ${offer.lines.join(" / ")}`);
   } else if (offer && round === "ajuste") {
     if (offer.by === null) {
@@ -681,7 +686,8 @@ function settle(world: World, track: Track, bloco: Bloco, winner: number) {
       bloco.refrain = offer.lines;
       note(
         world,
-        `O ${label(bloco)} ajustou o refrão: ${offer.lines.join(" / ")}`
+        `O ${label(bloco)} ajustou o refrão: ${offer.lines.join(" / ")}`,
+        offer.by
       );
       tell(world, bloco, `Refrão ajustado: ${offer.lines.join(" / ")}`);
     }

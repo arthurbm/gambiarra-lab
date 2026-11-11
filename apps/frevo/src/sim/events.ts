@@ -1,7 +1,7 @@
 // The short log of what just happened, shown on the telão. Every phase writes
 // to it; only text the server writes or a model wrote (already filtered) goes in.
-// A boneco's own line names the boneco, so the telão leaves it out while the
-// host keeps that boneco silenced.
+// A boneco's own line, or a line quoting its proposal, names the boneco, so the
+// telão leaves it out while the host keeps that boneco silenced.
 import type { World, WorldEvent } from "./world";
 
 /**
