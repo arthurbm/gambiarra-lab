@@ -17,6 +17,14 @@ const LINES = [
   "Vou dar um rolê e já volto.",
 ];
 
+/** Lines of 55 to 60 letters, the longest a verse may be. */
+const LONG_LINES = [
+  "Pé na praça, sombrinha no alto, a ladeira inteira vem junto",
+  "Bolo de rolo, caldo de cana e o passo miudinho até clarear",
+  "Do Marco Zero à Rua da Aurora, o bloco inteiro vem cantando",
+  "Trombone, surdo e pandeiro chamando o povo pra rua de novo",
+];
+
 export interface FakeUpstream {
   /** Base URL, without `/v1`, as createParticipantSession expects. */
   endpoint: string;
@@ -26,6 +34,11 @@ export interface FakeUpstream {
 export interface FakeUpstreamOptions {
   /** Delay before each answer, for every model; overrides the profiles' latency. */
   latencyMs?: number;
+  /**
+   * Answer with the longest texts the screens must hold: every list at its
+   * most items, every text near 60 letters. For rehearsing the layout.
+   */
+  longText?: boolean;
   models: string[];
   onRequest?: (body: Record<string, unknown>) => void;
   /** How each model behaves; a model without one answers well and at once. */
@@ -39,6 +52,7 @@ export interface FakeUpstreamOptions {
 interface JsonSchema {
   enum?: unknown[];
   items?: JsonSchema;
+  maxItems?: number;
   minItems?: number;
   properties?: Record<string, JsonSchema>;
   required?: string[];
@@ -54,7 +68,7 @@ function hash(text: string): number {
 }
 
 /** A value that satisfies `schema`, chosen by `seed`. */
-function valueFor(schema: JsonSchema, seed: number): unknown {
+function valueFor(schema: JsonSchema, seed: number, long = false): unknown {
   if (Array.isArray(schema.enum) && schema.enum.length > 0) {
     return schema.enum[seed % schema.enum.length];
   }
@@ -63,16 +77,22 @@ function valueFor(schema: JsonSchema, seed: number): unknown {
       const value: Record<string, unknown> = {};
       const properties = schema.properties ?? {};
       for (const [index, key] of Object.keys(properties).entries()) {
-        value[key] = valueFor(properties[key] as JsonSchema, seed + index);
+        value[key] = valueFor(
+          properties[key] as JsonSchema,
+          seed + index,
+          long
+        );
       }
       return value;
     }
     case "array": {
       const { items } = schema;
+      const length = Math.max(
+        1,
+        (long ? schema.maxItems : undefined) ?? schema.minItems ?? 1
+      );
       return items
-        ? Array.from({ length: Math.max(1, schema.minItems ?? 1) }, (_, i) =>
-            valueFor(items, seed + i)
-          )
+        ? Array.from({ length }, (_, i) => valueFor(items, seed + i, long))
         : [];
     }
     case "number":
@@ -81,7 +101,9 @@ function valueFor(schema: JsonSchema, seed: number): unknown {
     case "boolean":
       return seed % 2 === 0;
     default:
-      return LINES[seed % LINES.length];
+      return long
+        ? LONG_LINES[seed % LONG_LINES.length]
+        : LINES[seed % LINES.length];
   }
 }
 
@@ -100,7 +122,8 @@ function completion(
   model: string,
   body: Record<string, unknown>,
   sequence: number,
-  answer: "invalid" | "silent" | "valid"
+  answer: "invalid" | "silent" | "valid",
+  long = false
 ) {
   const tool = answer === "silent" ? undefined : forcedTool(body);
   const seed = hash(JSON.stringify(body.messages ?? "")) + sequence;
@@ -122,7 +145,8 @@ function completion(
                   : JSON.stringify(
                       valueFor(
                         tool.function.parameters ?? { type: "object" },
-                        seed
+                        seed,
+                        long
                       )
                     ),
             },
@@ -186,7 +210,9 @@ export function startFakeUpstream(options: FakeUpstreamOptions): FakeUpstream {
     } else if (profile && draw() < profile.invalidRate) {
       answer = "invalid";
     }
-    return Response.json(completion(model, body, sequence, answer));
+    return Response.json(
+      completion(model, body, sequence, answer, options.longText)
+    );
   }
 
   const server = Bun.serve({

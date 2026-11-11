@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 // The model host as a process. FREVO_MODEL_HOST_MODE=fake answers with local
 // fake models (FREVO_FAKE_LATENCY_MS fixes their latency, FREVO_FAKE_FAILURES=0
-// turns their failures off); the default points at OpenRouter through the
+// turns their failures off, FREVO_FAKE_LONG_TEXT=1 makes them write the
+// longest texts the screens must hold); the default points at OpenRouter through the
 // provider proxy, which holds the key and each model's request fields.
 // FREVO_MODEL_HOST_PORT is where GET /health answers (0 or unset: a free
 // port). It is not PORT, which the world uses when both run from one shell.
@@ -16,11 +17,13 @@ const config = await modelHostConfig();
 const models = config.models.map((spec) => spec.model);
 const latency = process.env.FREVO_FAKE_LATENCY_MS?.trim();
 const failures = process.env.FREVO_FAKE_FAILURES?.trim() !== "0";
+const longText = process.env.FREVO_FAKE_LONG_TEXT?.trim() === "1";
 const local =
   config.mode === "fake"
     ? startFakeUpstream({
         models,
         latencyMs: latency ? Number(latency) : undefined,
+        longText,
         profiles: Object.fromEntries(
           models.map((model) => {
             const profile = modelEntry(model).fake;

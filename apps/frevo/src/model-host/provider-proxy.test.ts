@@ -191,4 +191,52 @@ describe("the fake provider", () => {
       fake.stop();
     }
   });
+
+  test("writes the longest texts the telão must hold when asked to", async () => {
+    const fake = startFakeUpstream({ models: ["longo"], longText: true });
+    const refrain = {
+      type: "function",
+      function: {
+        name: "agir",
+        description: "",
+        parameters: {
+          type: "object",
+          properties: {
+            versos: {
+              type: "array",
+              minItems: 2,
+              maxItems: 4,
+              items: { type: "string" },
+            },
+          },
+        },
+      },
+    };
+    try {
+      const answer = (await (
+        await fetch(`${fake.endpoint}/v1/chat/completions`, {
+          method: "POST",
+          body: JSON.stringify({
+            model: "longo",
+            messages: [{ role: "user", content: "Oi" }],
+            tools: [refrain],
+          }),
+        })
+      ).json()) as {
+        choices: {
+          message: { tool_calls: { function: { arguments: string } }[] };
+        }[];
+      };
+      const { versos } = JSON.parse(
+        answer.choices[0]?.message.tool_calls[0]?.function.arguments ?? "{}"
+      ) as { versos: string[] };
+      expect(versos).toHaveLength(4);
+      for (const line of versos) {
+        expect(line.length).toBeGreaterThanOrEqual(55);
+        expect(line.length).toBeLessThanOrEqual(60);
+      }
+    } finally {
+      fake.stop();
+    }
+  });
 });
