@@ -1,10 +1,10 @@
 # Bloco de frevo: lista de conferência (10 minutos, de manhã)
 
-Para decidir se o Bloco de frevo vai ao palco às 16h40 ou se entra o vídeo no lugar. Os vídeos e o relatório de carga estão em `~/Videos/bloco-de-frevo/`.
+Para decidir se o Bloco de frevo vai ao palco às 16h40 ou se entra o vídeo no lugar. Os vídeos e o relatório de carga estão em `artifacts/bloco-de-frevo/`, no checkout principal do repositório (`~/Videos/bloco-de-frevo` é um link para lá).
 
 ## O que já foi conferido (2026-11-11, de madrugada, contra o deploy)
 
-Em `~/Videos/bloco-de-frevo/`:
+Em `artifacts/bloco-de-frevo/`:
 
 | Arquivo | O que mostra |
 |---|---|
@@ -47,7 +47,7 @@ Tetos que valem durante a apresentação:
 ### 1. O QR abre no celular e o boneco aparece no telão em poucos segundos
 
 - **Abrir:** o telão no notebook; apontar a câmera do seu celular para o QR.
-- **Esperar:** o celular abre a página, mostra o boneco com nome e figura e começa a entrevista; o mesmo boneco aparece na praça do telão em até uns 3 segundos. Na carga de hoje com 25 celulares pela internet contra este endereço, o boneco apareceu no telão em 0,4 s (mediana; máximo 0,5 s), sem erro e sem reconexão (`~/Videos/bloco-de-frevo/carga-25-celulares.md`).
+- **Esperar:** o celular abre a página, mostra o boneco com nome e figura e começa a entrevista; o mesmo boneco aparece na praça do telão em até uns 3 segundos. Na carga de hoje com 25 celulares pela internet contra este endereço, o boneco apareceu no telão em 0,4 s (mediana; máximo 0,5 s), sem erro e sem reconexão (`artifacts/bloco-de-frevo/carga-25-celulares.md`).
 - **Se falhar:**
   - O QR não abre: digite o endereço do celular à mão. Se a página não carrega, veja `/health`; se não responde, rode `railway logs --service mundo --lines 100` e, se o serviço caiu, `railway redeploy --service mundo --yes` (de dentro do repo, ligado ao projeto como no fim desta lista), ou vá para o plano B.
   - O boneco não aparece no telão: recarregue o telão (ele reconecta sozinho e recebe o mundo inteiro).
@@ -79,7 +79,7 @@ Tetos que valem durante a apresentação:
 
 ## Durante a apresentação
 
-- **Não faça push nem merge na `main`.** Com o deploy ligado à `main`, todo push redeploya: um redeploy do `mundo` zera a dinâmica, e um do `hub` apaga a Room.
+- **Não faça push nem merge na `main`.** Os serviços seguem a `main`: um push que toque os padrões de rebuild de um serviço o redeploya, e um redeploy do `mundo` zera a dinâmica, e um do `hub` apaga a Room. Para blindar, antes de subir ao palco: `railway service source disconnect --service <nome>` em cada serviço.
 - Gasto: o admin mostra o gasto estimado; uma dinâmica inteira com 25 bonecos gastou cerca de US$ 0,08 hoje.
 - Se os modelos falharem, os bonecos continuam andando no piloto automático; o telão não congela.
 
@@ -97,7 +97,7 @@ FREVO_PUBLIC_URL=http://$(hostname -I | awk '{print $1}'):3001 docker compose up
 - Telão: http://localhost:3001/telao · Admin: `http://localhost:3001/admin?k=<conteúdo de ~/.config/gambiarra-lab/admin.secret>`
 - Sem internet: `FREVO_MODEL_HOST_MODE=fake docker compose up --build -d --wait` (modelos falsos, sem gasto; os bonecos falam frases prontas).
 - Logs: `docker compose logs -f mundo` · Parar: `docker compose down`
-- Se nada funcionar: passe o vídeo do telão (`~/Videos/bloco-de-frevo/telao-melhores-momentos-1min.mp4` ou o inteiro).
+- Se nada funcionar: passe o vídeo do telão (`artifacts/bloco-de-frevo/telao-melhores-momentos-1min.mp4` ou o inteiro).
 
 ## Depois do evento: derrubar tudo
 

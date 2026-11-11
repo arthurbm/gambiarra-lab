@@ -163,9 +163,10 @@ railway logs --service mundo --build --lines 200 | grep -A1 -i healthcheck
 curl -s https://<mundo domain>/health    # room, participants, bonecos, viewers
 ```
 
-The deploy follows the working directory for now. After the merge to `main` (ticket #21), make each service follow `main`. Connecting deploys `main` right away, and without `watchPatterns` every push redeploys (a hub redeploy wipes the Rooms; do not merge during the show):
+Every service follows `main` on GitHub (`source` in `.railway/railway.ts`): a push to `main` that touches a service's `watchPatterns` redeploys it; the hub rebuilds only when its own Dockerfile or `bun.lock` change. `railway up` above stays as the manual deploy. A redeploy of `mundo` drops the dynamic in memory and one of `hub` wipes the Rooms, so before a show do not merge to `main`, or detach the source and connect it again afterwards:
 
 ```bash
+for s in hub modelos mundo; do railway service source disconnect --service "$s"; done
 for s in hub modelos mundo; do
   railway service source connect --repo arthurbm/gambiarra-lab --branch main --service "$s"
 done

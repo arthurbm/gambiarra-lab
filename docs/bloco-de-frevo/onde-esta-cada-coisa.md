@@ -4,7 +4,7 @@ Estado em 2026-11-11, dia da demonstração no Rec'n'Play. Confira se cada item 
 
 ## Origem
 
-- Spec: issue #10. Tickets: #11 a #21. PR de integração: #22 (branch `feat/bloco-de-frevo`).
+- Spec: issue #10. Tickets: #11 a #21. PR de integração: #22, já mergeado na `main` (a branch de integração não existe mais).
 - Código: `apps/frevo`, `apps/frevo-web`, `scripts/frevo*.ts`, `deploy/frevo/`, `.railway/railway.ts`, `compose.yaml`.
 - Lista de conferência do palco: [`conferencia.md`](conferencia.md). Itens adiados do code-review: [`../next-steps.md`](../next-steps.md).
 - Notas de exploração de 2026-11-11, de antes ou durante a implementação, que podem estar desatualizadas (cada uma abre com o que mudou depois), em [`notas/`](notas/): [`gambi-sdk.md`](notas/gambi-sdk.md) (hub, Rooms, túnel, eventos), [`openrouter-modelos.md`](notas/openrouter-modelos.md) (modelos de palco, raciocínio, providers, custo), [`railway-deploy.md`](notas/railway-deploy.md) (Railway, rede privada, compose), [`musica-geradores.md`](notas/musica-geradores.md) (fal.ai, MiniMax e ElevenLabs) e [`arte-pixel.md`](notas/arte-pixel.md) (pacote Ninja Adventure, licença, renderização).
@@ -24,7 +24,9 @@ A galeria não tem link para o mundo ao vivo nem para o admin, de propósito: um
 
 - Projeto `bloco-de-frevo`, id `11908982-91b4-4956-bfe2-b68de2283d62`, ambiente `production`.
 - Serviços: `hub` (só rede privada), `modelos` (só rede privada, guarda a key do OpenRouter), `mundo` (o único público, guarda o segredo do admin e a key do fal.ai).
-- O deploy é `railway up --service <nome> --ci` a partir de um checkout. O repositório do GitHub não está ligado aos serviços, de propósito: um push redeployaria no meio de uma apresentação, e redeployar o `hub` apaga as Rooms. Comandos em `apps/frevo/README.md`, seção "Deploy".
+- Os três serviços seguem a `main` do GitHub (`source` em `.railway/railway.ts`): um push na `main` que toque os padrões de rebuild de um serviço (`watchPatterns`) o redeploya. O `hub` só rebuilda quando o próprio Dockerfile ou o `bun.lock` mudam.
+- Redeploy do `mundo` derruba a dinâmica em memória; redeploy do `hub` apaga as Rooms. Antes de uma apresentação, não faça merge na `main`, ou desligue a origem com `railway service source disconnect --service <nome>`.
+- `railway up --service <nome> --ci` a partir de um checkout continua valendo como deploy manual. Comandos em `apps/frevo/README.md`, seção "Deploy".
 
 **Vercel** (a galeria):
 
@@ -32,12 +34,12 @@ A galeria não tem link para o mundo ao vivo nem para o admin, de propósito: um
 
 ## Pastas na máquina do host
 
-Ficam fora do repositório, porque são vídeos, áudio e segredos.
+Os artefatos (vídeos, áudio, capturas, relatórios) ficam em `artifacts/bloco-de-frevo/`, dentro do checkout principal do repositório e ignorados pelo git; os worktrees não têm essa pasta. `~/Videos/bloco-de-frevo` é um link simbólico para ela. As keys ficam fora do repositório, de propósito.
 
 | Pasta | Conteúdo |
 |---|---|
-| `~/Videos/bloco-de-frevo/` | Os quatro vídeos da demonstração, `musica/` (faixas de reserva, testes dos geradores e a faixa gerada pelo jukebox), `capturas*/`, os relatórios de carga (`carga-25-celulares.md`, `plano-b-compose-*.md`), a cópia da lista de conferência e as gravações brutas em `bruto/` |
-| `~/Videos/bloco-de-frevo/bloco-de-frevo-videos/` | Fonte da galeria da Vercel: `index.html`, `videos/`, `audio/`, `img/` |
+| `artifacts/bloco-de-frevo/` (checkout principal) | Os quatro vídeos da demonstração, `musica/` (faixas de reserva, testes dos geradores e a faixa gerada pelo jukebox), `capturas*/`, os relatórios de carga (`carga-25-celulares.md`, `plano-b-compose-*.md`), a cópia da lista de conferência e as gravações brutas em `bruto/` |
+| `artifacts/bloco-de-frevo/bloco-de-frevo-videos/` (checkout principal) | Fonte da galeria da Vercel: `index.html`, `videos/`, `audio/`, `img/` |
 | `~/.config/gambiarra-lab/` | `openrouter.key`, `fal.key`, `ai-gateway.key`, `admin.secret` e `admin-link.txt` (o link de admin completo). Nunca imprima o conteúdo |
 
 ## Limites que valem saber
