@@ -29,7 +29,11 @@ afterEach(() => {
 });
 
 function setup(
-  behaviors: { minimax: FakeFalBehavior; elevenlabs?: FakeFalBehavior },
+  behaviors: {
+    minimax: FakeFalBehavior;
+    elevenlabs?: FakeFalBehavior;
+    queuedBase?: string;
+  },
   options: Partial<FalMusicOptions> = {}
 ) {
   const fake = startFakeFal({
@@ -37,6 +41,7 @@ function setup(
       [MINIMAX]: behaviors.minimax,
       [ELEVENLABS]: behaviors.elevenlabs ?? { kind: "ok" },
     },
+    queuedBase: behaviors.queuedBase,
   });
   running = fake;
   const files = createMusicFiles();
@@ -162,6 +167,37 @@ describe("the ceiling", () => {
     const second = await music.generate(INPUT).catch((error: Error) => error);
     expect((second as Error).message).toBe("teto de 1 geração atingido");
     expect(fake.requests).toHaveLength(1);
+  });
+});
+
+describe("the key", () => {
+  test("goes only to the queue's own origin, never to a url the answer points elsewhere", async () => {
+    const elsewhere: (string | null)[] = [];
+    const other = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(request) {
+        elsewhere.push(request.headers.get("authorization"));
+        return Response.json({ status: "COMPLETED" });
+      },
+    });
+    try {
+      const { music } = setup({
+        minimax: { kind: "ok" },
+        elevenlabs: { kind: "ok" },
+        queuedBase: `http://127.0.0.1:${other.port}`,
+      });
+      const failure = await music
+        .generate(INPUT)
+        .catch((error: Error) => error);
+      await Bun.sleep(20);
+      expect((failure as Error).message).toBe(
+        "MiniMax respondeu fora do esperado; ElevenLabs respondeu fora do esperado"
+      );
+      expect(elsewhere).toEqual([]);
+    } finally {
+      other.stop(true);
+    }
   });
 });
 

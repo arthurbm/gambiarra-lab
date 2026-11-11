@@ -98,6 +98,18 @@ class StepFailure extends Error {
 
 const HTTP_URL = /^https?:\/\//;
 
+/** True when `url` is on this origin; anything unparsable is not. */
+function sameOrigin(url: string | undefined, origin: string): url is string {
+  if (!url) {
+    return false;
+  }
+  try {
+    return new URL(url).origin === origin;
+  } catch {
+    return false;
+  }
+}
+
 function ceilingReason(max: number): string {
   return `teto de ${max} ${max === 1 ? "geração" : "gerações"} atingido`;
 }
@@ -150,6 +162,8 @@ async function download(
 
 export function createFalMusic(options: FalMusicOptions): FalMusic {
   const queueUrl = options.queueUrl ?? QUEUE_URL;
+  /** The key goes only here: urls from fal.ai's answers are checked against it. */
+  const queueOrigin = new URL(queueUrl).origin;
   const pollMs = options.pollMs ?? 1500;
   const max = options.maxGenerations ?? DEFAULT_MAX_GENERATIONS;
   const log = options.log ?? (() => undefined);
@@ -209,7 +223,12 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
     queued: Queued,
     clock: ReturnType<typeof stepClock>
   ): Promise<MusicFile> {
-    if (!(queued.status_url && queued.response_url)) {
+    if (
+      !(
+        sameOrigin(queued.status_url, queueOrigin) &&
+        sameOrigin(queued.response_url, queueOrigin)
+      )
+    ) {
       throw new StepFailure(`${step.label} respondeu fora do esperado`);
     }
     await completed(queued.status_url, clock);
@@ -229,7 +248,7 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
   }
 
   function cancel(url: string | undefined) {
-    if (url) {
+    if (sameOrigin(url, queueOrigin)) {
       // Best effort, so a late request stops running on fal.ai.
       fetch(url, {
         method: "PUT",

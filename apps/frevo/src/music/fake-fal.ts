@@ -10,7 +10,9 @@ export type FakeFalBehavior =
   /** Stays IN_PROGRESS forever. */
   | { kind: "slow" }
   /** The submit itself answers this HTTP status. */
-  | { kind: "refused"; status?: number };
+  | { kind: "refused"; status?: number }
+  /** The status answers something that is not JSON this many times, then completes. */
+  | { kind: "garbled"; failures: number };
 
 export interface FakeFalRequest {
   authorization: string | null;
@@ -38,9 +40,14 @@ const QUEUED = /^\/q\/([\w-]+)(\/status|\/cancel)?$/;
 interface Started {
   at: number;
   behavior: FakeFalBehavior;
+  /** Garbled status answers given so far. */
+  garbled: number;
 }
 
 function isDone({ behavior, at }: Started): boolean {
+  if (behavior.kind === "garbled") {
+    return true;
+  }
   if (behavior.kind === "slow" || behavior.kind === "refused") {
     return false;
   }
@@ -60,6 +67,15 @@ function queuedAnswer(
     return Response.json({ status: "CANCELLATION_REQUESTED" });
   }
   if (action === "/status") {
+    if (
+      entry.behavior.kind === "garbled" &&
+      entry.garbled < entry.behavior.failures
+    ) {
+      entry.garbled += 1;
+      return new Response("<html>bad gateway</html>", {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return Response.json({
       status: isDone(entry) ? "COMPLETED" : "IN_PROGRESS",
     });
@@ -77,6 +93,8 @@ function queuedAnswer(
 
 export function startFakeFal(options: {
   behaviors: Record<string, FakeFalBehavior>;
+  /** Where the submit's status, result and cancel urls point; this server by default. */
+  queuedBase?: string;
 }): FakeFal {
   const requests: FakeFalRequest[] = [];
   const cancelled: string[] = [];
@@ -103,13 +121,14 @@ export function startFakeFal(options: {
         { status: behavior.status ?? 500 }
       );
     }
-    started.set(id, { behavior, at: Date.now() });
+    started.set(id, { behavior, at: Date.now(), garbled: 0 });
+    const queued = options.queuedBase ?? base;
     return Response.json({
       request_id: id,
       status: "IN_QUEUE",
-      status_url: `${base}/q/${id}/status`,
-      response_url: `${base}/q/${id}`,
-      cancel_url: `${base}/q/${id}/cancel`,
+      status_url: `${queued}/q/${id}/status`,
+      response_url: `${queued}/q/${id}`,
+      cancel_url: `${queued}/q/${id}/cancel`,
     });
   }
 
