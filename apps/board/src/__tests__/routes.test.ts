@@ -1,31 +1,31 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
 import { type BoardRuntime, createBoardApp } from "../app";
 import type { BoardHarnessRuntime } from "../harness-runtime";
 import type { AppRouterClient } from "../orpc/routers";
+import { createTestDatabase, type TestDatabase } from "./test-database";
 
 const runtimes: BoardRuntime[] = [];
-const directories: string[] = [];
+const databases: TestDatabase[] = [];
 const REVISION_PATTERN = /"revision":\d+/;
 
 afterEach(async () => {
   await Promise.all(runtimes.splice(0).map((runtime) => runtime.close()));
-  await Promise.all(
-    directories
-      .splice(0)
-      .map((directory) => rm(directory, { force: true, recursive: true }))
-  );
+  await Promise.all(databases.splice(0).map((database) => database.cleanup()));
 });
+
+async function testDatabaseUrl() {
+  const database = await createTestDatabase();
+  databases.push(database);
+  return database.url;
+}
 
 async function createRuntime() {
   const runtime = await createBoardApp({
     adminToken: "test-admin-token",
-    databaseUrl: ":memory:",
+    databaseUrl: await testDatabaseUrl(),
     onError: () => undefined,
   });
   runtimes.push(runtime);
@@ -258,7 +258,7 @@ describe.serial("board routes", () => {
     };
     const runtime = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl: ":memory:",
+      databaseUrl: await testDatabaseUrl(),
       harness: false,
       harnessRuntime: fakeHarness,
       orchestratorRuntime: {
@@ -417,11 +417,9 @@ describe.serial("board routes", () => {
   });
 
   test("persists distinct typed Challenge content proposed by the orchestrator model", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "gambi-model-proposal-"));
-    directories.push(directory);
     const runtime = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl: `file:${join(directory, "board.db")}`,
+      databaseUrl: await testDatabaseUrl(),
       harness: false,
       orchestratorRuntime: {
         listModels: () => Promise.resolve([]),

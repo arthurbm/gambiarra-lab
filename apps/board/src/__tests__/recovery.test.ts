@@ -1,13 +1,11 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
 import { type BoardRuntime, createBoardApp } from "../app";
 import type { BoardHarnessRuntime } from "../harness-runtime";
 import type { AppRouterClient } from "../orpc/routers";
+import { createTestDatabase } from "./test-database";
 
 function rpcClient(runtime: BoardRuntime): AppRouterClient {
   const link = new RPCLink({
@@ -19,13 +17,12 @@ function rpcClient(runtime: BoardRuntime): AppRouterClient {
 }
 
 test("recovers configuration, membership, phase, and audit events after restart", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "gambi-board-recovery-"));
-  const databaseUrl = `file:${join(directory, "board.db")}`;
+  const database = await createTestDatabase();
 
   try {
     const first = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       onError: () => undefined,
     });
     const firstClient = rpcClient(first);
@@ -65,7 +62,7 @@ test("recovers configuration, membership, phase, and audit events after restart"
 
     const second = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       onError: () => undefined,
     });
     const secondClient = rpcClient(second);
@@ -102,13 +99,12 @@ test("recovers configuration, membership, phase, and audit events after restart"
     expect(recovered.revision).toBe(8);
     await second.close();
   } finally {
-    await rm(directory, { force: true, recursive: true });
+    await database.cleanup();
   }
 });
 
 test("recovers a dispatched Decision and its escalation after restart", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "gambi-round-recovery-"));
-  const databaseUrl = `file:${join(directory, "board.db")}`;
+  const database = await createTestDatabase();
   const fakeHarness: BoardHarnessRuntime = {
     close: () => Promise.resolve(),
     prompt: async () => ({ sessionId: "unused", revision: 0 }),
@@ -120,7 +116,7 @@ test("recovers a dispatched Decision and its escalation after restart", async ()
   try {
     const first = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       harness: false,
       harnessRuntime: fakeHarness,
       onError: () => undefined,
@@ -201,7 +197,7 @@ test("recovers a dispatched Decision and its escalation after restart", async ()
 
     const second = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       harness: false,
       onError: () => undefined,
     });
@@ -224,13 +220,12 @@ test("recovers a dispatched Decision and its escalation after restart", async ()
     });
     await second.close();
   } finally {
-    await rm(directory, { force: true, recursive: true });
+    await database.cleanup();
   }
 });
 
 test("routes a returned review through a persisted harness session after restart", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "gambi-session-recovery-"));
-  const databaseUrl = `file:${join(directory, "board.db")}`;
+  const database = await createTestDatabase();
   const firstPrompts: Array<{ sessionId: string; prompt: string }> = [];
   const restoredPrompts: Array<{ sessionId: string; prompt: string }> = [];
   const fakeHarness = (
@@ -254,7 +249,7 @@ test("routes a returned review through a persisted harness session after restart
   try {
     const first = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       harness: harnessOptions,
       harnessRuntime: fakeHarness(firstPrompts),
       onError: () => undefined,
@@ -319,7 +314,7 @@ test("routes a returned review through a persisted harness session after restart
 
     const second = await createBoardApp({
       adminToken: "test-admin-token",
-      databaseUrl,
+      databaseUrl: database.url,
       harness: harnessOptions,
       harnessRuntime: fakeHarness(restoredPrompts),
       onError: () => undefined,
@@ -341,6 +336,6 @@ test("routes a returned review through a persisted harness session after restart
     ]);
     await second.close();
   } finally {
-    await rm(directory, { force: true, recursive: true });
+    await database.cleanup();
   }
 });

@@ -1,31 +1,25 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
 import { type BoardRuntime, createBoardApp } from "../app";
 import type { AppRouterClient } from "../orpc/routers";
+import { createTestDatabase, type TestDatabase } from "./test-database";
 
 const runtimes: BoardRuntime[] = [];
-const temporaryDirectories: string[] = [];
+const databases: TestDatabase[] = [];
 
 afterEach(async () => {
   await Promise.all(runtimes.splice(0).map((runtime) => runtime.close()));
-  await Promise.all(
-    temporaryDirectories
-      .splice(0)
-      .map((directory) => rm(directory, { force: true, recursive: true }))
-  );
+  await Promise.all(databases.splice(0).map((database) => database.cleanup()));
 });
 
 async function createRuntime() {
-  const directory = await mkdtemp(join(tmpdir(), "gambi-board-tiles-"));
-  temporaryDirectories.push(directory);
+  const database = await createTestDatabase();
+  databases.push(database);
   const runtime = await createBoardApp({
     adminToken: "test-admin-token",
-    databaseUrl: `file:${join(directory, "board.db")}`,
+    databaseUrl: database.url,
     harness: false,
     onError: () => undefined,
   });
