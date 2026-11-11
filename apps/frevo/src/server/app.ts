@@ -8,6 +8,7 @@ import {
   listModelParticipants,
   roomInference,
 } from "../gambi/room";
+import { tick } from "../sim/phases";
 import {
   answerHuman,
   createWorld,
@@ -15,12 +16,15 @@ import {
   type HumanAnswer,
   join,
   privateView,
-  publicSnapshot,
-  step,
   type WorldRules,
 } from "../sim/world";
+import { createAdminApi } from "./admin";
+import { createSimulatedHumans } from "./simulated";
+import { type PhoneEvent, telaoSnapshot } from "./views";
 
 export interface WorldServerOptions {
+  /** `Authorization: Bearer <secret>` opens /api/admin/*; without it they stay closed. */
+  adminSecret?: string;
   /** Simulated bonecos in the square. */
   bonecos?: number;
   host?: string;
@@ -58,6 +62,8 @@ const SSE_RETRY_MS = 1000;
 const encoder = new TextEncoder();
 /** A session id from the phone: opaque, short, URL safe. */
 const SESSION_ID = /^[A-Za-z0-9_-]{8,64}$/;
+/** How often the admin gets the host's state. */
+const ADMIN_PUBLISH_MS = 500;
 
 function sseHeaders() {
   return {
@@ -159,6 +165,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     string,
     Set<ReadableStreamDefaultController<Uint8Array>>
   >();
+  /** Sessions the host expelled; they stay out, even after a restart. */
+  const expelled = new Set<string>();
+  const simulated = createSimulatedHumans({ seed: options.seed ?? Date.now() });
 
   function broadcast(chunk: Uint8Array) {
     for (const controller of telao) {
@@ -170,13 +179,18 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
   }
 
+  /** A phone's view, or why it has none: expelled, or the world restarted. */
+  function phoneEvent(sessionId: string): PhoneEvent {
+    const view = privateView(world, sessionId);
+    if (view) {
+      return { ...view, clock: telaoSnapshot(world).clock };
+    }
+    return expelled.has(sessionId) ? { expulso: true } : { reiniciou: true };
+  }
+
   function publishPhones() {
     for (const [sessionId, streams] of phones) {
-      const view = privateView(world, sessionId);
-      if (!view) {
-        continue;
-      }
-      const chunk = sseEvent("snapshot", view);
+      const chunk = sseEvent("snapshot", phoneEvent(sessionId));
       for (const controller of streams) {
         try {
           controller.enqueue(chunk);
@@ -187,21 +201,45 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
   }
 
+  const admin = createAdminApi({
+    secret: options.adminSecret,
+    world: () => world,
+    setWorld: (next) => {
+      world = next;
+    },
+    simulated,
+    connected: (sessionId) => (phones.get(sessionId)?.size ?? 0) > 0,
+    // The scheduler does not estimate spending yet; the models ticket wires
+    // its budget here.
+    spending: () => null,
+    expelled: (sessionId) => {
+      expelled.add(sessionId);
+      publishPhones();
+    },
+    restarted: publishPhones,
+    publishNow: () => {
+      broadcast(sseEvent("snapshot", telaoSnapshot(world)));
+      publishPhones();
+    },
+    log,
+  });
+
   const tickTimer = setInterval(() => {
-    const next = step(world, {
+    const next = tick(world, {
       elapsedMs: tickMs,
       results: scheduler.drain(),
       models,
     });
-    ({ world } = next);
+    world = simulated.act(next.world);
     for (const request of next.requests) {
       scheduler.submit(request);
     }
   }, tickMs);
   const publishTimer = setInterval(() => {
-    broadcast(sseEvent("snapshot", publicSnapshot(world)));
+    broadcast(sseEvent("snapshot", telaoSnapshot(world)));
     publishPhones();
   }, options.publishMs ?? 200);
+  const adminTimer = setInterval(admin.publish, ADMIN_PUBLISH_MS);
   const keepaliveTimer = setInterval(() => {
     const keepalive = encoder.encode(": keepalive\n\n");
     broadcast(keepalive);
@@ -227,7 +265,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       start(controller) {
         self = controller;
         controller.enqueue(encoder.encode(`retry: ${SSE_RETRY_MS}\n\n`));
-        controller.enqueue(sseEvent("snapshot", publicSnapshot(world)));
+        controller.enqueue(sseEvent("snapshot", telaoSnapshot(world)));
         telao.add(controller);
       },
       cancel: leave,
@@ -238,8 +276,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
 
   /** One person's private stream: their boneco, its thoughts, the question. */
   function phoneStream(request: Request, sessionId: string): Response {
-    const view = privateView(world, sessionId);
-    if (!view) {
+    if (!(privateView(world, sessionId) || expelled.has(sessionId))) {
       return new Response("Sessão desconhecida.", { status: 404 });
     }
     let self: ReadableStreamDefaultController<Uint8Array> | undefined;
@@ -256,7 +293,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       start(controller) {
         self = controller;
         controller.enqueue(encoder.encode(`retry: ${SSE_RETRY_MS}\n\n`));
-        controller.enqueue(sseEvent("snapshot", view));
+        controller.enqueue(sseEvent("snapshot", phoneEvent(sessionId)));
         const streams = phones.get(sessionId) ?? new Set();
         streams.add(controller);
         phones.set(sessionId, streams);
@@ -274,6 +311,12 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
     const sessionId =
       body.sessao === undefined ? crypto.randomUUID() : sessionOf(body.sessao);
+    if (expelled.has(sessionId)) {
+      return Response.json(
+        { ok: false, erro: "O host tirou este boneco do bloco." },
+        { status: 403 }
+      );
+    }
     const joined = join(world, { sessionId });
     ({ world } = joined);
     if (joined.created) {
@@ -363,6 +406,11 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     port: options.port ?? 0,
     fetch(request, bunServer) {
       const { pathname, searchParams } = new URL(request.url);
+      if (pathname.startsWith("/api/admin/")) {
+        // The admin's state stream stays open like the others.
+        bunServer.timeout(request, 0);
+        return admin.handle(request, pathname);
+      }
       if (pathname.startsWith("/api/")) {
         return api(request, pathname);
       }
@@ -407,10 +455,12 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         roomTimer,
         tickTimer,
         publishTimer,
+        adminTimer,
         keepaliveTimer,
       ]) {
         clearInterval(timer);
       }
+      admin.stop();
       for (const controller of telao) {
         try {
           controller.close();

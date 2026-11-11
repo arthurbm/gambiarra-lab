@@ -1,8 +1,9 @@
 // The phone's data: the session kept in the browser, the arrival, the
 // private stream and the answers. A reload finds the session in storage and
 // gets the same boneco back; a server that forgot the session (a restart)
-// gets it again on the next arrival.
-import type { PrivateView } from "@gambiarra-lab/frevo/snapshot";
+// gets it again on the next arrival, and so does one the host restarted. A
+// person the host expelled is told so and stays out.
+import type { PhoneEvent, PhoneView } from "@gambiarra-lab/frevo/views";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { connectTelaoStream, type StreamStatus } from "../telao/stream";
 
@@ -48,7 +49,9 @@ export interface Reply {
 
 export function useCelular() {
   const [session, setSession] = useState<string | null>(null);
-  const [view, setView] = useState<PrivateView | null>(null);
+  const [view, setView] = useState<PhoneView | null>(null);
+  const [expelled, setExpelled] = useState(false);
+  const reentering = useRef(false);
   const [status, setStatus] = useState<StreamStatus>("connecting");
   /** When the view arrived, to run the countdown on this phone's clock. */
   const receivedAt = useRef(0);
@@ -76,9 +79,27 @@ export function useCelular() {
     if (!session) {
       return;
     }
-    return connectTelaoStream<PrivateView>({
+    return connectTelaoStream<PhoneEvent>({
       url: `/events/celular?sessao=${encodeURIComponent(session)}`,
       onSnapshot: (next) => {
+        if ("expulso" in next) {
+          setExpelled(true);
+          return;
+        }
+        if ("reiniciou" in next) {
+          // The host started over: come back with a new boneco.
+          setView(null);
+          if (!reentering.current) {
+            reentering.current = true;
+            enter(session)
+              .catch(() => undefined)
+              .finally(() => {
+                reentering.current = false;
+              });
+          }
+          return;
+        }
+        setExpelled(false);
         receivedAt.current = Date.now();
         setView(next);
       },
@@ -111,5 +132,5 @@ export function useCelular() {
     [session]
   );
 
-  return { view, status, reply, receivedAt };
+  return { view, status, reply, receivedAt, expelled };
 }

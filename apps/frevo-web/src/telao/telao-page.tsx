@@ -1,4 +1,5 @@
 import { EntradaQr } from "./entrada-qr";
+import { PhaseClock } from "./phase-clock";
 import type { StreamStatus } from "./stream";
 import { useTelao } from "./use-telao";
 import { WorldView } from "./world-view";
@@ -29,6 +30,7 @@ export function TelaoPage() {
           )}
         </section>
         <aside className="telao-side">
+          {snapshot ? <PhaseClock clock={snapshot.clock} /> : null}
           {snapshot?.phase === "entrada" ? <EntradaQr /> : null}
         </aside>
       </div>

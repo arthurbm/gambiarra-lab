@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 // The world server as a process. PORT, HOST, GAMBI_HUB_URL, FREVO_ROOM_NAME,
-// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL and FREVO_WEB_DIST
-// configure it.
+// FREVO_BONECOS, FREVO_DECISION_TIMEOUT_MS, FREVO_PUBLIC_URL, FREVO_WEB_DIST
+// and FREVO_ADMIN_SECRET configure it.
+import { randomBytes } from "node:crypto";
 import { exists } from "node:fs/promises";
 import { resolve } from "node:path";
 import { DEFAULT_HUB_URL, DEFAULT_ROOM_NAME } from "../model-host/config";
@@ -27,6 +28,8 @@ const webDist =
     ? defaultWebDist
     : undefined);
 const host = process.env.HOST?.trim() || "0.0.0.0";
+const givenSecret = process.env.FREVO_ADMIN_SECRET?.trim();
+const adminSecret = givenSecret || randomBytes(16).toString("hex");
 
 const server = startWorldServer({
   hubUrl: process.env.GAMBI_HUB_URL?.trim() || DEFAULT_HUB_URL,
@@ -43,6 +46,7 @@ const server = startWorldServer({
   },
   webDist,
   publicUrl: process.env.FREVO_PUBLIC_URL?.trim() || undefined,
+  adminSecret,
   log: (line) => console.log(line),
 });
 
@@ -50,6 +54,12 @@ console.log(`Frevo world listening on http://${host}:${server.port}`);
 console.log(
   webDist ? `Serving the web from ${webDist}` : "The web is not built"
 );
+if (!givenSecret) {
+  // Only when the secret was drawn here: a configured one never reaches a log.
+  console.log(
+    `Admin (no FREVO_ADMIN_SECRET, drawn for this run): /admin?k=${adminSecret}`
+  );
+}
 
 let stopping = false;
 async function shutdown() {

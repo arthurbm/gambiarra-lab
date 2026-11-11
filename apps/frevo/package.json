@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./snapshot": "./src/sim/world.ts"
+    "./snapshot": "./src/sim/world.ts",
+    "./views": "./src/server/views.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

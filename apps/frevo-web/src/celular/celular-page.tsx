@@ -1,7 +1,9 @@
 // The phone: the person's boneco, the model that thinks for it, its recent
 // thoughts and one question at a time with a countdown.
-import type { PrivateView, Thought } from "@gambiarra-lab/frevo/snapshot";
+import type { Thought } from "@gambiarra-lab/frevo/snapshot";
+import type { PhoneView as PrivateView } from "@gambiarra-lab/frevo/views";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { phaseLine } from "../phase/phase-text";
 import { type Reply, useCelular } from "./use-celular";
 
 const TYPING_PING_MS = 4000;
@@ -194,8 +196,17 @@ function Personality({ boneco }: { boneco: PrivateView["boneco"] }) {
 }
 
 export function CelularPage() {
-  const { view, status, reply, receivedAt } = useCelular();
+  const { view, status, reply, receivedAt, expelled } = useCelular();
   useTick(250);
+
+  if (expelled) {
+    return (
+      <main className="celular celular-waiting">
+        <h1>Bloco de frevo</h1>
+        <p>O host tirou seu boneco da praça.</p>
+      </main>
+    );
+  }
 
   if (!view) {
     return (
@@ -226,6 +237,7 @@ export function CelularPage() {
           <span className="celular-offline">reconectando…</span>
         )}
       </header>
+      <p className="celular-progress">{phaseLine(view.clock)}</p>
       <Status view={view} />
       {ask ? (
         <Question
