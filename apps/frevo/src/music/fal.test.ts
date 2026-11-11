@@ -22,22 +22,23 @@ const INPUT = {
   style: FREVO_STYLE,
 };
 
-let fake: FakeFal | null = null;
+let running: FakeFal | null = null;
 afterEach(() => {
-  fake?.stop();
-  fake = null;
+  running?.stop();
+  running = null;
 });
 
 function setup(
   behaviors: { minimax: FakeFalBehavior; elevenlabs?: FakeFalBehavior },
   options: Partial<FalMusicOptions> = {}
 ) {
-  fake = startFakeFal({
+  const fake = startFakeFal({
     behaviors: {
       [MINIMAX]: behaviors.minimax,
       [ELEVENLABS]: behaviors.elevenlabs ?? { kind: "ok" },
     },
   });
+  running = fake;
   const files = createMusicFiles();
   const lines: string[] = [];
   const music = createFalMusic({

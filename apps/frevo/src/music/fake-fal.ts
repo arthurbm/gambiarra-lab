@@ -32,85 +32,108 @@ export const FAKE_AUDIO = new Uint8Array([
   0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xfb,
 ]);
 
+const FILE = /^\/files\/([\w-]+)\.mp3$/;
+const QUEUED = /^\/q\/([\w-]+)(\/status|\/cancel)?$/;
+
+interface Started {
+  at: number;
+  behavior: FakeFalBehavior;
+}
+
+function isDone({ behavior, at }: Started): boolean {
+  if (behavior.kind === "slow" || behavior.kind === "refused") {
+    return false;
+  }
+  return Date.now() - at >= (behavior.ms ?? 0);
+}
+
+/** Status, cancel or result of a queued request. */
+function queuedAnswer(
+  entry: Started,
+  id: string,
+  action: string | undefined,
+  base: string,
+  cancelled: string[]
+): Response {
+  if (action === "/cancel") {
+    cancelled.push(id);
+    return Response.json({ status: "CANCELLATION_REQUESTED" });
+  }
+  if (action === "/status") {
+    return Response.json({
+      status: isDone(entry) ? "COMPLETED" : "IN_PROGRESS",
+    });
+  }
+  if (entry.behavior.kind === "error") {
+    return Response.json(
+      { detail: "downstream_service_unavailable" },
+      { status: entry.behavior.status ?? 504 }
+    );
+  }
+  return Response.json({
+    audio: { url: `${base}/files/${id}.mp3`, content_type: "audio/mpeg" },
+  });
+}
+
 export function startFakeFal(options: {
   behaviors: Record<string, FakeFalBehavior>;
 }): FakeFal {
   const requests: FakeFalRequest[] = [];
   const cancelled: string[] = [];
-  const started = new Map<string, { behavior: FakeFalBehavior; at: number }>();
+  const started = new Map<string, Started>();
   let count = 0;
+
+  async function submit(request: Request, endpoint: string, base: string) {
+    const behavior = options.behaviors[endpoint];
+    if (!behavior) {
+      return new Response("unknown endpoint", { status: 404 });
+    }
+    const input = (await request.json()) as Record<string, unknown>;
+    count += 1;
+    const id = `req-${count}`;
+    requests.push({
+      id,
+      endpoint,
+      input,
+      authorization: request.headers.get("authorization"),
+    });
+    if (behavior.kind === "refused") {
+      return Response.json(
+        { detail: "refused" },
+        { status: behavior.status ?? 500 }
+      );
+    }
+    started.set(id, { behavior, at: Date.now() });
+    return Response.json({
+      request_id: id,
+      status: "IN_QUEUE",
+      status_url: `${base}/q/${id}/status`,
+      response_url: `${base}/q/${id}`,
+      cancel_url: `${base}/q/${id}/cancel`,
+    });
+  }
 
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
-    async fetch(request): Promise<Response> {
+    fetch(request): Promise<Response> | Response {
       const { pathname, origin } = new URL(request.url);
-      const base: string = origin;
-      const file = /^\/files\/([\w-]+)\.mp3$/.exec(pathname);
-      if (file && request.method === "GET") {
+      if (FILE.test(pathname) && request.method === "GET") {
         return new Response(FAKE_AUDIO, {
           headers: { "Content-Type": "audio/mpeg" },
         });
       }
-      const queued = /^\/q\/([\w-]+)(\/status|\/cancel)?$/.exec(pathname);
+      const queued = QUEUED.exec(pathname);
       if (queued) {
         const id = queued[1] ?? "";
         const entry = started.get(id);
-        if (!entry) {
-          return new Response("not found", { status: 404 });
-        }
-        if (queued[2] === "/cancel") {
-          cancelled.push(id);
-          return Response.json({ status: "CANCELLATION_REQUESTED" });
-        }
-        const { behavior, at } = entry;
-        const done =
-          behavior.kind !== "slow" &&
-          Date.now() - at >= ("ms" in behavior ? (behavior.ms ?? 0) : 0);
-        if (queued[2] === "/status") {
-          return Response.json({ status: done ? "COMPLETED" : "IN_PROGRESS" });
-        }
-        if (behavior.kind === "error") {
-          return Response.json(
-            { detail: "downstream_service_unavailable" },
-            { status: behavior.status ?? 504 }
-          );
-        }
-        return Response.json({
-          audio: { url: `${base}/files/${id}.mp3`, content_type: "audio/mpeg" },
-        });
+        return entry
+          ? queuedAnswer(entry, id, queued[2], origin, cancelled)
+          : new Response("not found", { status: 404 });
       }
-      if (request.method !== "POST") {
-        return new Response("not found", { status: 404 });
-      }
-      const endpoint = pathname.slice(1);
-      const behavior = options.behaviors[endpoint];
-      if (!behavior) {
-        return new Response("unknown endpoint", { status: 404 });
-      }
-      const input = (await request.json()) as Record<string, unknown>;
-      count += 1;
-      const id = `req-${count}`;
-      requests.push({
-        id,
-        endpoint,
-        input,
-        authorization: request.headers.get("authorization"),
-      });
-      if (behavior.kind === "refused") {
-        return Response.json(
-          { detail: "refused" },
-          { status: behavior.status ?? 500 }
-        );
-      }
-      started.set(id, { behavior, at: Date.now() });
-      return Response.json({
-        request_id: id,
-        status: "IN_QUEUE",
-        status_url: `${base}/q/${id}/status`,
-        response_url: `${base}/q/${id}`,
-        cancel_url: `${base}/q/${id}/cancel`,
-      });
+      return request.method === "POST"
+        ? submit(request, pathname.slice(1), origin)
+        : new Response("not found", { status: 404 });
     },
   });
 

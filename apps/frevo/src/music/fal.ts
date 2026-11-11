@@ -96,9 +96,52 @@ class StepFailure extends Error {
   }
 }
 
+const HTTP_URL = /^https?:\/\//;
+
 function audioUrlOf(body: unknown): string | null {
   const url = (body as { audio?: { url?: unknown } } | null)?.audio?.url;
-  return typeof url === "string" && /^https?:\/\//.test(url) ? url : null;
+  return typeof url === "string" && HTTP_URL.test(url) ? url : null;
+}
+
+interface Queued {
+  cancel_url?: string;
+  response_url?: string;
+  status_url?: string;
+}
+
+/** One step's clock: every call gets the time left, and none more than CALL_TIMEOUT_MS. */
+function stepClock(step: Step) {
+  const deadline = Date.now() + step.timeoutMs;
+  const left = () => deadline - Date.now();
+  return {
+    left,
+    signal: () =>
+      AbortSignal.timeout(Math.max(1, Math.min(CALL_TIMEOUT_MS, left()))),
+    late: () =>
+      new StepFailure(
+        `${step.label} passou de ${Math.round(step.timeoutMs / 1000)} s`
+      ),
+  };
+}
+
+/** The audio, downloaded; the audio host needs no key, so it never gets one. */
+async function download(
+  step: Step,
+  url: string,
+  signal: AbortSignal
+): Promise<MusicFile> {
+  const audio = await fetch(url, { signal });
+  if (!audio.ok) {
+    throw new StepFailure(
+      `${step.label}: o áudio não baixou (HTTP ${audio.status})`
+    );
+  }
+  const bytes = new Uint8Array(await audio.arrayBuffer());
+  if (bytes.length === 0 || bytes.length > MAX_AUDIO_BYTES) {
+    throw new StepFailure(`${step.label}: áudio de tamanho inválido`);
+  }
+  const type = audio.headers.get("content-type") ?? "";
+  return { bytes, type: type.startsWith("audio/") ? type : "audio/mpeg" };
 }
 
 export function createFalMusic(options: FalMusicOptions): FalMusic {
@@ -113,100 +156,99 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
   };
   let used = 0;
 
-  async function run(step: Step, refrain: string[], style: string) {
-    const deadline = Date.now() + step.timeoutMs;
-    const left = () => deadline - Date.now();
-    const signal = () =>
-      AbortSignal.timeout(Math.max(1, Math.min(CALL_TIMEOUT_MS, left())));
-    const late = () =>
-      new StepFailure(
-        `${step.label} passou de ${Math.round(step.timeoutMs / 1000)} s`
+  async function submit(
+    step: Step,
+    body: Record<string, unknown>,
+    signal: AbortSignal
+  ): Promise<Queued> {
+    const response = await fetch(`${queueUrl}/${step.endpoint}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (!response.ok) {
+      throw new StepFailure(
+        `${step.label} recusou o pedido (HTTP ${response.status})`,
+        true
       );
-    let cancelUrl: string | null = null;
+    }
+    return (await response.json()) as Queued;
+  }
+
+  /** Asks the status until COMPLETED; a status that does not answer is asked again. */
+  async function completed(
+    statusUrl: string,
+    clock: ReturnType<typeof stepClock>
+  ) {
+    for (;;) {
+      // biome-ignore lint/performance/noAwaitInLoops: polling waits by design.
+      await Bun.sleep(Math.max(0, Math.min(pollMs, clock.left())));
+      if (clock.left() <= 0) {
+        throw clock.late();
+      }
+      const status = await fetch(statusUrl, {
+        headers,
+        signal: clock.signal(),
+      });
+      const body = status.ok
+        ? ((await status.json()) as { status?: string })
+        : null;
+      if (body?.status === "COMPLETED") {
+        return;
+      }
+    }
+  }
+
+  async function made(
+    step: Step,
+    queued: Queued,
+    clock: ReturnType<typeof stepClock>
+  ): Promise<MusicFile> {
+    if (!(queued.status_url && queued.response_url)) {
+      throw new StepFailure(`${step.label} respondeu fora do esperado`);
+    }
+    await completed(queued.status_url, clock);
+    // A failure also ends as COMPLETED; the error is in the result.
+    const result = await fetch(queued.response_url, {
+      headers,
+      signal: clock.signal(),
+    });
+    if (!result.ok) {
+      throw new StepFailure(`${step.label} falhou (HTTP ${result.status})`);
+    }
+    const audioUrl = audioUrlOf(await result.json());
+    if (!audioUrl) {
+      throw new StepFailure(`${step.label} não devolveu áudio`);
+    }
+    return download(step, audioUrl, clock.signal());
+  }
+
+  function cancel(url: string | undefined) {
+    if (url) {
+      // Best effort, so a late request stops running on fal.ai.
+      fetch(url, {
+        method: "PUT",
+        headers,
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => undefined);
+    }
+  }
+
+  async function run(step: Step, refrain: string[], style: string) {
+    const clock = stepClock(step);
+    let queued: Queued = {};
     try {
-      const submit = await fetch(`${queueUrl}/${step.endpoint}`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(step.input(refrain, style)),
-        signal: signal(),
-      });
-      if (!submit.ok) {
-        throw new StepFailure(
-          `${step.label} recusou o pedido (HTTP ${submit.status})`,
-          true
-        );
-      }
-      const queued = (await submit.json()) as {
-        cancel_url?: string;
-        response_url?: string;
-        status_url?: string;
-      };
-      cancelUrl = queued.cancel_url ?? null;
-      if (!(queued.status_url && queued.response_url)) {
-        throw new StepFailure(`${step.label} respondeu fora do esperado`);
-      }
-      while (true) {
-        // biome-ignore lint/performance/noAwaitInLoops: polling waits by design.
-        await Bun.sleep(Math.max(0, Math.min(pollMs, left())));
-        if (left() <= 0) {
-          throw late();
-        }
-        const status = await fetch(queued.status_url, {
-          headers,
-          signal: signal(),
-        });
-        // A status that does not answer is asked again on the next turn.
-        const body = status.ok
-          ? ((await status.json()) as { status?: string })
-          : null;
-        if (body?.status === "COMPLETED") {
-          break;
-        }
-      }
-      // A failure also ends as COMPLETED; the error is in the result.
-      const result = await fetch(queued.response_url, {
-        headers,
-        signal: signal(),
-      });
-      if (!result.ok) {
-        throw new StepFailure(`${step.label} falhou (HTTP ${result.status})`);
-      }
-      const audioUrl = audioUrlOf(await result.json());
-      if (!audioUrl) {
-        throw new StepFailure(`${step.label} não devolveu áudio`);
-      }
-      // The audio host needs no key, so it never gets one.
-      const audio = await fetch(audioUrl, { signal: signal() });
-      if (!audio.ok) {
-        throw new StepFailure(
-          `${step.label}: o áudio não baixou (HTTP ${audio.status})`
-        );
-      }
-      const bytes = new Uint8Array(await audio.arrayBuffer());
-      if (bytes.length === 0 || bytes.length > MAX_AUDIO_BYTES) {
-        throw new StepFailure(`${step.label}: áudio de tamanho inválido`);
-      }
-      const type = audio.headers.get("content-type") ?? "";
-      return {
-        bytes,
-        type: type.startsWith("audio/") ? type : "audio/mpeg",
-      } satisfies MusicFile;
+      queued = await submit(step, step.input(refrain, style), clock.signal());
+      return await made(step, queued, clock);
     } catch (error) {
-      const failure =
-        error instanceof StepFailure && left() > 0
-          ? error
-          : left() <= 0
-            ? late()
-            : new StepFailure(`${step.label} sem resposta`);
-      if (left() <= 0 && cancelUrl) {
-        // Best effort, so a late request stops running on fal.ai.
-        fetch(cancelUrl, {
-          method: "PUT",
-          headers,
-          signal: AbortSignal.timeout(5000),
-        }).catch(() => undefined);
+      if (clock.left() <= 0) {
+        cancel(queued.cancel_url);
+        throw clock.late();
       }
-      throw failure;
+      throw error instanceof StepFailure
+        ? error
+        : new StepFailure(`${step.label} sem resposta`);
     }
   }
 
