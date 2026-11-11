@@ -47,6 +47,8 @@ export type PhoneEvent =
   | PhoneView
   /** The host expelled this person; the session stays out. */
   | { expulso: true }
+  /** The person left from this phone; entering again gives a new boneco. */
+  | { saiu: true }
   /** The host restarted the dynamic; entering again gives a new boneco. */
   | { reiniciou: true };
 

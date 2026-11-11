@@ -38,5 +38,6 @@ Tetos: 30 bonecos na praça (simulados contam), US$ 1 de modelos por rodada, 6 m
 | "A praça lotou" | **Bonecos simulados** → **Remover simulados** |
 | Veio pouca gente | **Bonecos simulados** → **Preencher** |
 | Celular de alguém travou | Recarregar a página: volta para o mesmo boneco |
+| Alguém quer ir embora, ou recomeçar com outro nome | **Sair da praça**, no fim da tela do celular: o boneco sai do bloco, dos votos e do telão, e a pessoa pode entrar de novo na hora, com boneco novo. Não precisa do admin |
 | Telão ou admin "reconectando…" | Volta sozinho; se não, recarregar |
 | A música de um bloco não ficou pronta | Toca a reserva; o motivo aparece embaixo do bloco no cartão Júri |
