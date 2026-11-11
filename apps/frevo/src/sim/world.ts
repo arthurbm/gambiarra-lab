@@ -315,8 +315,8 @@ export interface PublicBloco {
   mark: number;
   /** Boneco ids. */
   members: string[];
-  /** Where the bloco gathers. */
-  spot: { x: number; y: number };
+  /** Where the bloco gathers; `id` is the meeting spot's, on the square. */
+  spot: { id: string | null; x: number; y: number };
 }
 
 /** What the telão may show. */

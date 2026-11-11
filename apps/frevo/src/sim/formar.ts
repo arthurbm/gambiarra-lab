@@ -11,6 +11,7 @@
 import type { Ask, AskOutcome } from "./ask";
 import { filterModelText } from "./blocklist";
 import { logEvent } from "./events";
+import { MEETING_SPOTS } from "./meeting-spots";
 import {
   type Acquaintance,
   askHuman,
@@ -23,6 +24,7 @@ import {
   type MaestroRequest,
   mateOf,
   type Place,
+  PRACA,
   say,
   type Talk,
   think,
@@ -37,8 +39,8 @@ export interface Bloco {
   mark: number;
   /** Boneco ids. */
   members: string[];
-  /** Where the bloco gathers. */
-  spot: { x: number; y: number };
+  /** Where the bloco gathers; `id` is the meeting spot's, on the square. */
+  spot: { id: string | null; x: number; y: number };
 }
 
 interface EncounterSide {
@@ -240,18 +242,25 @@ export function talksOf(world: World, bonecoId: string): Talk[] {
 }
 
 /**
- * Where a bloco gathers. #15 may move this to the meeting spots of the map;
- * the formar phase only needs the blocos to come together somewhere apart.
+ * Where a bloco gathers: on the square, the map's meeting spots in turn (the
+ * telão draws a flag at each); on any other map, spots spread over it.
  */
 export function blocoSpot(
   world: World,
   mark: number
-): { x: number; y: number } {
+): { id: string | null; x: number; y: number } {
+  const onSquare =
+    world.map.width === PRACA.width && world.map.height === PRACA.height;
+  const meeting = MEETING_SPOTS[mark % MEETING_SPOTS.length];
+  if (onSquare && meeting) {
+    return { id: meeting.id, x: meeting.x, y: meeting.y };
+  }
   const [fx, fy] = GATHERING[mark % GATHERING.length] as readonly [
     number,
     number,
   ];
   return {
+    id: null,
     x: Math.round(world.map.width * fx),
     y: Math.round(world.map.height * fy),
   };

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { closeFormar, enterFormar, sizesFor } from "./formar";
+import { MEETING_SPOTS } from "./meeting-spots";
 import {
   answerHuman,
   type BrainResult,
@@ -9,6 +10,7 @@ import {
   type HumanAnswer,
   join,
   type MaestroRequest,
+  PRACA,
   type PrivateView,
   privateView,
   publicSnapshot,
@@ -509,5 +511,32 @@ describe("late arrivals", () => {
     expect(view.bloco?.mates).toHaveLength(3);
     // The interview still runs for the late arrival.
     expect(view.interview?.done).toBe(false);
+  });
+});
+
+describe("where blocos gather", () => {
+  test("on the square, each bloco walks to its own meeting spot", () => {
+    const square9 = square({
+      simulated: 6,
+      map: PRACA,
+      rules: { meetRadius: 200 },
+    });
+    const formed = after(square9, 60_000, { brain: friendly });
+    const { blocos } = publicSnapshot(formed);
+    expect(blocos).toHaveLength(2);
+    expect(blocos.map((bloco) => bloco.spot.id)).toEqual(
+      MEETING_SPOTS.slice(0, 2).map((spot) => spot.id)
+    );
+    // Its members stand together around the spot, and stay there.
+    for (const bloco of blocos) {
+      for (const id of bloco.members) {
+        const boneco = publicSnapshot(formed).bonecos.find((b) => b.id === id);
+        expect(boneco?.walking).toBe(false);
+        expect(Math.abs((boneco?.x ?? 0) - bloco.spot.x)).toBeLessThanOrEqual(
+          6
+        );
+        expect(boneco?.y).toBe(bloco.spot.y);
+      }
+    }
   });
 });
