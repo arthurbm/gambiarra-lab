@@ -573,6 +573,73 @@ a {
   border-radius: 10px;
 }
 
+/*
+ * Picking the boneco: five per row, so each one is about 56 px wide on a
+ * 360 px phone. The picked one turns yellow with a red ring; the ones
+ * already on the square fade out.
+ */
+.celular-looks {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.celular-looks legend {
+  padding: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.celular-looks-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.celular .celular-look,
+.celular .celular-look-draw {
+  background: #fff;
+}
+
+.celular .celular-look {
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  aspect-ratio: 1;
+  padding: 0;
+  border-width: 2px;
+  border-radius: 10px;
+}
+
+.celular .celular-look[aria-pressed="true"],
+.celular .celular-look-draw[aria-pressed="true"] {
+  outline: 3px solid var(--red);
+  outline-offset: 1px;
+  background: var(--yellow);
+  border-width: 3px;
+}
+
+.celular .celular-look:disabled {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.celular .celular-look:focus-visible,
+.celular .celular-look-draw:focus-visible {
+  outline: 3px solid var(--night-soft);
+  outline-offset: 2px;
+}
+
+.celular-looks-note {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
 /* Where the dynamic is: the five phases and the clock. */
 .celular-steps {
   display: grid;

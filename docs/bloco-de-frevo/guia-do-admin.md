@@ -19,9 +19,9 @@ Tetos: 30 bonecos na praça (simulados contam), US$ 1 de modelos por rodada, 6 m
 
 | Etapa | O que a sala faz | O que você faz |
 |---|---|---|
-| 1. Entrada (sem relógio) | Escaneia o QR, diz o nome, responde três perguntas de toque (30 s cada) e uma aberta | Espera o número de bonecos parar de subir e toca em **Iniciar a brincadeira** |
+| 1. Entrada (sem relógio) | Escaneia o QR, diz o nome, escolhe um dos 30 bonecos (ou deixa sortear; os que já estão na praça aparecem apagados), responde três perguntas de toque (30 s cada) e uma aberta (1 min) | Espera o número de bonecos parar de subir e toca em **Iniciar a brincadeira** |
 | 2. Conhecer e formar (2:30) | Os bonecos conversam e formam blocos de três; o convite aparece no celular por 12 s e quem não responde conta como sim | Nada: a fase vira sozinha e o maestro agrupa quem sobrou. **Avançar para Compor** se os blocos já fecharam |
-| 3. Compor (2:30) | Cada bloco vota o nome e o refrão (25 s por voto); no voto do nome dá para escrever outro nome | Nada: a fase vira sozinha. Fique de olho nos nomes escritos, que aparecem no telão |
+| 3. Compor (2:30) | Cada bloco vota o nome (1 min, porque dá para escrever outro nome) e o refrão (25 s) | Nada: a fase vira sozinha. Fique de olho nos nomes escritos, que aparecem no telão |
 | 4. Desfile e júri (3:00) | Assiste: um bloco por vez no palco | No cartão **Júri**: **Anterior**/**Próximo** trocam o bloco, **Marcar** até três (marcar já prepara a música), **Tocar**/**Repetir**, **Parar a música**. Depois, **Avançar para Final** |
 | 5. Final (sem relógio) | Vê todos os blocos, os escolhidos primeiro | Toca de novo a música dos escolhidos. Outra rodada: **Reiniciar do zero…**; os celulares abertos entram de novo sozinhos, com o mesmo nome |
 

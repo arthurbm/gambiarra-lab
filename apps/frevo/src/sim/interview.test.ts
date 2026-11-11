@@ -157,6 +157,8 @@ describe("the interview with a person who answers", () => {
     const open = phone(world).ask;
     expect(open?.options).toEqual([]);
     expect(open?.textMaxLength).toBe(80);
+    // Writing takes longer than tapping: a minute.
+    expect(open?.totalMs).toBe(60_000);
 
     world = send(world, {
       askId: open?.id as string,
@@ -277,7 +279,7 @@ describe("the interview with a person who does not answer", () => {
 
   test("the whole interview finishes alone, open question included", () => {
     let personality: PersonalityRequest | undefined;
-    const world = after(arrived(), 150_000, (request) => {
+    const world = after(arrived(), 180_000, (request) => {
       if (request.kind === "personality") {
         personality = request;
       }
@@ -289,8 +291,31 @@ describe("the interview with a person who does not answer", () => {
     expect(phone(world).boneco.instrument).toBe("trombone");
   });
 
-  test("typing in the open question holds the countdown, up to a cap", () => {
+  test("the open question waits a minute, and typing does not stretch it past the cap", () => {
     let world = after(arrived(), 300, writer);
+    for (const choice of [0, 0, 0]) {
+      world = answer(world, choice);
+      world = after(world, 300, writer);
+    }
+    const open = phone(world).ask?.id as string;
+    world = after(world, 50_000);
+    world = send(world, { askId: open, typing: true });
+    world = after(world, 9500);
+    // Still open at 59.5 s: past the half minute of a tap question.
+    expect(phone(world).ask?.id).toBe(open);
+    expect(phone(world).ask?.remainingMs).toBeLessThanOrEqual(500);
+    world = send(world, { askId: open, typing: true });
+    world = after(world, 800);
+    // The cap (60 s) is the minute itself: typing gave no extra time.
+    expect(phone(world).ask).toBeNull();
+  });
+
+  test("typing in the open question holds the countdown, up to a cap above the minute", () => {
+    let world = after(
+      arrived({ openAskMs: 30_000, askTypingCapMs: 60_000 }),
+      300,
+      writer
+    );
     for (const choice of [0, 0, 0]) {
       world = answer(world, choice);
       world = after(world, 300, writer);

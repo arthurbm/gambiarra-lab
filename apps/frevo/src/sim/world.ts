@@ -85,6 +85,23 @@ export interface PhaseClock {
 /** How many looks the art has; a boneco's look is an index into them. */
 export const LOOKS = 30;
 
+/** Whether `value` is a look the art has: a whole number from 0 to LOOKS - 1. */
+export function isLook(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value < LOOKS
+  );
+}
+
+/** The looks the square's bonecos wear, in order; a new boneco avoids them. */
+export function looksInUse(world: World): number[] {
+  return [...new Set(world.bonecos.map((boneco) => boneco.look))].sort(
+    (a, b) => a - b
+  );
+}
+
 export interface Place {
   id: string;
   name: string;
@@ -318,13 +335,16 @@ export interface WorldEvent {
 export interface WorldRules {
   /** Countdown of a question a boneco asks its human, unless it has its own. */
   askMs: number;
-  /** Typing in an open question never stretches its wait past this. */
+  /**
+   * Typing in an open question never stretches its wait past this. At or
+   * below `openAskMs`, typing never stretches an open answer at all.
+   */
   askTypingCapMs: number;
   /** How long a boneco waits for its brain before going on autopilot. */
   decisionTimeoutMs: number;
   /** Events the telão's log keeps. */
   eventsKept: number;
-  /** Countdown of each interview question: people read it on arrival. */
+  /** Countdown of each tap question of the interview: people read it on arrival. */
   interviewAskMs: number;
   /** How long the interview waits for the model before a fixed question. */
   interviewThinkMs: number;
@@ -336,6 +356,11 @@ export interface WorldRules {
   meetCooldownMs: number;
   /** Two bonecos this close (in map units) meet. */
   meetRadius: number;
+  /**
+   * Countdown of a question the person may answer by writing: the interview's
+   * open question and the vote on the bloco's name.
+   */
+  openAskMs: number;
   /** Pause at a place before the next decision. */
   restMs: number;
   speechMaxLength: number;
@@ -343,7 +368,7 @@ export interface WorldRules {
   /** Map units per second. */
   speed: number;
   thoughtsKept: number;
-  /** Countdown of a vote on the bloco's name or refrain. */
+  /** Countdown of a vote with choices only: the refrain and its rework. */
   voteMs: number;
 }
 
@@ -478,6 +503,7 @@ export const DEFAULT_RULES: WorldRules = {
   maxBonecos: 30,
   meetCooldownMs: 30_000,
   meetRadius: 8,
+  openAskMs: 60_000,
   restMs: 1500,
   speechMaxLength: 140,
   speechMs: 6000,
@@ -596,7 +622,8 @@ function newBoneco(
   world: World,
   id: string,
   sessionId: string | null,
-  chosenName?: string | null
+  chosenName?: string | null,
+  chosenLook?: number | null
 ): Boneco {
   const taken = world.bonecos.map((boneco) => boneco.name);
   const lower = (text: string) => text.toLocaleLowerCase("pt-BR");
@@ -608,11 +635,7 @@ function newBoneco(
     count += 1;
   }
   const looks = Array.from({ length: LOOKS }, (_, index) => index);
-  const look = drawUnused(
-    world,
-    looks,
-    world.bonecos.map((boneco) => boneco.look)
-  );
+  const look = chosenLook ?? drawUnused(world, looks, looksInUse(world));
   const x = 10 + roll(world) * (world.map.width - 20);
   const y = 10 + roll(world) * (world.map.height - 20);
   return {
@@ -712,11 +735,13 @@ export function squareFull(world: World): boolean {
  * A person arriving from the phone. The same session always gets the same
  * boneco back, so a reload resumes where it was, even with the square full.
  * `name` is what the person asked to be called (already through
- * `acceptPersonName`); without it the boneco gets a drawn name.
+ * `acceptPersonName`); without it the boneco gets a drawn name. `look` is the
+ * character the person picked (already checked with `isLook` and against
+ * `looksInUse`); without it the boneco gets a drawn one not in use.
  */
 export function join(
   world: World,
-  input: { name?: string | null; sessionId: string }
+  input: { look?: number | null; name?: string | null; sessionId: string }
 ): JoinResult {
   const known = world.bonecos.find(
     (other) => other.sessionId === input.sessionId
@@ -732,7 +757,8 @@ export function join(
     next,
     nextBonecoId(next),
     input.sessionId,
-    input.name
+    input.name,
+    input.look
   );
   next.bonecos.push(boneco);
   return { world: next, bonecoId: boneco.id, created: true, full: false };
@@ -961,7 +987,8 @@ function askOpenQuestion(boneco: Boneco, world: World): Boneco {
     question: OPEN_QUESTION,
     options: [],
     textMaxLength: OPEN_TEXT_MAX_LENGTH,
-    durationMs: world.rules.interviewAskMs,
+    // Writing takes longer than tapping: a minute.
+    durationMs: world.rules.openAskMs,
   });
 }
 

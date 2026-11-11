@@ -1,7 +1,8 @@
 // The phone's data: the session kept in the browser, the arrival, the
 // private stream and the answers. A first visit waits for the person to say
-// their name (or ask for a drawn one) before it enters; the name is kept with
-// the session. A reload finds the session in storage and
+// their name (or ask for a drawn one) and pick a boneco (or let one be drawn)
+// before it enters; both are kept with the session. A boneco someone else took
+// meanwhile sends the person back to the welcome with the name kept. A reload finds the session in storage and
 // gets the same boneco back; a server that forgot the session (a restart)
 // gets it again on the next arrival, and so does one the host restarted. A
 // person the host expelled is told so and stays out, and so is a new person
@@ -15,6 +16,8 @@ import { connectTelaoStream, type StreamStatus } from "../telao/stream";
 const SESSION_KEY = "frevo-sessao";
 /** The name the person gave; a new boneco after a restart gets it again. */
 const NAME_KEY = "frevo-nome";
+/** The boneco the person picked, likewise; absent when they let it be drawn. */
+const LOOK_KEY = "frevo-visual";
 const ENTER_RETRY_MS = 1500;
 
 function stored(key: string): string | null {
@@ -41,14 +44,24 @@ function store(key: string, value: string | null) {
 const FULL = "lotado";
 /** The server refused the name the person typed. */
 const REFUSED = "nome-recusado";
+/** Someone already wears the boneco the person picked. */
+const LOOK_TAKEN = "visual-ocupado";
 type Entered =
+  | { erro: string; kind: typeof LOOK_TAKEN }
   | { erro: string; kind: typeof REFUSED }
   | { kind: "entrou"; sessao: string }
   | { kind: typeof FULL };
 
+/** The look the person picked, kept as text; null lets the world draw one. */
+function storedLook(): number | null {
+  const look = Number(stored(LOOK_KEY) ?? Number.NaN);
+  return Number.isInteger(look) && look >= 0 ? look : null;
+}
+
 async function enter(
   session: string | null,
-  name: string | null
+  name: string | null,
+  look: number | null
 ): Promise<Entered> {
   const response = await fetch("/api/entrar", {
     method: "POST",
@@ -56,6 +69,7 @@ async function enter(
     body: JSON.stringify({
       ...(session ? { sessao: session } : {}),
       ...(name ? { nome: name } : {}),
+      ...(look === null ? {} : { look }),
     }),
   });
   if (response.status === 403 && session) {
@@ -67,12 +81,16 @@ async function enter(
       erro?: string;
       lotado?: boolean;
       nomeRecusado?: boolean;
+      visualOcupado?: boolean;
     };
     if (body.lotado) {
       return { kind: FULL };
     }
     if (body.nomeRecusado) {
       return { kind: REFUSED, erro: body.erro ?? "Tente outro nome." };
+    }
+    if (body.visualOcupado) {
+      return { kind: LOOK_TAKEN, erro: body.erro ?? "Escolha outro boneco." };
     }
   }
   if (!response.ok) {
@@ -81,6 +99,20 @@ async function enter(
   const { sessao } = (await response.json()) as { sessao: string };
   store(SESSION_KEY, sessao);
   return { kind: "entrou", sessao };
+}
+
+/**
+ * Entering again without the person on the welcome (a restart, a server that
+ * forgot the session): when someone else took their boneco meanwhile, a drawn
+ * one is better than a phone stuck outside.
+ */
+async function enterAgain(
+  session: string,
+  name: string | null,
+  look: number | null
+): Promise<Entered> {
+  const entered = await enter(session, name, look);
+  return entered.kind === LOOK_TAKEN ? enter(session, name, null) : entered;
 }
 
 export interface Reply {
@@ -104,6 +136,7 @@ export function useCelular() {
   /** A first visit: nobody enters before saying how they want to be called. */
   const [welcome, setWelcome] = useState(() => stored(SESSION_KEY) === null);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [lookError, setLookError] = useState<string | null>(null);
   const reentering = useRef(false);
   const [status, setStatus] = useState<StreamStatus>("connecting");
   /** When the view arrived, to run the countdown on this phone's clock. */
@@ -111,6 +144,8 @@ export function useCelular() {
   const sessionRef = useRef<string | null>(null);
   /** The name as typed: storage only keeps it for the next visit. */
   const nameRef = useRef<string | null>(stored(NAME_KEY));
+  /** The boneco as picked; null lets the world draw one. */
+  const lookRef = useRef<number | null>(storedLook());
 
   /** Leaving: nothing may enter again with the session being dropped. */
   const leaving = useRef<boolean>(false);
@@ -125,13 +160,23 @@ export function useCelular() {
           // biome-ignore lint/performance/noAwaitInLoops: tries again until the world answers.
           const entered = await enter(
             sessionRef.current ?? stored(SESSION_KEY),
-            nameRef.current
+            nameRef.current,
+            lookRef.current
           );
           if (entered.kind === REFUSED) {
             // Back to the welcome, to pick another name.
             nameRef.current = null;
             store(NAME_KEY, null);
             setNameError(entered.erro);
+            setWelcome(true);
+            arriving.current = null;
+            return;
+          }
+          if (entered.kind === LOOK_TAKEN) {
+            // Back to the welcome, name kept, to pick another boneco.
+            lookRef.current = null;
+            store(LOOK_KEY, null);
+            setLookError(entered.erro);
             setWelcome(true);
             arriving.current = null;
             return;
@@ -169,16 +214,23 @@ export function useCelular() {
     setFull(false);
     setExpelled(false);
     setNameError(null);
+    setLookError(null);
     setWelcome(true);
   }, []);
 
-  /** The welcome's answer: a name, or null for a drawn one. */
+  /**
+   * The welcome's answer: a name, or null for a drawn one, and a look, or
+   * null for a drawn one.
+   */
   const start = useCallback(
-    (name: string | null) => {
+    (name: string | null, look: number | null) => {
       leaving.current = false;
       setNameError(null);
+      setLookError(null);
       nameRef.current = name?.trim() || null;
       store(NAME_KEY, nameRef.current);
+      lookRef.current = look;
+      store(LOOK_KEY, look === null ? null : String(look));
       return arrive();
     },
     [arrive]
@@ -210,7 +262,7 @@ export function useCelular() {
           // Several notices may arrive before the new boneco does.
           if (reentering.current === false) {
             reentering.current = true;
-            enter(session, nameRef.current)
+            enterAgain(session, nameRef.current, lookRef.current)
               .then((result) => setFull(result.kind === FULL))
               .catch(() => undefined)
               .finally(() => {
@@ -227,7 +279,9 @@ export function useCelular() {
         setStatus(next);
         // The server may have restarted and forgotten the session.
         if (next === "reconnecting" && !leaving.current) {
-          enter(session, nameRef.current).catch(() => undefined);
+          enterAgain(session, nameRef.current, lookRef.current).catch(
+            () => undefined
+          );
         }
       },
     });
@@ -295,6 +349,9 @@ export function useCelular() {
     leave,
     /** The name typed last, to fill the welcome again after leaving. */
     lastName: nameRef.current,
+    /** The boneco picked last, likewise; null when it was drawn. */
+    lastLook: lookRef.current,
+    lookError,
     view,
     status,
     reply,

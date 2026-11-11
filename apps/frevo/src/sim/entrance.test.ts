@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
   acceptPersonName,
   createWorld,
+  isLook,
   join,
+  looksInUse,
   PERSON_NAME_MAX_LENGTH,
   PHASES,
   privateView,
@@ -68,6 +70,21 @@ describe("the entrance", () => {
     const { bonecos } = publicSnapshot(world);
     expect(new Set(bonecos.map((boneco) => boneco.name)).size).toBe(9);
     expect(new Set(bonecos.map((boneco) => boneco.look)).size).toBe(9);
+  });
+
+  test("a person may pick a look; the next draw avoids it and the simulated ones still draw", () => {
+    let world = createWorld({ seed: 4, bonecos: 3 });
+    const simulated = looksInUse(world);
+    expect(simulated).toHaveLength(3);
+    const free = [...new Array(30).keys()].find(
+      (look) => !simulated.includes(look)
+    ) as number;
+    ({ world } = join(world, { sessionId: "sessao-1", look: free }));
+    expect(privateView(world, "sessao-1")?.boneco.look).toBe(free);
+    ({ world } = joined(world, "sessao-2"));
+    expect(looksInUse(world)).toHaveLength(5);
+    expect([0, 29].every(isLook)).toBe(true);
+    expect([-1, 30, 1.5, "2", null].some(isLook)).toBe(false);
   });
 
   test("a boneco that arrived before any model gets one when models show up", () => {
