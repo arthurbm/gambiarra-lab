@@ -51,7 +51,7 @@ describe("the prompts on the telão", () => {
       expect(prompt).toContain("cor, raça, etnia, corpo, aparência");
       expect(prompt).toContain("Não use apelido nem gíria");
       expect(prompt).toContain("duplo sentido");
-      expect(prompt).toContain("não comece com oxe");
+      expect(prompt).toContain("não comece com oxe, visse nem bora");
     }
   });
 

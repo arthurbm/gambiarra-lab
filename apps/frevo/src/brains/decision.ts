@@ -253,9 +253,12 @@ const RESPECT = [
   "Nada de duplo sentido. Na dúvida, escolha a palavra mais neutra.",
 ].join(" ");
 
-/** Every boneco on the same telão opened with "Oxe" before this rule. */
+/**
+ * Every boneco on the same telão opened with "Oxe" before this rule, and with
+ * "Bora" once only oxe was forbidden.
+ */
 const OPENINGS =
-  "Varie o começo das frases: não comece com oxe nem visse (use essas palavras no máximo de vez em quando, no meio da frase), porque todos os bonecos falam no mesmo telão e a repetição cansa.";
+  "Varie o começo das frases: não comece com oxe, visse nem bora (use essas palavras no máximo de vez em quando, no meio da frase), porque todos os bonecos falam no mesmo telão e a repetição cansa.";
 
 function persona(name: string): string {
   return [
@@ -305,7 +308,7 @@ function questionMessages(request: QuestionRequest): ChatMessage[] {
         "Você acabou de conhecer o seu humano e quer saber do jeito dele com perguntas rápidas de tocar na tela.",
         `Escreva a próxima pergunta (são ${request.total} ao todo): curta, divertida e com sabor do Recife, sobre gostos, lugares, comidas, músicas e hábitos.`,
         "Escreva só a pergunta: sem número, sem «Pergunta 1» e sem contar quantas faltam.",
-        "Dê duas ou três respostas bem diferentes entre si, cada uma com até quatro palavras e nomeando uma coisa que existe de verdade: uma comida (tapioca, bolo de rolo, cuscuz, caldo de cana, macaxeira, acarajé), um lugar (Boa Viagem, Marco Zero, Olinda, Recife Antigo, Rua da Aurora) ou um ritmo (frevo, maracatu, ciranda, coco, brega, manguebeat). Nada de palavra inventada nem de palavra repetida dentro da mesma resposta.",
+        "Dê duas ou três respostas bem diferentes entre si, cada uma com até quatro palavras e nomeando uma coisa que existe de verdade: uma comida, um lugar, um ritmo ou um hábito do Recife (por exemplo tapioca, bolo de rolo, cuscuz, caldinho, macaxeira, sorvete de tapioca, Boa Viagem, Olinda, Recife Antigo, Casa Amarela, Parque da Jaqueira, frevo, maracatu, ciranda, coco, brega; há muitos outros, varie). As respostas de uma pergunta são do mesmo tipo. Nada de palavra inventada nem de palavra repetida dentro da mesma resposta.",
         "Não peça dados pessoais (nome, idade, onde mora, trabalho) e não repita o tema de uma pergunta anterior.",
         answered(request.previous),
       ].join("\n"),
