@@ -6,7 +6,12 @@
 //
 //   bun run frevo:load -- --url https://<mundo domain> [--phones 25]
 //     [--formar 150] [--compor 150] [--desfile 180]   (seconds)
-//     [--out report.md] [--no-restart] [--no-reset-spending]
+//     [--out report.md] [--no-restart] [--no-reset-spending] [--no-jury]
+//
+// In the desfile it marks three blocos and plays the first one's music, as the
+// host does. With FAL_KEY on the server, each mark spends one of the
+// process's music generations on fal.ai (about US$ 0.15 each); --no-jury skips
+// the jury.
 //
 // The admin secret comes from FREVO_ADMIN_SECRET or from a file
 // (--secret-file, default ~/.config/gambiarra-lab/admin.secret). It is never
@@ -32,6 +37,8 @@ export interface LoadOptions {
   answerMarginMs?: number;
   /** Phase durations to set before starting, in ms. */
   durations?: { compor?: number; desfile?: number; formar?: number };
+  /** Mark three blocos and play one in the desfile (default true). */
+  jury?: boolean;
   log?: (line: string) => void;
   phones: number;
   /** Reset the spending estimate before the run. */
@@ -560,7 +567,8 @@ export async function runLoad(options: LoadOptions): Promise<LoadReport> {
     await waitFor(() => lastTelao?.phase === "compor", timeout, "compor");
     await waitFor(() => lastTelao?.phase === "desfile", timeout, "desfile");
     // The jury: three blocos marked and one music played.
-    const blocos = lastTelao?.desfile?.blocos ?? [];
+    const blocos =
+      options.jury === false ? [] : (lastTelao?.desfile?.blocos ?? []);
     for (const bloco of blocos.slice(0, 3)) {
       // biome-ignore lint/performance/noAwaitInLoops: the host marks one at a time.
       await admin("desfile/escolher", { bloco: bloco.id, escolhido: true });
@@ -793,6 +801,7 @@ if (import.meta.main) {
       ? durations
       : undefined,
     restart: !process.argv.includes("--no-restart"),
+    jury: !process.argv.includes("--no-jury"),
     resetSpending: !process.argv.includes("--no-reset-spending"),
     log: (line) => process.stdout.write(`${line}\n`),
   });
