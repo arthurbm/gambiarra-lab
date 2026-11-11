@@ -65,6 +65,7 @@ The world creates the Room, or reuses the one with the same name (`FREVO_ROOM_NA
 | `OPENROUTER_BASE_URL` | model host | `https://openrouter.ai/api/v1` |
 | `FREVO_FAKE_LATENCY_MS` | model host (fake) | each fake model's own range in the catalog |
 | `FREVO_FAKE_FAILURES` | model host (fake) | on; `0` turns the fake models' errors and unusable answers off |
+| `FREVO_FAKE_LONG_TEXT` | model host (fake) | off; `1` makes the fake models write the longest texts the screens hold (every list full, texts near 60 letters), to rehearse the telão's layout |
 
 ## Modules
 
