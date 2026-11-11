@@ -11,7 +11,9 @@ const TRAILING_SLASH = /\/+$/;
 // Three screens, one page each; no router is needed for that.
 function Screen() {
   const path = window.location.pathname.replace(TRAILING_SLASH, "") || "/";
-  if (path === "/telao/demo") {
+  // The demo's fake bonecos are for rehearsing the layout: development only,
+  // and left out of the production build.
+  if (import.meta.env.DEV && path === "/telao/demo") {
     return <TelaoDemoPage />;
   }
   if (path === "/telao") {

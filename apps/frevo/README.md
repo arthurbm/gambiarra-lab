@@ -208,7 +208,7 @@ The telão draws the square on a canvas at a whole scale (`apps/frevo-web/src/te
 | `apps/frevo-web/src/telao/scene.ts` | The square's tiles and props, built on `PRACA` and the meeting spots |
 | `src/sim/meeting-spots.ts` | Where blocos gather, in map units (`@gambiarra-lab/frevo/meeting-spots`) |
 
-`/telao/demo` runs the simulation in the browser with 30 bonecos and a fake brain, to check the art at full load without a hub (`?blocos` sends them to the meeting spots).
+`/telao/demo` (Vite's dev server only; the production build leaves it out) runs the simulation in the browser with 30 bonecos and a fake brain, to check the art at full load without a hub (`?blocos` sends them to the meeting spots).
 
 ## Credits
 
