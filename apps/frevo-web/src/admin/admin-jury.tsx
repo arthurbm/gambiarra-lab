@@ -47,7 +47,7 @@ export function AdminJury({ state, act }: { act: Act; state: AdminState }) {
   const full = desfile.chosen.length >= desfile.maxChosen;
   const playingId = jury.playing?.url ? jury.playing.blocoId : null;
   return (
-    <section className="admin-card admin-jury">
+    <section className="admin-card">
       <h2>
         Júri: {desfile.chosen.length} de {desfile.maxChosen} escolhidos
       </h2>

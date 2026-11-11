@@ -14,6 +14,7 @@
       "!.agents",
       "!.claude",
       "!.impeccable",
+      "!artifacts",
       "!docs/gambiarra-2026-08-23/evidence",
       "!apps/board/drizzle/meta"
     ]

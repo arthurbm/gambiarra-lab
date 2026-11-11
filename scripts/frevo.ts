@@ -17,6 +17,14 @@ import {
   spawnProcess,
   startHub,
 } from "../apps/frevo/src/testing/processes";
+import {
+  commandOf,
+  type DevRecord,
+  isAlive,
+  readRecord,
+  removeRecord,
+  writeRecord,
+} from "./frevo-pidfile";
 
 const ROOT = resolve(import.meta.dir, "..");
 const WORLD_LISTENING = /Frevo world listening on http:\/\/\S+:(\d+)/;
@@ -218,11 +226,29 @@ async function main() {
   }
   const real = args.includes("--real");
 
+  // One frevo:dev per worktree; frevo:stop finds it by this file.
+  const previous = await readRecord();
+  if (previous && isAlive(previous.pid)) {
+    throw new Error(
+      `frevo:dev already runs in this worktree (pid ${previous.pid}); stop it with bun run frevo:stop`
+    );
+  }
+  const record: DevRecord = {
+    pid: process.pid,
+    // As ps shows it, so frevo:stop can tell this process from a reused pid.
+    command: commandOf(process.pid),
+    cwd: ROOT,
+    groups: [],
+    startedAt: new Date().toISOString(),
+  };
+  await writeRecord(record);
+
   let running: RunningFrevo | undefined;
   let interrupted = false;
   const shutdown = async (exitCode: number) => {
     interrupted = true;
     await running?.stop();
+    await removeRecord(process.pid);
     process.exit(exitCode);
   };
   process.once("SIGINT", () => shutdown(0));
@@ -254,6 +280,8 @@ async function main() {
       await running.stop();
       return;
     }
+    record.groups = [running.hub.pid(), ...running.pids()];
+    await writeRecord(record);
     const pages = running.webUrl ?? running.worldUrl;
     process.stdout.write(
       [
@@ -264,7 +292,7 @@ async function main() {
         `Admin:   ${pages}/admin?k=${adminSecret}`,
         `World:   ${running.worldUrl}/health`,
         `Hub:     ${running.hubUrl}`,
-        "Stop everything: Ctrl+C",
+        "Stop everything: Ctrl+C, or bun run frevo:stop from this worktree",
         "",
       ].join("\n")
     );

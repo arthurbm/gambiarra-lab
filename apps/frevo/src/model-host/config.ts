@@ -24,7 +24,8 @@ const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
 const TRAILING_SLASH = /\/+$/;
 const TRAILING_V1 = /\/v1$/;
 
-async function providerKey(env: Env): Promise<string> {
+/** The inference key, from OPENROUTER_API_KEY or its file. Never logged. */
+export async function providerKey(env: Env): Promise<string> {
   const fromEnv = env.OPENROUTER_API_KEY?.trim();
   if (fromEnv) {
     return fromEnv;

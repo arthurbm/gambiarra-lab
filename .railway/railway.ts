@@ -24,7 +24,7 @@
 //   `railway variable set --stdin`.
 // - Do not run `railway config ...` behind `timeout`, `env` or `bunx`: the SDK
 //   reads `$_` to find the CLI and fails with "requires Railway CLI 5.42.1".
-import { defineRailway, preserve, project, service } from "railway/iac";
+import { defineRailway, github, preserve, project, service } from "railway/iac";
 
 // Virginia: of the four regions, the closest to Recife.
 const REGION = "us-east4-eqdc4a";
@@ -32,6 +32,14 @@ const HUB_PORT = "3000";
 const MODELOS_PORT = "3002";
 const MUNDO_PORT = "3001";
 const ROOM_NAME = "bloco-de-frevo";
+
+// Every service follows main on GitHub: a push that touches a service's watch
+// patterns redeploys it. A redeploy of `mundo` drops the dynamic in memory, and
+// one of `hub` wipes the Rooms, so do not merge to main during a presentation
+// (or `railway service source disconnect --service <name>` before it).
+const SOURCE = github("arthurbm/gambiarra-lab", { branch: "main" });
+// What every image is built from, besides its own Dockerfile.
+const SHARED = ["package.json", "bun.lock", "packages/**"];
 
 // One replica in one region. Sleep (serverless) is off by default.
 function deploy(healthcheckPath: string) {
@@ -47,9 +55,11 @@ export default defineRailway(() => {
     build: {
       builder: "DOCKERFILE",
       dockerfilePath: "deploy/frevo/hub.Dockerfile",
-      // With a GitHub source, the hub rebuilds only when these change.
-      watchPatterns: ["deploy/frevo/hub.Dockerfile", "bun.lock", ".railway/**"],
+      // The hub rebuilds only when its own image changes. This file is not
+      // in the list: the CLI applies it, a deploy does not read it.
+      watchPatterns: ["deploy/frevo/hub.Dockerfile", "bun.lock"],
     },
+    source: SOURCE,
     deploy: deploy("/v1/health"),
     env: {
       // The hub ignores PORT; CMD passes HUB_PORT by flag. PORT repeats it
@@ -70,7 +80,14 @@ export default defineRailway(() => {
     build: {
       builder: "DOCKERFILE",
       dockerfilePath: "deploy/frevo/modelos.Dockerfile",
+      watchPatterns: [
+        "apps/frevo/**",
+        "deploy/frevo/modelos.Dockerfile",
+        "deploy/frevo/secrets-entrypoint.sh",
+        ...SHARED,
+      ],
     },
+    source: SOURCE,
     // 200 while the process runs; the body says how many participants joined.
     deploy: deploy("/health"),
     env: {
@@ -90,7 +107,15 @@ export default defineRailway(() => {
     build: {
       builder: "DOCKERFILE",
       dockerfilePath: "deploy/frevo/mundo.Dockerfile",
+      watchPatterns: [
+        "apps/frevo/**",
+        "apps/frevo-web/**",
+        "deploy/frevo/mundo.Dockerfile",
+        "deploy/frevo/secrets-entrypoint.sh",
+        ...SHARED,
+      ],
     },
+    source: SOURCE,
     deploy: deploy("/health"),
     env: {
       GAMBI_HUB_URL: hubUrl,
@@ -112,12 +137,3 @@ export default defineRailway(() => {
 
   return project("bloco-de-frevo", { resources: [hub, modelos, mundo] });
 });
-
-// After the merge to main (ticket #21), make each service follow main, from
-// the CLI and without editing this file (it deploys main right away):
-//
-//   railway service source connect --repo arthurbm/gambiarra-lab --branch main --service hub
-//
-// or here, with `import { github } from "railway/iac"`:
-//
-//   source: github("arthurbm/gambiarra-lab", { branch: "main" }),

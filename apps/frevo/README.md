@@ -18,7 +18,10 @@ From the repository root:
 bun install
 bun run frevo:dev             # hub + world + model host + web, fake models
 bun run frevo:dev -- --real   # same, with models from OpenRouter (spends money)
+bun run frevo:stop            # stops the frevo:dev of this worktree, from another shell
 ```
+
+`frevo:dev` writes `.frevo-dev.json` at the worktree root (its pid, its command and its children's process groups) and refuses to start while that run is alive. `frevo:stop` sends SIGTERM to that pid, so the run stops its children in order, and kills what is left after 15 s. A pidfile whose process is gone signals nothing: it is removed and any recorded group still alive is only reported. Matching processes by name would also stop another worktree's run.
 
 The telão is at `http://localhost:3201/telao` and the phone at `http://localhost:3201/`. The QR on the telão points at `FREVO_PUBLIC_URL`, or at the telão's own address; to scan it from a real phone in development, open the telão by the Network address Vite prints. `PORT` (world, 3200), `FREVO_WEB_PORT` (web, 3201) and `FREVO_HUB_PORT` (hub, 3210) move the ports; 0 asks the OS for a free one. `--no-web` skips Vite; the world then serves `apps/frevo-web/dist` when it was built.
 
@@ -31,6 +34,28 @@ bun test apps/frevo/src apps/frevo-web/src
 ```
 
 `frevo:smoke` builds the web, starts everything on free ports and checks, one line per step: the Room and its model participants, the web served by the world, a boneco deciding by a model, the model host dying (autopilot) and coming back, the hub restarting (new Room, the host joins again) and the telão reconnecting. `FREVO_SMOKE_VERBOSE=1` streams the children's output.
+
+### What the models write
+
+```bash
+bun run frevo:text-check -- --fake --burst 12        # dry run with the fake models: no key, no spending
+bun run frevo:text-check                             # the stage models through a hub (spends money)
+bun run frevo:text-check -- --burst 20 --concurrency 10 --out texts.json
+```
+
+Run it whenever a prompt (`src/brains/`), the catalog (`src/models/catalog.ts`) or the filter (`src/sim/blocklist.ts`) changes. One model at a time per participant, as on stage, it asks each model for tap questions, refrains and one line of every other kind, and counts per model the valid answers, blocked terms, a leaked "Pergunta 2 de 3" before and after cleaning, and lines that open with "Oxe" or "Bora". `--out` keeps every text for a person to read, since nonsense has no regex. `--burst N` then sends N decisions per model at once to the provider proxy (at most `--concurrency` open per model) and counts HTTP errors, answers without a usable tool call and network errors, with the reasons: that is how a model that passes one call at a time shows it fails under load (MiniMax M3, routed to another provider under load, answered 16 of 21 calls of a burst without a tool call before anyone saw it). Models are named as `model:participants` after the flags; the default is the stage.
+
+Cost, estimated from the US$ 0.000125 per decision measured on 2026-11-11 (refrains cost more): the default run is about 110 decisions, a few cents; a burst of 20 per model adds about 100 decisions. `FREVO_REAL_CHECK_BUDGET_USD` (default 0.15) stops both when the providers' reported cost reaches it. Check the balance before and after with `frevo:spend`.
+
+### What is left to spend
+
+```bash
+bun run frevo:spend   # account balance and this key's usage and limit; never prints a key
+```
+
+It prints the account's real balance (`GET /api/v1/credits`: purchased, used, remaining) and the key's usage and limit (`GET /api/v1/key`). They are different numbers: a key with a US$ 50 limit on an account with US$ 3.55 left stops at US$ 3.55, and reading the limit as the balance is how an agent once reported "US$ 49 left". The inference key comes as in `--real`. OpenRouter's documentation says `GET /credits` needs a management key: put one in `OPENROUTER_MANAGEMENT_KEY` or `~/.config/gambiarra-lab/openrouter-management.key` (`OPENROUTER_MANAGEMENT_KEY_FILE` moves it). Without the balance the script says "unknown" and exits 1.
+
+To cap what one agent or one rehearsal can spend, give it its own key with a limit instead of the event's key. With a management key, OpenRouter's key API (checked against its API reference on 2026-11-11) creates one: `POST https://openrouter.ai/api/v1/keys` with `Authorization: Bearer <management key>` and a body like `{ "name": "agente-ensaio", "limit": 0.5, "limit_reset": null, "expires_at": "2026-11-12T23:59:59Z" }` (`name` is required; `limit` is in US$; `limit_reset` is `daily`, `weekly`, `monthly` or null; `expires_at` needs seconds). The answer carries the plaintext `key` once, at the top level, and `data.hash`; `DELETE /api/v1/keys/<hash>` removes it. Write the key to a file with mode 600 and point `OPENROUTER_API_KEY_FILE` at it, never into a chat or a log. The key's limit still sits under the account balance.
 
 ## The three processes
 
@@ -95,6 +120,8 @@ The web keeps the data flow apart from the drawing: `telao/stream.ts` keeps the 
 ## Deploy
 
 Three services from this repository, on Railway (project `bloco-de-frevo`, environment `production`, region `us-east4-eqdc4a`) and in `docker compose` on a notebook as plan B.
+
+The Bloco de frevo is the one exception to the lab's trusted-local-network rule (`AGENTS.md`, rule 6): it runs in public because the audience joins from their own phones over the internet. It keeps to the rule's spirit: the hub and the model host live only on Railway's private network (the hub never gets a public domain), the inference provider's key (OpenRouter) exists only in the model host, and the world server, the only public service, holds only the admin's secret (`FREVO_ADMIN_SECRET`, which the admin needs) and the fal.ai key for the music (`FAL_KEY`).
 
 | Service | Dockerfile | Network | Health | Secrets |
 |---|---|---|---|---|
@@ -163,9 +190,10 @@ railway logs --service mundo --build --lines 200 | grep -A1 -i healthcheck
 curl -s https://<mundo domain>/health    # room, participants, bonecos, viewers
 ```
 
-The deploy follows the working directory for now. After the merge to `main` (ticket #21), make each service follow `main`. Connecting deploys `main` right away, and without `watchPatterns` every push redeploys (a hub redeploy wipes the Rooms; do not merge during the show):
+Every service follows `main` on GitHub (`source` in `.railway/railway.ts`): a push to `main` that touches a service's `watchPatterns` redeploys it; the hub rebuilds only when its own Dockerfile or `bun.lock` change. `railway up` above stays as the manual deploy. A redeploy of `mundo` drops the dynamic in memory and one of `hub` wipes the Rooms, so before a show do not merge to `main`, or detach the source and connect it again afterwards:
 
 ```bash
+for s in hub modelos mundo; do railway service source disconnect --service "$s"; done
 for s in hub modelos mundo; do
   railway service source connect --repo arthurbm/gambiarra-lab --branch main --service "$s"
 done

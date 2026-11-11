@@ -92,9 +92,7 @@ function Countdown({
       <div className="celular-countdown-bar">
         <span style={{ width: `${share * 100}%` }} />
       </div>
-      <span className="celular-countdown-text">
-        {countdownText(seconds, vote)}
-      </span>
+      <span>{countdownText(seconds, vote)}</span>
     </div>
   );
 }
