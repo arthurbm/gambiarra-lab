@@ -234,7 +234,11 @@ async function main() {
 
   try {
     running = await startFrevo({
-      env: { FREVO_ADMIN_SECRET: adminSecret },
+      env: {
+        FREVO_ADMIN_SECRET: adminSecret,
+        // One boneco walks on its own, so the telão moves before anyone joins.
+        FREVO_BONECOS: process.env.FREVO_BONECOS?.trim() || "1",
+      },
       host: process.env.HOST?.trim() || "0.0.0.0",
       onLine: prefixed,
       ports: {

@@ -49,7 +49,8 @@ The world creates the Room, or reuses the one with the same name (`FREVO_ROOM_NA
 | `GAMBI_HUB_URL` | world, model host | `http://127.0.0.1:3210` |
 | `FREVO_ROOM_NAME` | world, model host | `bloco-de-frevo` |
 | `PORT`, `HOST` | world | `3200`, `::` (IPv6 and IPv4) |
-| `FREVO_BONECOS` | world | `1` simulated boneco |
+| `FREVO_BONECOS` | world | `0`: bonecos with nobody behind them, walking on their own (`frevo:dev` asks for `1`) |
+| `FREVO_MAX_BONECOS` | world | `30`: bonecos the square holds; a new phone then reads "A praça lotou" |
 | `FREVO_DECISION_TIMEOUT_MS` | world | `12000` |
 | `FREVO_ADMIN_SECRET` | world | drawn at start and printed as `/admin?k=<secret>` |
 | `FREVO_BUDGET_USD` | world | `1`: estimated session spending that puts every boneco on autopilot |

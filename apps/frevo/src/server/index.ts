@@ -42,7 +42,9 @@ const server = startWorldServer({
   roomName: process.env.FREVO_ROOM_NAME?.trim() || DEFAULT_ROOM_NAME,
   host,
   port: integer("PORT", 3200, 0),
-  bonecos: integer("FREVO_BONECOS", 1, 0),
+  // A deploy starts with an empty square: a boneco with nobody behind it
+  // would join a bloco and parade. frevo:dev and the smoke ask for theirs.
+  bonecos: integer("FREVO_BONECOS", 0, 0),
   rules: {
     maxBonecos: integer("FREVO_MAX_BONECOS", DEFAULT_RULES.maxBonecos, 1),
     decisionTimeoutMs: integer(

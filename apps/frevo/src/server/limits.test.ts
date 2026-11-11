@@ -77,3 +77,23 @@ describe("the square's ceiling", () => {
     expect(filled.people.simulated).toBe(2);
   });
 });
+
+describe("a world server that just started", () => {
+  test("has no boneco without a person unless asked for one", async () => {
+    const empty = startWorldServer({
+      hubUrl: "http://127.0.0.1:9",
+      roomName: "bloco-vazio",
+      host: "127.0.0.1",
+      port: 0,
+      seed: 1,
+    });
+    try {
+      const health = (await (await fetch(`${empty.url}/health`)).json()) as {
+        bonecos: number;
+      };
+      expect(health.bonecos).toBe(0);
+    } finally {
+      await empty.stop();
+    }
+  });
+});

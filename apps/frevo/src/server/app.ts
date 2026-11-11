@@ -38,7 +38,7 @@ import {
 export interface WorldServerOptions {
   /** `Authorization: Bearer <secret>` opens /api/admin/*; without it they stay closed. */
   adminSecret?: string;
-  /** Simulated bonecos in the square. */
+  /** Bonecos with no person behind them, walking on their own; 0 by default. */
   bonecos?: number;
   /** Estimated session spending after which every boneco goes on autopilot. */
   ceilingUsd?: number;
@@ -129,7 +129,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
 
   let world = createWorld({
     seed: options.seed ?? Date.now(),
-    bonecos: options.bonecos ?? 1,
+    bonecos: options.bonecos ?? 0,
     rules,
   });
   let roomCode: string | null = null;
