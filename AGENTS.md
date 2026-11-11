@@ -20,7 +20,8 @@ bun install
 bun run dev:hub              # gambi hub serve (published CLI)
 bun run dev:board            # board server
 bun run dev:board-web        # board web
-bun run board:e2e            # full event with fake harnesses, ephemeral DB
+bun run board:e2e            # full event with fake harnesses, ephemeral DB; runs until SIGINT
+bun run board:smoke          # runtime proof on free ports that exits 0/1 on its own
 bun run check-types
 bun run test
 bun x ultracite fix          # format before committing

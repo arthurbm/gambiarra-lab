@@ -51,7 +51,9 @@ bun run check-types
 bun run test
 ```
 
-`bun run board:e2e` roda o evento completo com harnesses falsos e banco efêmero, sem chamar modelo. Os harnesses `fake` rodam `scripts/fake-acp-agent.ts`, que chama o `runFakeAcpAgent()` do `gambi-sdk`. `bun run event` é a versão com OpenCode de verdade.
+`bun run board:e2e` roda o evento completo com harnesses falsos, banco e workspaces efêmeros, sem chamar modelo, nas portas do evento (3000, 3001, 3002), e fica rodando até Ctrl+C. Os harnesses `fake` rodam `scripts/fake-acp-agent.ts`, que chama o `runFakeAcpAgent()` do `gambi-sdk`. `bun run event` é a versão com OpenCode de verdade.
+
+`bun run board:smoke` sobe o mesmo evento em portas livres, percorre harness hospedado, harness trazido pela pessoa e orquestrador, imprime um resumo por passo e termina sozinho: sai 0 se tudo passou e 1 no primeiro passo que falhar. Duas execuções podem rodar ao mesmo tempo.
 
 Antes de commitar, rode `bun x ultracite fix`.
 

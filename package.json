@@ -23,6 +23,7 @@
   },
   "scripts": {
     "board:e2e": "bun scripts/event.ts --fake --ephemeral",
+    "board:smoke": "bun scripts/board-smoke.ts",
     "build": "turbo run build",
     "check": "ultracite check",
     "check-types": "turbo run check-types",

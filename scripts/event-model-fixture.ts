@@ -19,8 +19,9 @@ function requireEnv(name: string): string {
 
 function readConfig(): FixtureConfig {
   const port = Number(requireEnv("FIXTURE_PORT"));
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new Error("FIXTURE_PORT must be an integer from 1 to 65535");
+  // 0 asks the OS for a free port; the ready line prints the real endpoint.
+  if (!Number.isInteger(port) || port < 0 || port > 65_535) {
+    throw new Error("FIXTURE_PORT must be an integer from 0 to 65535");
   }
   return {
     hubUrl: requireEnv("GAMBI_HUB_URL"),
