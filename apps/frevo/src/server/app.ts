@@ -535,6 +535,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       headers: {
         "Content-Type": file.type,
         "Cache-Control": "public, max-age=86400, immutable",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   }

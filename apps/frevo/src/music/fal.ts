@@ -71,6 +71,8 @@ export interface FalMusicOptions {
   files: MusicFiles;
   key: string;
   log?: (line: string) => void;
+  /** Largest audio kept; a longer download is cut off. */
+  maxAudioBytes?: number;
   /** Generations (fal.ai requests) for the life of the server. */
   maxGenerations?: number;
   pollMs?: number;
@@ -140,24 +142,91 @@ function stepClock(step: Step) {
   };
 }
 
-/** The audio, downloaded; the audio host needs no key, so it never gets one. */
+const AUDIO_TYPE = /^audio\/[\w.+-]+/i;
+/** A generic binary type some file hosts send; accepted only if it starts like an MP3. */
+const OCTET_STREAM = /^(application|binary)\/octet-stream/i;
+
+/** An ID3 tag or an MPEG audio frame sync, how every MP3 begins. */
+function looksLikeMp3(bytes: Uint8Array): boolean {
+  const [a = 0, b = 0, c = 0] = bytes;
+  const id3 = a === 0x49 && b === 0x44 && c === 0x33;
+  return id3 || (a === 0xff && (b & 0xe0) === 0xe0);
+}
+
+/** The body, read until it passes `max` bytes; null when it does. */
+async function readAtMost(
+  response: Response,
+  max: number
+): Promise<Uint8Array | null> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return new Uint8Array();
+  }
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  for (;;) {
+    // biome-ignore lint/performance/noAwaitInLoops: a stream is read chunk by chunk.
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    length += value.length;
+    if (length > max) {
+      await reader.cancel().catch(() => undefined);
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return bytes;
+}
+
+/**
+ * The audio, downloaded; the audio host needs no key, so it never gets one.
+ * Its size is checked before and during the read, and only audio is kept.
+ */
 async function download(
   step: Step,
   url: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  maxBytes: number
 ): Promise<MusicFile> {
   const audio = await fetch(url, { signal });
   if (!audio.ok) {
+    await audio.body?.cancel().catch(() => undefined);
     throw new StepFailure(
       `${step.label}: o áudio não baixou (HTTP ${audio.status})`
     );
   }
-  const bytes = new Uint8Array(await audio.arrayBuffer());
-  if (bytes.length === 0 || bytes.length > MAX_AUDIO_BYTES) {
-    throw new StepFailure(`${step.label}: áudio de tamanho inválido`);
+  const declared = audio.headers.get("content-type") ?? "";
+  const isAudio = AUDIO_TYPE.test(declared);
+  if (!(isAudio || OCTET_STREAM.test(declared))) {
+    await audio.body?.cancel().catch(() => undefined);
+    throw new StepFailure(`${step.label}: o arquivo não é áudio`);
   }
-  const type = audio.headers.get("content-type") ?? "";
-  return { bytes, type: type.startsWith("audio/") ? type : "audio/mpeg" };
+  if (Number(audio.headers.get("content-length") ?? 0) > maxBytes) {
+    await audio.body?.cancel().catch(() => undefined);
+    throw new StepFailure(`${step.label}: áudio grande demais`);
+  }
+  const bytes = await readAtMost(audio, maxBytes);
+  if (!bytes) {
+    throw new StepFailure(`${step.label}: áudio grande demais`);
+  }
+  if (bytes.length === 0) {
+    throw new StepFailure(`${step.label}: áudio vazio`);
+  }
+  if (isAudio) {
+    return { bytes, type: (AUDIO_TYPE.exec(declared) as RegExpExecArray)[0] };
+  }
+  if (!looksLikeMp3(bytes)) {
+    throw new StepFailure(`${step.label}: o arquivo não é áudio`);
+  }
+  return { bytes, type: "audio/mpeg" };
 }
 
 export function createFalMusic(options: FalMusicOptions): FalMusic {
@@ -166,6 +235,7 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
   const queueOrigin = new URL(queueUrl).origin;
   const pollMs = options.pollMs ?? 1500;
   const max = options.maxGenerations ?? DEFAULT_MAX_GENERATIONS;
+  const maxAudioBytes = options.maxAudioBytes ?? MAX_AUDIO_BYTES;
   const log = options.log ?? (() => undefined);
   const timeouts = { ...DEFAULT_TIMEOUTS_MS, ...options.timeoutsMs };
   const headers = {
@@ -257,7 +327,7 @@ export function createFalMusic(options: FalMusicOptions): FalMusic {
     if (!audioUrl) {
       throw new StepFailure(`${step.label} não devolveu áudio`);
     }
-    return download(step, audioUrl, clock.signal());
+    return download(step, audioUrl, clock.signal(), maxAudioBytes);
   }
 
   function cancel(url: string | undefined) {

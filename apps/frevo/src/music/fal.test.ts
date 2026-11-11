@@ -207,6 +207,80 @@ describe("the ceiling", () => {
   });
 });
 
+describe("the download", () => {
+  const LIMIT = 256 * 1024;
+
+  test("an audio that says it is too big is refused", async () => {
+    const { music } = setup(
+      {
+        minimax: { kind: "ok", audio: { size: LIMIT + 1 } },
+        elevenlabs: { kind: "refused" },
+      },
+      { maxAudioBytes: LIMIT }
+    );
+    await expect(music.generate(INPUT)).rejects.toThrow(
+      "MiniMax: áudio grande demais"
+    );
+  });
+
+  test("an audio with no length is cut off once it passes the limit", async () => {
+    const { music } = setup(
+      {
+        minimax: { kind: "ok", audio: { size: LIMIT * 8, chunked: true } },
+        elevenlabs: { kind: "refused" },
+      },
+      { maxAudioBytes: LIMIT }
+    );
+    await expect(music.generate(INPUT)).rejects.toThrow(
+      "MiniMax: áudio grande demais"
+    );
+  });
+
+  test("anything that is not audio is refused", async () => {
+    const { music } = setup({
+      minimax: { kind: "ok", audio: { type: "text/html" } },
+      elevenlabs: { kind: "refused" },
+    });
+    await expect(music.generate(INPUT)).rejects.toThrow(
+      "MiniMax: o arquivo não é áudio"
+    );
+  });
+
+  test("a generic binary type is kept only when it starts like an MP3", async () => {
+    const mp3 = setup({
+      minimax: { kind: "ok", audio: { type: "application/octet-stream" } },
+    });
+    const { url } = await mp3.music.generate(INPUT);
+    expect(mp3.files.get(url)?.type).toBe("audio/mpeg");
+    mp3.fake.stop();
+
+    const zeros = setup({
+      minimax: {
+        kind: "ok",
+        audio: { type: "application/octet-stream", size: 64 },
+      },
+      elevenlabs: { kind: "refused" },
+    });
+    await expect(zeros.music.generate(INPUT)).rejects.toThrow(
+      "MiniMax: o arquivo não é áudio"
+    );
+  });
+
+  test("an audio within the limit is kept whole", async () => {
+    const { files, music } = setup(
+      {
+        minimax: {
+          kind: "ok",
+          audio: { size: LIMIT, chunked: true, type: "audio/mpeg" },
+        },
+      },
+      { maxAudioBytes: LIMIT }
+    );
+    const { url } = await music.generate(INPUT);
+    expect(files.get(url)?.bytes.length).toBe(LIMIT);
+  });
+});
+
 describe("the key", () => {
   test("goes only to the queue's own origin, never to a url the answer points elsewhere", async () => {
     const elsewhere: (string | null)[] = [];

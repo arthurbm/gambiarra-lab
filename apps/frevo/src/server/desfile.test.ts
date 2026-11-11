@@ -233,6 +233,7 @@ describe("the desfile through the world server", () => {
     const copy = await fetch(`${server.url}${track?.url}`);
     expect(copy.status).toBe(200);
     expect(copy.headers.get("content-type")).toStartWith("audio/mpeg");
+    expect(copy.headers.get("x-content-type-options")).toBe("nosniff");
     expect(new Uint8Array(await copy.arrayBuffer())).toEqual(FAKE_AUDIO);
     expect((await fetch(`${server.url}/api/musica/0000.mp3`)).status).toBe(404);
 

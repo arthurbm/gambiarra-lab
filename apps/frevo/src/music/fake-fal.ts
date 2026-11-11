@@ -3,8 +3,8 @@
 // refused or never finishing. It never touches the network.
 
 export type FakeFalBehavior =
-  /** Completes after `ms` with an audio file. */
-  | { kind: "ok"; ms?: number }
+  /** Completes after `ms` with an audio file, of this type and size if given. */
+  | { kind: "ok"; ms?: number; audio?: FakeAudio }
   /** Completes after `ms`, and the result answers this HTTP status (fal's 504). */
   | { kind: "error"; ms?: number; status?: number }
   /** Stays IN_PROGRESS forever. */
@@ -13,6 +13,13 @@ export type FakeFalBehavior =
   | { kind: "refused"; status?: number }
   /** The status answers something that is not JSON this many times, then completes. */
   | { kind: "garbled"; failures: number };
+
+export interface FakeAudio {
+  /** Streamed in chunks with no Content-Length, so only reading tells its size. */
+  chunked?: boolean;
+  size?: number;
+  type?: string;
+}
 
 export interface FakeFalRequest {
   authorization: string | null;
@@ -52,6 +59,33 @@ function isDone({ behavior, at }: Started): boolean {
     return false;
   }
   return Date.now() - at >= (behavior.ms ?? 0);
+}
+
+function audioAnswer(audio: FakeAudio = {}): Response {
+  const headers = { "Content-Type": audio.type ?? "audio/mpeg" };
+  if (audio.size === undefined) {
+    return new Response(FAKE_AUDIO, { headers });
+  }
+  const size = audio.size;
+  if (!audio.chunked) {
+    return new Response(new Uint8Array(size), { headers });
+  }
+  const chunk = 64 * 1024;
+  let sent = 0;
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent >= size) {
+          controller.close();
+          return;
+        }
+        const length = Math.min(chunk, size - sent);
+        sent += length;
+        controller.enqueue(new Uint8Array(length));
+      },
+    }),
+    { headers }
+  );
 }
 
 /** Status, cancel or result of a queued request. */
@@ -137,10 +171,12 @@ export function startFakeFal(options: {
     port: 0,
     fetch(request): Promise<Response> | Response {
       const { pathname, origin } = new URL(request.url);
-      if (FILE.test(pathname) && request.method === "GET") {
-        return new Response(FAKE_AUDIO, {
-          headers: { "Content-Type": "audio/mpeg" },
-        });
+      const file = FILE.exec(pathname);
+      if (file && request.method === "GET") {
+        const behavior = started.get(file[1] ?? "")?.behavior;
+        return audioAnswer(
+          behavior?.kind === "ok" ? behavior.audio : undefined
+        );
       }
       const queued = QUEUED.exec(pathname);
       if (queued) {
