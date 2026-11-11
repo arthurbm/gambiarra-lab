@@ -244,11 +244,45 @@
 
 /* The models section comes from the models ticket; fit it to the card look. */
 .admin .admin-models {
+  min-width: 0;
   max-width: none;
   padding: 0.9rem;
-  overflow-x: auto;
   background: var(--night-soft);
   border-radius: 14px;
+}
+
+/* One model per row, so the list fits a phone without scrolling sideways. */
+.admin-models-list {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-models-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-models-list li[data-off="true"] strong {
+  opacity: 0.6;
+}
+
+.admin-models-list div {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-models-list strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-models-list small {
+  font-size: 0.8rem;
+  opacity: 0.8;
 }
 
 .admin .admin-models button {
@@ -260,4 +294,84 @@
 .admin-boneco .admin-confirm {
   grid-column: 1 / -1;
   justify-content: flex-end;
+}
+
+/* The jury. */
+.admin-sound {
+  padding: 0.5rem 0.7rem;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--red);
+  border-radius: 10px;
+}
+
+.admin-sound[data-on="true"] {
+  color: var(--ink);
+  background: #3bceac;
+}
+
+.admin-jury-stage {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-jury-stage .admin-main-buttons {
+  grid-template-columns: 1fr 1fr;
+}
+
+.admin-jury-blocos {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-jury-blocos li {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--night);
+  border-left: 0.45rem solid var(--bloco, var(--yellow));
+  border-radius: 8px;
+}
+
+.admin-jury-blocos li[data-current="true"] {
+  outline: 2px solid var(--yellow);
+}
+
+.admin-jury-name {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-jury-name strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-jury-name small {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.admin-jury-actions {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 0.4rem;
+}
+
+.admin-jury-actions button {
+  min-height: 2.9rem;
+  padding: 0.4rem 0.6rem;
+}
+
+/* A bloco not chosen fits one line: its name, then "Marcar". */
+.admin-jury-blocos li[data-chosen="false"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.admin-jury-blocos li[data-chosen="false"] .admin-jury-actions button {
+  min-width: 6.5rem;
 }

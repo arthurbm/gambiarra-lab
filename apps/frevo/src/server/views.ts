@@ -1,18 +1,46 @@
 // What the world server sends to each screen, beyond the simulation's own
 // views: the phase clock on the telão and the phones, the phone's notices,
 // and the host's state on the admin. The web imports these types.
+import type { PlayCommand, SoundStatus, TrackStatus } from "../music/jukebox";
+import {
+  type DesfileView,
+  desfileView,
+  type PhoneDesfile,
+  phoneDesfile,
+} from "../sim/desfile";
 import { type PhaseStatus, phaseStatus } from "../sim/phases";
 import {
   type PrivateView,
   type PublicSnapshot,
+  privateView,
   publicSnapshot,
   type World,
 } from "../sim/world";
 
+export type { PlayCommand, SoundStatus, TrackStatus } from "../music/jukebox";
+export type {
+  DesfileBloco,
+  DesfileMember,
+  DesfileView,
+  PhoneDesfile,
+} from "../sim/desfile";
 export type { PhaseStatus } from "../sim/phases";
 
-export type TelaoSnapshot = PublicSnapshot & { clock: PhaseStatus };
-export type PhoneView = PrivateView & { clock: PhaseStatus };
+/** What the telão plays, with how long ago the host asked for it. */
+export type TelaoAudio = PlayCommand & { ageMs: number };
+
+export type TelaoSnapshot = PublicSnapshot & {
+  /** The music the host last played or stopped; null before any. */
+  audio?: TelaoAudio | null;
+  clock: PhaseStatus;
+  /** The parade and the jury, in the desfile and the final. */
+  desfile: DesfileView | null;
+};
+export type PhoneView = PrivateView & {
+  clock: PhaseStatus;
+  /** The person's bloco in the desfile and the final. */
+  desfile: PhoneDesfile | null;
+};
 /** What a phone's stream carries: its view, or why it has none. */
 export type PhoneEvent =
   | PhoneView
@@ -41,9 +69,20 @@ export interface Spending {
   spentUsd: number;
 }
 
+/** The jury's section of the admin. */
+export interface AdminJury {
+  desfile: DesfileView | null;
+  /** The last command sent to the telão. */
+  playing: PlayCommand | null;
+  sound: SoundStatus;
+  /** The music of each bloco the host chose, by bloco id. */
+  tracks: Record<string, TrackStatus>;
+}
+
 export interface AdminState {
   bonecos: AdminBoneco[];
   clock: PhaseStatus;
+  jury: AdminJury;
   people: {
     /** Phones of real people with the stream open now. */
     connected: number;
@@ -56,7 +95,23 @@ export interface AdminState {
 }
 
 export function telaoSnapshot(world: World): TelaoSnapshot {
-  return { ...publicSnapshot(world), clock: phaseStatus(world) };
+  return {
+    ...publicSnapshot(world),
+    clock: phaseStatus(world),
+    desfile: desfileView(world),
+  };
+}
+
+/** One person's phone, by session; null for a session the world does not know. */
+export function phoneView(world: World, sessionId: string): PhoneView | null {
+  const view = privateView(world, sessionId);
+  return view
+    ? {
+        ...view,
+        clock: phaseStatus(world),
+        desfile: phoneDesfile(world, view.boneco.id),
+      }
+    : null;
 }
 
 export function adminState(
@@ -64,6 +119,7 @@ export function adminState(
   input: {
     connected: (sessionId: string) => boolean;
     isSimulated: (sessionId: string) => boolean;
+    jury?: Omit<AdminJury, "desfile">;
     spending: Spending | null;
   }
 ): AdminState {
@@ -93,5 +149,11 @@ export function adminState(
     },
     bonecos,
     spending: input.spending,
+    jury: {
+      desfile: desfileView(world),
+      playing: input.jury?.playing ?? null,
+      sound: input.jury?.sound ?? { enabled: false, playing: null },
+      tracks: input.jury?.tracks ?? {},
+    },
   };
 }

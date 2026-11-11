@@ -3,7 +3,14 @@
 // closed. The state stream is read with fetch, so the secret never goes in a
 // URL the browser or a proxy might log.
 import { timingSafeEqual } from "node:crypto";
+import type { Jukebox } from "../music/jukebox";
 import { expel, setSilenced } from "../sim/admin";
+import {
+  desfileView,
+  nextBloco,
+  previousBloco,
+  setChosen,
+} from "../sim/desfile";
 import {
   advancePhase,
   restartWorld,
@@ -20,6 +27,8 @@ export interface AdminContext {
   connected: (sessionId: string) => boolean;
   /** The person behind this session was expelled: tell the phone, keep it out. */
   expelled: (sessionId: string) => void;
+  /** The jury's music; without it the jury's audio routes answer 404. */
+  jukebox?: Jukebox;
   log: (line: string) => void;
   /** Routes other tickets add under /api/admin/*, after the secret was checked. */
   otherRoutes?: (
@@ -88,6 +97,15 @@ export function createAdminApi(context: AdminContext): AdminApi {
       connected: context.connected,
       isSimulated: context.simulated.isSimulated,
       spending: context.spending(),
+      ...(context.jukebox
+        ? {
+            jury: {
+              playing: context.jukebox.current(),
+              sound: context.jukebox.sound(),
+              tracks: context.jukebox.tracks(),
+            },
+          }
+        : {}),
     });
   }
 
@@ -161,6 +179,43 @@ export function createAdminApi(context: AdminContext): AdminApi {
     return Response.json({ erro: "boneco não encontrado" }, { status: 404 });
   }
 
+  /** A bloco of the parade, by the body's `bloco`. */
+  function paradeBloco(world: World, input: Record<string, unknown>) {
+    return desfileView(world)?.blocos.find((bloco) => bloco.id === input.bloco);
+  }
+
+  function choose(world: World, input: Record<string, unknown>): Response {
+    const id = typeof input.bloco === "string" ? input.bloco : "";
+    const chosen = input.escolhido !== false;
+    const result = setChosen(world, id, chosen);
+    if (result.error) {
+      return Response.json({ erro: result.error }, { status: 409 });
+    }
+    const bloco = paradeBloco(result.world, input);
+    if (chosen && bloco) {
+      // The music is made in the background while the desfile goes on.
+      context.jukebox?.prepare({
+        blocoId: bloco.id,
+        blocoName: bloco.name,
+        refrain: bloco.refrain,
+      });
+    }
+    return change(result.world, `${chosen ? "chose" : "unchose"} ${id}`);
+  }
+
+  function play(world: World, input: Record<string, unknown>): Response {
+    const bloco = paradeBloco(world, input);
+    if (!(bloco && context.jukebox)) {
+      return Response.json({ erro: "bloco não encontrado" }, { status: 404 });
+    }
+    const command = context.jukebox.play({
+      blocoId: bloco.id,
+      blocoName: bloco.name,
+      refrain: bloco.refrain,
+    });
+    return change(world, `played ${bloco.id} (${command.url})`);
+  }
+
   function durationsOf(input: Record<string, unknown>) {
     const durations: Partial<Record<TimedPhase, number>> = {};
     for (const phase of TIMED) {
@@ -197,6 +252,7 @@ export function createAdminApi(context: AdminContext): AdminApi {
       ),
     reiniciar: (world) => {
       context.simulated.reset();
+      context.jukebox?.reset();
       const response = change(restartWorld(world), "restarted from zero");
       context.restarted();
       return response;
@@ -223,6 +279,16 @@ export function createAdminApi(context: AdminContext): AdminApi {
         context.expelled(result.sessionId);
       }
       return response;
+    },
+    "desfile/proximo": (world) =>
+      change(nextBloco(world), "moved the desfile to the next bloco"),
+    "desfile/anterior": (world) =>
+      change(previousBloco(world), "moved the desfile back a bloco"),
+    "desfile/escolher": choose,
+    "desfile/tocar": play,
+    "desfile/parar": (world) => {
+      context.jukebox?.stop();
+      return change(world, "stopped the music");
     },
     silenciar: (world, input) => {
       const id = bonecoOf(input);

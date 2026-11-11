@@ -8,6 +8,7 @@ import type {
 } from "@gambiarra-lab/frevo/views";
 import { useEffect, useState } from "react";
 import { clockText, nextPhase, PHASE_LABELS } from "../phase/phase-text";
+import { AdminJury } from "./admin-jury";
 import { AdminModelsSection } from "./admin-models";
 import { adminSecret, useAdmin } from "./use-admin";
 import "./admin.css";
@@ -334,6 +335,7 @@ function AdminScreen({ secret }: { secret: string }) {
         </p>
       ) : null}
       <PhaseControls act={act} clock={state.clock} />
+      <AdminJury act={act} state={state} />
       <Durations act={act} clock={state.clock} />
       <Simulated act={act} state={state} />
       <Bonecos act={act} state={state} />
@@ -341,7 +343,8 @@ function AdminScreen({ secret }: { secret: string }) {
       <section className="admin-card admin-restart">
         <h2>Recomeçar</h2>
         <p className="admin-hint">
-          Volta para a entrada e tira todos os bonecos. As durações ficam.
+          Volta para a entrada com o QR, tira todos os bonecos e esquece o
+          desfile e as escolhas do júri. As durações ficam.
         </p>
         <ConfirmButton
           className="admin-danger"

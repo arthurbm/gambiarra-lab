@@ -9,6 +9,7 @@
 // and `tick` is the step the server runs. The hooks are wired here, not in
 // each phase's module, so a phase imports the world and never this module.
 import { closeCompor, enterCompor } from "./compor";
+import { enterDesfile, enterFinal } from "./desfile";
 import { closeFormar, enterFormar } from "./formar";
 import {
   type BrainResult,
@@ -45,6 +46,8 @@ export const PHASE_HOOKS: Partial<Record<Phase, PhaseHooks | undefined>> = {
   formar: { onEnter: enterFormar, onExit: closeFormar },
   // Every bloco leaves the compor phase with a name and a refrain.
   compor: { onEnter: enterCompor, onExit: closeCompor },
+  desfile: { onEnter: enterDesfile },
+  final: { onEnter: enterFinal },
 };
 
 export interface PhaseStatus {

@@ -1,0 +1,286 @@
+/* The desfile and the final cover the square, which stays faintly behind. */
+.desfile {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 2.5vw, 3rem);
+  overflow: hidden;
+  background: rgb(27 16 53 / 90%);
+}
+
+.desfile-empty {
+  font-size: clamp(1.4rem, 2.4vw, 2.6rem);
+  font-weight: 700;
+}
+
+.desfile-card {
+  display: grid;
+  gap: clamp(0.6rem, 1.4vh, 1.4rem);
+  justify-items: center;
+  width: min(100%, 72rem);
+  max-height: 100%;
+  padding: clamp(1rem, 2.4vw, 2.6rem);
+  text-align: center;
+  background: var(--night);
+  border: 0.5rem solid var(--bloco, var(--yellow));
+  border-radius: 1.6rem;
+  box-shadow: 0 0.6rem 0 rgb(0 0 0 / 35%);
+}
+
+.desfile-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: clamp(1rem, 1.5vw, 1.7rem);
+  font-weight: 700;
+  color: var(--bloco, var(--yellow));
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.desfile-chosen {
+  padding: 0.15em 0.7em;
+  font-size: 0.85em;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  background: var(--yellow);
+  border-radius: 999px;
+}
+
+.desfile-name {
+  margin: 0;
+  font-size: clamp(2.4rem, 4.6vw, 5.6rem);
+  line-height: 1.05;
+  color: var(--paper);
+}
+
+.desfile-refrain {
+  display: grid;
+  gap: 0.15em;
+  margin: 0;
+  font-size: clamp(1.8rem, 3.3vw, 4rem);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--yellow);
+}
+
+.desfile-refrain p {
+  margin: 0;
+}
+
+.desfile-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 3vw, 3.5rem);
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.desfile-members li {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: center;
+  max-width: 16rem;
+}
+
+.desfile-members strong {
+  font-size: clamp(1.1rem, 1.7vw, 2rem);
+}
+
+.desfile-members small {
+  font-size: clamp(0.9rem, 1.2vw, 1.4rem);
+  color: #c9b8ff;
+}
+
+.desfile-footer {
+  margin: 0;
+  font-size: clamp(1rem, 1.3vw, 1.5rem);
+  opacity: 0.85;
+}
+
+/* The final: chosen blocos large on top, the others small below. */
+.final {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: clamp(0.5rem, 1.2vh, 1.2rem);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.final-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.6rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.final-header h2 {
+  margin: 0;
+  font-size: clamp(2rem, 3.4vw, 4rem);
+  line-height: 1;
+  color: var(--yellow);
+}
+
+.final-header p {
+  margin: 0;
+  font-size: clamp(1rem, 1.4vw, 1.6rem);
+}
+
+.final-chosen,
+.final-others {
+  display: grid;
+  gap: clamp(0.5rem, 1vw, 1.1rem);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.final-chosen {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.final-others {
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  align-content: start;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.final-bloco {
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+  padding: clamp(0.5rem, 0.9vw, 1rem);
+  background: var(--night);
+  border: 0.3rem solid var(--bloco, var(--yellow));
+  border-radius: 1rem;
+}
+
+.final-bloco[data-chosen="true"] {
+  background: var(--night-soft);
+  border-width: 0.45rem;
+}
+
+.final-bloco-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.final-bloco h3 {
+  margin: 0;
+  font-size: clamp(1rem, 1.4vw, 1.6rem);
+  line-height: 1.1;
+}
+
+.final-bloco[data-chosen="true"] h3 {
+  font-size: clamp(1.4rem, 2vw, 2.4rem);
+}
+
+.final-bloco .desfile-chosen {
+  font-size: clamp(0.7rem, 0.85vw, 1rem);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.final-bloco-refrain {
+  font-size: clamp(1rem, 1.35vw, 1.6rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--yellow);
+}
+
+.final-bloco-refrain p {
+  margin: 0;
+}
+
+.final-bloco-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.final-bloco-members li {
+  display: grid;
+  justify-items: center;
+  max-width: 6.5rem;
+  font-size: clamp(0.75rem, 0.9vw, 1rem);
+  text-align: center;
+}
+
+.final-bloco-members span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.final-bloco-models {
+  margin: 0;
+  font-size: clamp(0.75rem, 0.9vw, 1rem);
+  color: #c9b8ff;
+}
+
+.final-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  padding: 0.6rem 0.9rem;
+  margin: 0;
+  font-size: clamp(0.85rem, 1.05vw, 1.2rem);
+  list-style: none;
+  background: var(--night-soft);
+  border-radius: 0.7rem;
+}
+
+.final-models strong {
+  color: var(--yellow);
+}
+
+.final-credits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 2rem;
+  font-size: clamp(0.85rem, 1vw, 1.15rem);
+  opacity: 0.9;
+}
+
+.final-credits p {
+  margin: 0;
+}
+
+.final-credits span {
+  color: var(--yellow);
+}
+
+/* The tap that turns the telão's sound on; it leaves after the first tap. */
+.telao-sound {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 11;
+  padding: 0.7em 1.4em;
+  font: inherit;
+  font-size: clamp(1.1rem, 1.6vw, 1.8rem);
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+  background: var(--yellow);
+  border: 0.2rem solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 0.3rem 0 rgb(0 0 0 / 35%);
+}

@@ -21,6 +21,7 @@ import {
   VOTE_PURPOSE,
   votoAnswered,
 } from "./compor";
+import type { DesfileState } from "./desfile";
 import {
   type Bloco,
   blocoAnswered,
@@ -50,6 +51,7 @@ import {
 
 export type { Ask, AskOutcome, HumanAnswer } from "./ask";
 export type { ComporState, ComposeView } from "./compor";
+export type { DesfileState } from "./desfile";
 export type { Bloco } from "./formar";
 export { INSTRUMENTS, type Instrument } from "./interview";
 
@@ -340,6 +342,8 @@ export interface World {
   bonecos: Boneco[];
   /** The compor phase's rounds and votes; null before it starts. */
   compor: ComporState | null;
+  /** The desfile's bloco on stage and the host's choices; null before it starts. */
+  desfile: DesfileState | null;
   events: WorldEvent[];
   /** The formar phase's encounters and proposals; null before it starts. */
   formar: FormarState | null;
@@ -631,6 +635,7 @@ export function createWorld(options: {
     blocos: [],
     bonecos: [],
     compor: null,
+    desfile: null,
     events: [],
     formar: null,
     map: options.map ?? PRACA,

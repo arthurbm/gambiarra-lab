@@ -385,17 +385,6 @@ a {
   text-align: left;
 }
 
-.admin-models table {
-  border-collapse: collapse;
-}
-
-.admin-models th,
-.admin-models td {
-  padding: 0.3rem 0.5rem;
-  text-align: left;
-  border-bottom: 1px solid rgb(255 248 231 / 0.2);
-}
-
 .admin-warning {
   padding: 0.6rem 0.8rem;
   font-weight: 600;
@@ -444,13 +433,14 @@ a {
   display: grid;
   flex: none;
   place-items: center;
-  width: 3.4rem;
-  height: 3.4rem;
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--ink);
-  border: 3px solid var(--paper);
-  border-radius: 45% 45% 35% 35%;
+  padding: 0.2rem;
+  background: var(--night-soft);
+  border-radius: 12px;
+}
+
+/* The costume sticks out to the right of the boneco; keep the name clear. */
+.celular-avatar .boneco-sprite {
+  margin-right: calc(var(--boneco-size) / 2);
 }
 
 .celular-model {
@@ -705,4 +695,42 @@ a {
 .celular-compor-options small {
   font-size: 0.75rem;
   opacity: 0.7;
+}
+
+/* The phone in the desfile and the final: the bloco's refrain, big. */
+.celular-desfile {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+  text-align: center;
+  background: var(--night-soft);
+  border: 4px solid var(--bloco, var(--yellow));
+  border-radius: 14px;
+}
+
+.celular-desfile[data-chosen="true"] {
+  background: #3a2470;
+  border-color: var(--yellow);
+}
+
+.celular-desfile-line {
+  margin: 0;
+  font-weight: 700;
+  color: var(--yellow);
+}
+
+.celular-desfile h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.celular-desfile blockquote {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.celular-desfile blockquote p {
+  margin: 0;
 }

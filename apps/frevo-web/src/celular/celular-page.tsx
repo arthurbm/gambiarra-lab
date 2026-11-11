@@ -5,6 +5,7 @@ import { modelLabel } from "@gambiarra-lab/frevo/models";
 import type { Talk, Thought } from "@gambiarra-lab/frevo/snapshot";
 import type { PhoneView as PrivateView } from "@gambiarra-lab/frevo/views";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { BonecoSprite } from "../art/boneco-sprite";
 import { phaseLine } from "../phase/phase-text";
 import { blocoColor, blocoLabel } from "../telao/bloco-mark";
 import { ComporPanel } from "./compor-panel";
@@ -22,19 +23,56 @@ function useTick(ms: number) {
   }, [ms]);
 }
 
-function lookColor(look: number) {
-  return `hsl(${(look * 37) % 360} 75% 60%)`;
+function Avatar({
+  boneco,
+  scale = 3,
+}: {
+  boneco: { instrument?: string | null; look: number; name: string };
+  scale?: number;
+}) {
+  return (
+    <span className="celular-avatar">
+      <BonecoSprite
+        instrument={boneco.instrument}
+        look={boneco.look}
+        scale={scale}
+      />
+    </span>
+  );
 }
 
-function Avatar({ boneco }: { boneco: { look: number; name: string } }) {
+/** The bloco's refrain in the desfile, and in the final whether it was chosen. */
+function DesfileResult({
+  desfile,
+  mark,
+}: {
+  desfile: NonNullable<PrivateView["desfile"]>;
+  mark: number;
+}) {
+  let line = desfile.onStage
+    ? "Seu bloco está desfilando no telão agora!"
+    : "Seu bloco desfila no telão.";
+  if (desfile.chosen) {
+    line = "Seu bloco foi escolhido pelo júri!";
+  } else if (desfile.phase === "final") {
+    line = "O desfile acabou. Seu bloco não foi escolhido desta vez.";
+  }
   return (
-    <span
-      aria-hidden="true"
-      className="celular-avatar"
-      style={{ background: lookColor(boneco.look) }}
+    <section
+      aria-live="polite"
+      className="celular-desfile"
+      data-chosen={desfile.chosen}
+      style={{ "--bloco": blocoColor(mark) } as React.CSSProperties}
     >
-      {boneco.name.slice(0, 1)}
-    </span>
+      <p className="celular-desfile-line">{line}</p>
+      <h2>{desfile.name}</h2>
+      <blockquote>
+        {desfile.refrain.map((verse, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a refrain may repeat a line.
+          <p key={index}>{verse}</p>
+        ))}
+      </blockquote>
+    </section>
   );
 }
 
@@ -303,7 +341,7 @@ export function CelularPage() {
   return (
     <main className="celular">
       <header className="celular-header">
-        <Avatar boneco={boneco} />
+        <Avatar boneco={boneco} scale={4} />
         <div>
           <h1>{boneco.name}</h1>
           <p className="celular-model">
@@ -333,6 +371,9 @@ export function CelularPage() {
         <p className="celular-thinking">Pensando na próxima pergunta…</p>
       ) : null}
       {view.compor ? <ComporPanel compor={view.compor} /> : null}
+      {view.desfile && view.bloco ? (
+        <DesfileResult desfile={view.desfile} mark={view.bloco.mark} />
+      ) : null}
       {view.bloco ? <BlocoMates bloco={view.bloco} /> : null}
       <Personality boneco={boneco} />
       <Talks talks={view.talks} />
