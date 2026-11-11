@@ -2,7 +2,6 @@
 // models for the bonecos' decisions and publishes the world over SSE. It also
 // serves the built web, so the experience is one public service.
 
-import { timingSafeEqual } from "node:crypto";
 import { resolve, sep } from "node:path";
 import { createModelMetrics } from "../brains/metrics";
 import { createBrainScheduler } from "../brains/scheduler";
@@ -14,6 +13,7 @@ import {
 import { watchRoomLlmEvents } from "../gambi/room-events";
 import { modelEntry, modelLabel } from "../models/catalog";
 import { modelPanelRows } from "../models/panel";
+import { phaseStatus, tick } from "../sim/phases";
 import {
   answerHuman,
   type BrainResult,
@@ -22,10 +22,11 @@ import {
   type HumanAnswer,
   join,
   privateView,
-  publicSnapshot,
-  step,
   type WorldRules,
 } from "../sim/world";
+import { createAdminApi } from "./admin";
+import { createSimulatedHumans } from "./simulated";
+import { type PhoneEvent, telaoSnapshot as withPhaseClock } from "./views";
 
 export interface WorldServerOptions {
   /** `Authorization: Bearer <secret>` opens /api/admin/*; without it they stay closed. */
@@ -73,6 +74,8 @@ const SSE_RETRY_MS = 1000;
 const encoder = new TextEncoder();
 /** A session id from the phone: opaque, short, URL safe. */
 const SESSION_ID = /^[A-Za-z0-9_-]{8,64}$/;
+/** How often the admin gets the host's state. */
+const ADMIN_PUBLISH_MS = 500;
 
 function sseHeaders() {
   return {
@@ -158,7 +161,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
     warnedCeiling = budget.exceeded;
     return {
-      ...publicSnapshot(world),
+      ...withPhaseClock(world),
       models: modelRows().map(({ fromEvents: _, ...row }) => row),
     };
   }
@@ -245,6 +248,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     string,
     Map<ReadableStreamDefaultController<Uint8Array>, () => void>
   >();
+  /** Sessions the host expelled; they stay out, even after a restart. */
+  const expelled = new Set<string>();
+  const simulated = createSimulatedHumans({ seed: options.seed ?? Date.now() });
 
   function broadcast(chunk: Uint8Array) {
     for (const [controller, leave] of telao) {
@@ -256,13 +262,18 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
   }
 
+  /** A phone's view, or why it has none: expelled, or the world restarted. */
+  function phoneEvent(sessionId: string): PhoneEvent {
+    const view = privateView(world, sessionId);
+    if (view) {
+      return { ...view, clock: phaseStatus(world) };
+    }
+    return expelled.has(sessionId) ? { expulso: true } : { reiniciou: true };
+  }
+
   function publishPhones() {
     for (const [sessionId, streams] of phones) {
-      const view = privateView(world, sessionId);
-      if (!view) {
-        continue;
-      }
-      const chunk = sseEvent("snapshot", view);
+      const chunk = sseEvent("snapshot", phoneEvent(sessionId));
       for (const [controller, leave] of streams) {
         try {
           controller.enqueue(chunk);
@@ -273,13 +284,38 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
   }
 
+  const admin = createAdminApi({
+    secret: options.adminSecret,
+    world: () => world,
+    setWorld: (next) => {
+      world = next;
+    },
+    simulated,
+    // The admin's stream counts as someone watching; simulated people do not.
+    watch,
+    connected: (sessionId) => (phones.get(sessionId)?.size ?? 0) > 0,
+    spending: () => scheduler.budget(),
+    // The models' routes, behind the same secret.
+    otherRoutes: modelRoutes,
+    expelled: (sessionId) => {
+      expelled.add(sessionId);
+      publishPhones();
+    },
+    restarted: publishPhones,
+    publishNow: () => {
+      broadcast(sseEvent("snapshot", telaoSnapshot()));
+      publishPhones();
+    },
+    log,
+  });
+
   const tickTimer = setInterval(() => {
-    const next = step(world, {
+    const next = tick(world, {
       elapsedMs: tickMs,
       results: [...unwatched, ...scheduler.drain()],
       models,
     });
-    ({ world } = next);
+    world = simulated.act(next.world);
     unwatched = [];
     for (const request of next.requests) {
       if (watched()) {
@@ -297,6 +333,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     broadcast(sseEvent("snapshot", telaoSnapshot()));
     publishPhones();
   }, options.publishMs ?? 200);
+  const adminTimer = setInterval(admin.publish, ADMIN_PUBLISH_MS);
   const keepaliveTimer = setInterval(() => {
     const keepalive = encoder.encode(": keepalive\n\n");
     broadcast(keepalive);
@@ -335,8 +372,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
 
   /** One person's private stream: their boneco, its thoughts, the question. */
   function phoneStream(request: Request, sessionId: string): Response {
-    const view = privateView(world, sessionId);
-    if (!view) {
+    if (!(privateView(world, sessionId) || expelled.has(sessionId))) {
       return new Response("Sessão desconhecida.", { status: 404 });
     }
     let self: ReadableStreamDefaultController<Uint8Array> | undefined;
@@ -355,7 +391,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       start(controller) {
         self = controller;
         controller.enqueue(encoder.encode(`retry: ${SSE_RETRY_MS}\n\n`));
-        controller.enqueue(sseEvent("snapshot", view));
+        controller.enqueue(sseEvent("snapshot", phoneEvent(sessionId)));
         const streams = phones.get(sessionId) ?? new Map();
         streams.set(controller, leave);
         phones.set(sessionId, streams);
@@ -373,6 +409,12 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     }
     const sessionId =
       body.sessao === undefined ? crypto.randomUUID() : sessionOf(body.sessao);
+    if (expelled.has(sessionId)) {
+      return Response.json(
+        { ok: false, erro: "O host tirou este boneco do bloco." },
+        { status: 403 }
+      );
+    }
     const joined = join(world, { sessionId });
     ({ world } = joined);
     if (joined.created) {
@@ -460,17 +502,6 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     });
   }
 
-  function adminAllowed(request: Request) {
-    const secret = options.adminSecret;
-    const given = request.headers.get("authorization") ?? "";
-    const expected = `Bearer ${secret}`;
-    return (
-      Boolean(secret) &&
-      given.length === expected.length &&
-      timingSafeEqual(Buffer.from(given), Buffer.from(expected))
-    );
-  }
-
   function adminState() {
     return Response.json({
       models: modelRows(),
@@ -478,10 +509,11 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     });
   }
 
-  async function adminApi(request: Request, pathname: string) {
-    if (!adminAllowed(request)) {
-      return Response.json({ error: "unauthorized" }, { status: 401 });
-    }
+  /** The models' admin routes; the secret was checked before. */
+  async function modelRoutes(
+    request: Request,
+    pathname: string
+  ): Promise<Response | undefined> {
     if (pathname === "/api/admin/models" && request.method === "GET") {
       return adminState();
     }
@@ -505,7 +537,6 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       log("Spending reset to zero");
       return adminState();
     }
-    return Response.json({ error: "not found" }, { status: 404 });
   }
 
   function publicModels() {
@@ -548,11 +579,14 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     fetch(request, bunServer) {
       const { pathname, searchParams } = new URL(request.url);
       if (pathname.startsWith("/api/")) {
-        // A phone entering or answering, or the admin's page polling.
+        // A phone entering or answering, or the admin's page acting.
         activeUntil = Date.now() + API_ACTIVITY_MS;
-        return pathname.startsWith("/api/admin/")
-          ? adminApi(request, pathname)
-          : api(request, pathname);
+        if (pathname.startsWith("/api/admin/")) {
+          // The admin's state stream stays open like the others.
+          bunServer.timeout(request, 0);
+          return admin.handle(request, pathname);
+        }
+        return api(request, pathname);
       }
       if (request.method !== "GET" && request.method !== "HEAD") {
         return new Response("Method Not Allowed", { status: 405 });
@@ -583,10 +617,12 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         roomTimer,
         tickTimer,
         publishTimer,
+        adminTimer,
         keepaliveTimer,
       ]) {
         clearInterval(timer);
       }
+      admin.stop();
       for (const controller of telao.keys()) {
         try {
           controller.close();

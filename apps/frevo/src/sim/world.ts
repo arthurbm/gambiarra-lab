@@ -42,6 +42,22 @@ export const PHASES = [
   "final",
 ] as const;
 export type Phase = (typeof PHASES)[number];
+/** The phases that run on a clock; the entrance and the final wait for the host. */
+export type TimedPhase = "compor" | "desfile" | "formar";
+export type PhaseDurations = Record<TimedPhase, number>;
+export const DEFAULT_PHASE_DURATIONS: PhaseDurations = {
+  formar: 150_000,
+  compor: 150_000,
+  desfile: 180_000,
+};
+
+/** The phase's clock. Only `sim/phases.ts` moves it. */
+export interface PhaseClock {
+  durations: PhaseDurations;
+  /** Time the current phase has run, not counting pauses. */
+  elapsedMs: number;
+  paused: boolean;
+}
 
 /** How many looks the art has; a boneco's look is an index into them. */
 export const LOOKS = 30;
@@ -172,6 +188,8 @@ interface Boneco {
   restUntilMs: number;
   /** The phone's session; null for a simulated boneco. */
   sessionId: string | null;
+  /** The host hid what it says from the telão. */
+  silenced: boolean;
   speech: { text: string; untilMs: number } | null;
   target: Place | null;
   thoughts: Thought[];
@@ -203,6 +221,7 @@ export interface World {
   /** The models of the Room, for spreading bonecos evenly among them. */
   models: string[];
   phase: Phase;
+  phaseClock: PhaseClock;
   /** State of the seeded generator; the only source of randomness. */
   rng: number;
   rules: WorldRules;
@@ -388,6 +407,7 @@ function newBoneco(world: World, id: string, sessionId: string | null): Boneco {
     speech: null,
     pending: null,
     restUntilMs: 0,
+    silenced: false,
     brain: null,
     model: null,
     decisions: 0,
@@ -434,6 +454,11 @@ export function createWorld(options: {
     map: options.map ?? PRACA,
     models: [],
     phase: "entrada",
+    phaseClock: {
+      elapsedMs: 0,
+      paused: false,
+      durations: { ...DEFAULT_PHASE_DURATIONS },
+    },
     rng: seedState(options.seed),
     rules: { ...DEFAULT_RULES, ...options.rules },
     timeMs: 0,
@@ -973,7 +998,7 @@ function publicBoneco(world: World, boneco: Boneco): PublicBoneco {
       : null,
     asking: boneco.ask !== null,
     speech:
-      boneco.speech && boneco.speech.untilMs > world.timeMs
+      boneco.speech && boneco.speech.untilMs > world.timeMs && !boneco.silenced
         ? boneco.speech.text
         : null,
     brain: boneco.brain,

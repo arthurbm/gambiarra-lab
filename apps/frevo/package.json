@@ -6,7 +6,8 @@
   "exports": {
     "./snapshot": "./src/sim/world.ts",
     "./meeting-spots": "./src/sim/meeting-spots.ts",
-    "./models": "./src/models/web.ts"
+    "./models": "./src/models/web.ts",
+    "./views": "./src/server/views.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

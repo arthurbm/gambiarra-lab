@@ -1,0 +1,42 @@
+.phase-clock {
+  display: grid;
+  gap: 0.1rem;
+  justify-items: center;
+  width: clamp(11rem, 18vw, 20rem);
+  padding: 0.6rem 0.8rem;
+  text-align: center;
+  background: var(--night-soft);
+  border-radius: 12px;
+}
+
+.phase-clock p {
+  margin: 0;
+}
+
+.phase-clock-name {
+  font-size: clamp(1rem, 1.6vw, 1.6rem);
+  font-weight: 800;
+  color: var(--yellow);
+}
+
+.phase-clock-time {
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.phase-clock[data-paused="true"] .phase-clock-time {
+  opacity: 0.5;
+}
+
+.phase-clock-paused {
+  padding: 0.1rem 0.6rem;
+  font-size: clamp(0.8rem, 1.1vw, 1.1rem);
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--yellow);
+  border-radius: 999px;
+}
