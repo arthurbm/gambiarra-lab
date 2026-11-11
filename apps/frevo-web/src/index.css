@@ -1,0 +1,736 @@
+:root {
+  --night: #1b1035;
+  --night-soft: #2a1a52;
+  --ground: #2f7d5b;
+  --ground-dark: #256649;
+  --paper: #fff8e7;
+  --ink: #1b1035;
+  --yellow: #ffd23f;
+  --red: #ee4266;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  color: var(--paper);
+  background: var(--night);
+}
+
+a {
+  color: var(--yellow);
+}
+
+.placeholder {
+  display: grid;
+  gap: 0.5rem;
+  align-content: center;
+  justify-items: center;
+  min-height: 100%;
+  padding: 2rem;
+  text-align: center;
+}
+
+.placeholder h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: var(--yellow);
+}
+
+.placeholder p {
+  margin: 0;
+}
+
+/* The telão: one screen, no scrolling. The square on the left, a column of
+   panels on the right. */
+.telao {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 22vw, 440px);
+  height: 100%;
+  overflow: hidden;
+}
+
+.telao-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #adbc3a;
+}
+
+.telao-waiting {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Panels from other tickets stack here, in order. */
+.telao-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-height: 0;
+  padding: 0.9rem;
+  overflow: hidden;
+  background: var(--night);
+  border-left: 4px solid var(--night-soft);
+}
+
+.telao-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.telao-header h1 {
+  margin: 0;
+  font-size: clamp(1.3rem, 1.9vw, 2.2rem);
+  line-height: 1.1;
+  color: var(--yellow);
+  letter-spacing: 0.02em;
+}
+
+.telao-status {
+  padding: 0.2rem 0.8rem;
+  font-size: clamp(0.85rem, 1vw, 1.1rem);
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--red);
+  border-radius: 999px;
+}
+
+.telao-status[data-status="live"] {
+  color: var(--ink);
+  background: #3bceac;
+}
+
+/* The entrance QR, a panel of the side column (#13). */
+.entrada-qr {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  padding: 0.8rem;
+  text-align: center;
+  background: var(--night-soft);
+  border-radius: 12px;
+}
+
+.entrada-qr h2 {
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.6rem);
+  color: var(--yellow);
+}
+
+.entrada-qr-code {
+  width: min(100%, 18rem);
+  height: auto;
+  border-radius: 6px;
+}
+
+.entrada-qr-url {
+  margin: 0;
+  font-size: clamp(0.8rem, 1.1vw, 1.1rem);
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.entrada-qr-hint {
+  margin: 0;
+  font-size: clamp(0.7rem, 0.95vw, 1rem);
+  opacity: 0.85;
+}
+
+/* The square: a canvas covering the stage, balloons in the DOM above it. */
+.world {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.world-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.world-balloon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  padding: 0.3em 0.6em;
+  margin: 0;
+  font-size: var(--balloon-font, 1.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+  background: rgb(255 248 231 / 96%);
+  border: 0.14em solid var(--ink);
+  border-radius: 0.5em;
+  box-shadow: 0 0.12em 0 rgb(27 16 53 / 45%);
+  animation: frevo-balloon-in 150ms ease-out;
+  will-change: transform;
+}
+
+.world-balloon span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+}
+
+/* The tail points at the speaker's head. */
+.world-balloon::after {
+  position: absolute;
+  top: 100%;
+  left: calc(var(--tail-x, 50%) - 0.45em);
+  content: "";
+  border: 0.45em solid transparent;
+  border-top-color: var(--ink);
+}
+
+.world-balloon[data-slot="below"]::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--ink);
+}
+
+.world-balloon strong {
+  display: block;
+  font-size: 0.7em;
+  line-height: 1.2;
+  color: #b8204a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+@keyframes frevo-balloon-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* The phone's boneco: a character sheet as a CSS sprite. */
+.boneco-sprite {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--boneco-size);
+  height: var(--boneco-size);
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-size: calc(var(--boneco-size) * 4) calc(var(--boneco-size) * 7);
+}
+
+.boneco-sprite[data-walking="true"] {
+  animation: boneco-walk 500ms steps(4) infinite;
+}
+
+.boneco-sprite-instrument {
+  position: absolute;
+  top: calc(var(--boneco-size) / 8);
+  left: calc(var(--boneco-size) / 2);
+  width: var(--boneco-size);
+  height: var(--boneco-size);
+}
+
+@keyframes boneco-walk {
+  from {
+    background-position-y: 0;
+  }
+
+  to {
+    background-position-y: calc(var(--boneco-size) * -4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boneco-sprite[data-walking="true"],
+  .world-balloon {
+    animation: none;
+  }
+}
+
+/* /telao/demo only. */
+.telao-demo {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  background: var(--night-soft);
+  border-radius: 0.6rem;
+}
+
+.telao-demo p {
+  margin: 0;
+}
+
+.telao-demo-sprites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.6rem;
+}
+
+/* The models panel, in the telão's side column. */
+.models-panel {
+  padding: 0.8rem;
+  font-size: clamp(0.7rem, 1vw, 1rem);
+  background: var(--night-soft);
+  border-radius: 0.6rem;
+}
+
+.models-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1em;
+  color: var(--yellow);
+}
+
+.models-panel table {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  border-collapse: collapse;
+}
+
+.models-panel th,
+.models-panel td {
+  padding: 0.3em 0.2em;
+  text-align: right;
+  border-bottom: 1px solid rgb(255 248 231 / 0.15);
+}
+
+.models-panel thead th {
+  font-size: 0.8em;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.models-panel tbody th {
+  font-weight: 600;
+  text-align: left;
+}
+
+.models-panel tr[data-off="true"] {
+  opacity: 0.45;
+}
+
+.models-panel-state {
+  display: block;
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--yellow);
+}
+
+.models-panel-empty {
+  margin: 0;
+  opacity: 0.75;
+}
+
+/* The short log of what just happened, in the telão's side column. */
+/* Last in the side column: when it runs out of room, the oldest lines go. */
+.event-log {
+  min-height: 0;
+  padding: 0.8rem;
+  overflow: hidden;
+  font-size: clamp(0.7rem, 1vw, 1rem);
+  background: var(--night-soft);
+  border-radius: 0.6rem;
+}
+
+.event-log h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1em;
+  color: var(--yellow);
+}
+
+.event-log ol {
+  display: grid;
+  gap: 0.35em;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.event-log li:first-child {
+  font-weight: 700;
+}
+
+.event-log li:not(:first-child) {
+  opacity: 0.75;
+}
+
+.admin-models {
+  display: grid;
+  gap: 0.8rem;
+  max-width: 40rem;
+  text-align: left;
+}
+
+.admin-warning {
+  padding: 0.6rem 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--yellow);
+  border-radius: 0.4rem;
+}
+
+/* The phone: one column, big targets, readable outdoors. */
+.celular {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  max-width: 32rem;
+  min-height: 100%;
+  padding: 1rem 1rem 2rem;
+  margin: 0 auto;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+.celular-waiting {
+  align-content: center;
+  text-align: center;
+}
+
+.celular h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--yellow);
+}
+
+.celular h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  color: var(--yellow);
+}
+
+.celular-header {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.celular-boneco {
+  display: grid;
+  flex: none;
+  place-items: center;
+  padding: 0.2rem;
+  background: var(--night-soft);
+  border-radius: 12px;
+}
+
+/* The costume sticks out to the right of the boneco; keep the name clear. */
+.celular-boneco .boneco-sprite {
+  margin-right: calc(var(--boneco-size) / 2);
+}
+
+.celular-model {
+  margin: 0.1rem 0 0;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.celular-offline {
+  padding: 0.2rem 0.6rem;
+  margin-left: auto;
+  font-size: 0.8rem;
+  background: var(--red);
+  border-radius: 999px;
+}
+
+.celular-progress,
+.celular-thinking,
+.celular-footer {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.celular-question {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 14px;
+}
+
+.celular-question-text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.celular-options {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.celular button {
+  min-height: 3rem;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+}
+
+.celular button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.celular .celular-skip {
+  background: transparent;
+}
+
+.celular-open {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.celular-open textarea {
+  width: 100%;
+  padding: 0.6rem;
+  font: inherit;
+  color: var(--ink);
+  resize: none;
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+}
+
+.celular-open-count {
+  justify-self: end;
+  font-size: 0.8rem;
+}
+
+.celular-open-actions {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.6rem;
+}
+
+.celular-countdown {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.celular-countdown-bar {
+  height: 0.5rem;
+  overflow: hidden;
+  background: rgb(27 16 53 / 15%);
+  border-radius: 999px;
+}
+
+.celular-countdown-bar span {
+  display: block;
+  height: 100%;
+  background: var(--red);
+  transition: width 250ms linear;
+}
+
+.celular-personality {
+  padding: 0.8rem 1rem;
+  background: var(--night-soft);
+  border-radius: 14px;
+}
+
+.celular-personality p {
+  margin: 0;
+}
+
+.celular-instrument {
+  margin-top: 0.5rem !important;
+}
+
+.celular-thoughts ol {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.celular-thoughts li {
+  padding: 0.5rem 0.8rem;
+  background: var(--night-soft);
+  border-left: 4px solid var(--yellow);
+  border-radius: 8px;
+}
+
+.celular-thoughts li[data-tone="aviso"] {
+  border-left-color: var(--red);
+}
+
+.celular-thoughts p {
+  margin: 0;
+}
+
+.celular-thoughts small {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.celular-model-other {
+  margin: 0.2rem 0 0;
+  font-size: 0.9em;
+  color: var(--yellow);
+}
+
+/* The phone's encounters and bloco. */
+.celular-talks ol,
+.celular-bloco ul {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.celular-talks li {
+  padding: 0.5rem 0.8rem;
+  background: var(--night-soft);
+  border-radius: 8px;
+}
+
+.celular-talks p {
+  margin: 0.15rem 0 0;
+}
+
+.celular-talks small {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.celular-bloco {
+  padding: 0.8rem;
+  background: var(--night-soft);
+  border: 3px solid var(--bloco, var(--yellow));
+  border-radius: 12px;
+}
+
+.celular-bloco h2 {
+  margin-top: 0;
+}
+
+.celular-bloco li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+/* The compor phase: the bloco's name, refrain and vote. */
+.celular .celular-vote-option {
+  white-space: pre-line;
+}
+
+.celular-compor {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  background: var(--night-soft);
+  border: 3px solid var(--yellow);
+  border-radius: 12px;
+}
+
+.celular-compor h2,
+.celular-compor p {
+  margin: 0;
+}
+
+.celular-compor-refrain {
+  padding-left: 0.8rem;
+  margin: 0;
+  font-style: italic;
+  border-left: 3px solid var(--yellow);
+}
+
+.celular-compor-status {
+  font-weight: 700;
+}
+
+.celular-compor-options {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.celular-compor-options li {
+  display: grid;
+  padding: 0.4rem 0.6rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+
+.celular-compor-options li[data-mine] {
+  border-color: var(--yellow);
+}
+
+.celular-compor-options small {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* The phone in the desfile and the final: the bloco's refrain, big. */
+.celular-desfile {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+  text-align: center;
+  background: var(--night-soft);
+  border: 4px solid var(--bloco, var(--yellow));
+  border-radius: 14px;
+}
+
+.celular-desfile[data-chosen="true"] {
+  background: #3a2470;
+  border-color: var(--yellow);
+}
+
+.celular-desfile-line {
+  margin: 0;
+  font-weight: 700;
+  color: var(--yellow);
+}
+
+.celular-desfile h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.celular-desfile blockquote {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.celular-desfile blockquote p {
+  margin: 0;
+}

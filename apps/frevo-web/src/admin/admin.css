@@ -1,0 +1,382 @@
+/* The admin: a phone on the stage. One column, big targets, state on top. */
+.admin {
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+  max-width: 34rem;
+  min-height: 100%;
+  padding: 0 1rem 2rem;
+  margin: 0 auto;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.admin-message {
+  align-content: center;
+  text-align: center;
+}
+
+.admin h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--yellow);
+}
+
+.admin h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--yellow);
+}
+
+.admin p {
+  margin: 0;
+}
+
+.admin button {
+  min-height: 3.25rem;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+}
+
+.admin button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.admin .admin-primary {
+  font-size: 1.15rem;
+  background: var(--yellow);
+}
+
+.admin .admin-danger {
+  color: var(--paper);
+  background: var(--red);
+}
+
+.admin-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem 1rem;
+  margin: 0 -1rem;
+  background: var(--night-soft);
+  border-bottom: 3px solid var(--yellow);
+}
+
+.admin-bar[data-paused="true"] {
+  border-bottom-color: var(--red);
+}
+
+.admin-bar-phase {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.admin-bar-phase strong {
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.admin-bar-phase em {
+  padding: 0.1rem 0.5rem;
+  font-size: 0.85rem;
+  font-style: normal;
+  color: var(--ink);
+  text-transform: uppercase;
+  background: var(--yellow);
+  border-radius: 999px;
+}
+
+.admin-bar-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.admin-bar-numbers [data-alert="true"] {
+  font-weight: 700;
+  color: var(--red);
+}
+
+.admin-offline {
+  justify-self: start;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  background: var(--red);
+  border-radius: 999px;
+}
+
+.admin-error {
+  padding: 0.6rem 0.8rem;
+  color: var(--paper);
+  background: var(--red);
+  border-radius: 10px;
+}
+
+.admin-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  background: var(--night-soft);
+  border-radius: 14px;
+}
+
+.admin-main-buttons {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.admin-hint {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.admin-durations,
+.admin-bonecos {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-durations li {
+  display: grid;
+  grid-template-columns: 1fr 3.25rem 4rem 3.25rem;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.admin-durations li[data-current="true"] span {
+  font-weight: 700;
+  color: var(--yellow);
+}
+
+.admin-durations strong {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.admin-durations button {
+  padding: 0;
+  font-size: 1.4rem;
+}
+
+.admin-total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-total input {
+  width: 5rem;
+  min-height: 3rem;
+  padding: 0 0.5rem;
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+}
+
+.admin-check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 2.5rem;
+}
+
+.admin-check input {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.admin-boneco {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.admin-boneco div {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-boneco small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.admin-boneco button {
+  min-height: 2.9rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.admin-confirm {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.admin-restart .admin-confirm {
+  display: grid;
+}
+
+/* The models section comes from the models ticket; fit it to the card look. */
+.admin .admin-models {
+  min-width: 0;
+  max-width: none;
+  padding: 0.9rem;
+  background: var(--night-soft);
+  border-radius: 14px;
+}
+
+/* One model per row, so the list fits a phone without scrolling sideways. */
+.admin-models-list {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-models-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-models-list li[data-off="true"] strong {
+  opacity: 0.6;
+}
+
+.admin-models-list div {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-models-list strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-models-list small {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.admin .admin-models button {
+  min-height: 2.6rem;
+  padding: 0.3rem 0.7rem;
+}
+
+/* Confirming in a boneco's row takes a line of its own. */
+.admin-boneco .admin-confirm {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
+/* The jury. */
+.admin-sound {
+  padding: 0.5rem 0.7rem;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--red);
+  border-radius: 10px;
+}
+
+.admin-sound[data-on="true"] {
+  color: var(--ink);
+  background: #3bceac;
+}
+
+.admin-jury-stage {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-jury-stage .admin-main-buttons {
+  grid-template-columns: 1fr 1fr;
+}
+
+.admin-jury-blocos {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-jury-blocos li {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--night);
+  border-left: 0.45rem solid var(--bloco, var(--yellow));
+  border-radius: 8px;
+}
+
+.admin-jury-blocos li[data-current="true"] {
+  outline: 2px solid var(--yellow);
+}
+
+.admin-jury-name {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-jury-name strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-jury-name small {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.admin-jury-name .admin-jury-reason {
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.admin-jury-actions {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 0.4rem;
+}
+
+.admin-jury-actions button {
+  min-height: 2.9rem;
+  padding: 0.4rem 0.6rem;
+}
+
+/* A bloco not chosen fits one line: its name, then "Marcar". */
+.admin-jury-blocos li[data-chosen="false"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.admin-jury-blocos li[data-chosen="false"] .admin-jury-actions button {
+  min-width: 6.5rem;
+}

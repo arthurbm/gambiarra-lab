@@ -1,0 +1,19 @@
+# For the three Bloco de frevo Dockerfiles (the context is the repo root).
+.git
+.github
+.turbo
+.claude
+.agents
+.impeccable
+**/node_modules
+**/dist
+**/build
+**/.evlog
+**/*.log
+**/local.db*
+.env
+.env*
+docs
+# Never send a key to the build context, even if someone copies one here.
+**/*.key
+**/*.secret

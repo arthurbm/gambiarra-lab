@@ -1,0 +1,9 @@
+# `railway up` already honours .gitignore and skips .git and node_modules.
+# This only shrinks the upload.
+docs
+.claude
+.agents
+.impeccable
+.turbo
+**/*.key
+**/*.secret

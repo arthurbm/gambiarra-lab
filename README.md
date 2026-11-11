@@ -29,6 +29,7 @@ A dependência só vai de cima para baixo: o gambi nunca importa nada daqui.
 | Experiência | Estado | Onde |
 |---|---|---|
 | **Cidade das inteligências mistas**, preparada para o encontro de 2026-08-23. Squads constroem uma cidade bairro por bairro. Cada squad registra uma decisão antes de despachar trabalho para o próprio harness, e um steerer humano, que muda a cada rodada, aceita o resultado ou o devolve com um motivo. | O encontro aconteceu sem o board. O código está aqui e precisa voltar a rodar. | `apps/board`, `apps/board-web`, `docs/gambiarra-2026-08-23/` |
+| **Bloco de frevo**, para a demonstração no Rec'n'Play de 2026-11-11. Um mundo 2D em que cada pessoa da plateia ganha um boneco que pensa com um modelo da Room, conversa com outros bonecos e forma um bloco de três. | Esqueleto que anda: um boneco decide por um modelo da Room e aparece no telão. A spec é a issue #10. | `apps/frevo`, `apps/frevo-web` |
 | **Arena** reconstruída sobre o Gambi, usando o [Gambiarra Arena](https://github.com/filipecalegario/gambiarra-arena) como referência de regras e jogos. | Próxima. | `apps/arena` (a criar) |
 
 ## Pacotes
@@ -37,6 +38,7 @@ A dependência só vai de cima para baixo: o gambi nunca importa nada daqui.
 |---|---|
 | `@gambiarra-lab/agents` | Orquestrador hub-and-spoke com steerer humano: squads, desafios, drafts, decisão antes do dispatch e devoluções. Não sabe nada de rodadas, tiles ou da cidade. Ver [`packages/agents/README.md`](packages/agents/README.md). |
 | `@gambiarra-lab/board`, `@gambiarra-lab/board-web` | Servidor do board (SQLite, oRPC, SSE) e a interface. |
+| `@gambiarra-lab/frevo`, `@gambiarra-lab/frevo-web` | Bloco de frevo: simulação pura do mundo, agendador de cérebros, hospedeiro de modelos, servidor (HTTP e SSE) e a web do telão. Ver [`apps/frevo/README.md`](apps/frevo/README.md). |
 | `@gambiarra-lab/ui` | Componentes shadcn compartilhados entre as experiências. |
 
 Nenhum pacote vai para o npm enquanto tiver um consumidor só.
@@ -54,6 +56,8 @@ bun run test
 `bun run board:e2e` roda o evento completo com harnesses falsos, banco e workspaces efêmeros, sem chamar modelo, nas portas do evento (3000, 3001, 3002), e fica rodando até Ctrl+C. Os harnesses `fake` rodam `scripts/fake-acp-agent.ts`, que chama o `runFakeAcpAgent()` do `gambi-sdk`. `bun run event` é a versão com OpenCode de verdade.
 
 `bun run board:smoke` sobe o mesmo evento em portas livres, percorre harness hospedado, harness trazido pela pessoa e orquestrador, imprime um resumo por passo e termina sozinho: sai 0 se tudo passou e 1 no primeiro passo que falhar. Duas execuções podem rodar ao mesmo tempo.
+
+`bun run frevo:dev` sobe o Bloco de frevo com um comando (hub, hospedeiro de modelos, servidor do mundo e web) usando um modelo falso, sem key e sem rede; `-- --real` usa modelos do OpenRouter. O telão fica em `http://localhost:3201/telao`. `bun run frevo:smoke` é a prova de runtime que termina sozinha.
 
 Antes de commitar, rode `bun x ultracite fix`.
 

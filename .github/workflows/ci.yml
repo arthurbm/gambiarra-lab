@@ -50,6 +50,9 @@ jobs:
       - name: Build board-web
         run: bun run --cwd apps/board-web build
 
+      - name: Build frevo-web
+        run: bun run --cwd apps/frevo-web build
+
   smoke:
     name: Board smoke
     runs-on: ubuntu-latest
@@ -68,3 +71,23 @@ jobs:
       # script (hosted and brought harnesses, tiles, orchestrator), and exits 0/1.
       - name: Smoke
         run: bun run board:smoke
+
+  frevo-smoke:
+    name: Frevo smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      # Builds the web, boots hub, world and model host (fake model) on free
+      # ports, watches a boneco decide by a Room model, kills the model host,
+      # restarts the hub, and exits 0/1.
+      - name: Smoke
+        run: bun run frevo:smoke

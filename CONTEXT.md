@@ -48,12 +48,23 @@ _Avoid_: Template, seed (fine in prose), boilerplate.
 One social dynamic built on Gambi, with its own app, rules and data (the 2026-08-23 city board is the first). Primitives move from an experience into `packages/agents` only when a second experience needs them.
 _Avoid_: Demo, project, game (unless the experience is literally a game).
 
+### Bloco de frevo
+
+**Boneco**:
+The personal agent of one person in the Bloco de frevo: a character in the square that thinks with a model of the Room, says what it is thinking, and asks its human before it commits to something. A boneco with no brain answer in time goes on autopilot.
+_Avoid_: Avatar, player, character, bot.
+
+**Bloco**:
+The group of three bonecos, and their three humans, formed by affinity in the Bloco de frevo. It is not a **Squad**: it has no steerer and receives no dispatch.
+_Avoid_: Team, group, squad.
+
 ## Relationships
 
 - A **Squad** is people, zero-to-many **Harness participants** (one designated per round for dispatch), exactly one **Steerer** at a time, and any number of **Drafts**.
 - Per round: a **Challenge** gathers **Drafts**, the steerer records a **Decision**, then the orchestrator **dispatches**; output is accepted or **returned**.
 - An **Orchestrator** is a harness; it **dispatches** to harness participants and receives accepted or **returned** output.
 - An **Experience** supplies the **Starter** for the Workspaces it dispatches to.
+- A **Boneco** belongs to one person and decides through one model participant of the Room at a time; three bonecos form a **Bloco**.
 
 ## Flagged ambiguities
 

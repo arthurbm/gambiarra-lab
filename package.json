@@ -34,7 +34,11 @@
     "dev:hub": "gambi hub serve",
     "event": "bun scripts/event.ts",
     "fix": "ultracite fix",
-    "test": "bun test apps/board/src packages/agents scripts"
+    "frevo:dev": "bun scripts/frevo.ts",
+    "frevo:load": "bun scripts/frevo-load.ts",
+    "frevo:real-check": "bun scripts/frevo-real-check.ts",
+    "frevo:smoke": "bun scripts/frevo-smoke.ts",
+    "test": "bun test apps/board/src apps/frevo/src apps/frevo-web/src packages/agents scripts"
   },
   "dependencies": {
     "zod": "catalog:"
@@ -45,6 +49,7 @@
     "@types/bun": "catalog:",
     "gambi": "^0.7.2",
     "gambi-sdk": "^0.7.2",
+    "railway": "3.16.0",
     "turbo": "^2.11.7",
     "typescript": "catalog:",
     "ultracite": "8.0.0"

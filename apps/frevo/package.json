@@ -1,0 +1,26 @@
+{
+  "name": "@gambiarra-lab/frevo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./snapshot": "./src/sim/world.ts",
+    "./meeting-spots": "./src/sim/meeting-spots.ts",
+    "./models": "./src/models/web.ts",
+    "./views": "./src/server/views.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "model-host": "bun run src/model-host/index.ts",
+    "start": "bun run src/server/index.ts"
+  },
+  "dependencies": {
+    "gambi": "^0.7.2",
+    "gambi-sdk": "^0.7.2"
+  },
+  "devDependencies": {
+    "@gambiarra-lab/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}
