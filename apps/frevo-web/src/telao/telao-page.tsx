@@ -1,5 +1,6 @@
 import type { PublicSnapshot } from "@gambiarra-lab/frevo/snapshot";
 import type { ReactNode } from "react";
+import { EntradaQr } from "./entrada-qr";
 import type { StreamStatus } from "./stream";
 import { useTelao } from "./use-telao";
 import { WorldView } from "./world-view";
@@ -50,5 +51,9 @@ export function TelaoLayout({
 /** The projector: data comes from the stream, drawing is WorldView's job. */
 export function TelaoPage() {
   const { snapshot, status } = useTelao();
-  return <TelaoLayout snapshot={snapshot} status={status} />;
+  return (
+    <TelaoLayout snapshot={snapshot} status={status}>
+      {snapshot?.phase === "entrada" ? <EntradaQr /> : null}
+    </TelaoLayout>
+  );
 }

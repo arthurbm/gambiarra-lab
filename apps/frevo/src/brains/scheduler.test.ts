@@ -245,3 +245,140 @@ describe("the brain scheduler choosing among free participants", () => {
     ]);
   });
 });
+
+describe("the brain scheduler and the boneco's own model", () => {
+  test("asks a free participant of the boneco's model first", async () => {
+    const asked: string[] = [];
+    const infer: Inference = (participantId, body) => {
+      asked.push(participantId);
+      return Promise.resolve(toolCall(body, { lugar: "ponte", fala: "Opa" }));
+    };
+    const scheduler = createBrainScheduler({ infer });
+    scheduler.setParticipants([
+      { id: "frevo-a-1", model: "modelo-a" },
+      { id: "frevo-b-1", model: "modelo-b" },
+    ]);
+    for (let index = 1; index <= 3; index += 1) {
+      scheduler.submit({ ...request(`boneco-1#${index}`), model: "modelo-b" });
+      // biome-ignore lint/performance/noAwaitInLoops: one decision at a time, so both participants are free.
+      await drained(scheduler, 1);
+    }
+    expect(asked).toEqual(["frevo-b-1", "frevo-b-1", "frevo-b-1"]);
+  });
+
+  test("falls back to any free participant when the boneco's model is busy", async () => {
+    const asked: string[] = [];
+    const infer: Inference = async (participantId, body) => {
+      asked.push(participantId);
+      await Bun.sleep(15);
+      return toolCall(body, { lugar: "ponte", fala: "Opa" });
+    };
+    const scheduler = createBrainScheduler({ infer });
+    scheduler.setParticipants([
+      { id: "frevo-a-1", model: "modelo-a" },
+      { id: "frevo-b-1", model: "modelo-b" },
+    ]);
+    scheduler.submit({ ...request("boneco-1#1"), model: "modelo-b" });
+    scheduler.submit({ ...request("boneco-2#1"), model: "modelo-b" });
+    const results = await drained(scheduler, 2);
+    expect(results.map((result) => result.ok)).toEqual([true, true]);
+    expect(asked.sort()).toEqual(["frevo-a-1", "frevo-b-1"]);
+  });
+});
+
+describe("the brain scheduler during the interview", () => {
+  const base = {
+    boneco: { id: "boneco-1", name: "Biu" },
+    deadlineMs: 8000,
+    model: "modelo-a",
+  };
+
+  test("asks the model for a tap question with two or three choices", async () => {
+    let sent: ChatCompletionBody | undefined;
+    const infer: Inference = (_participantId, body) => {
+      sent = body;
+      return Promise.resolve(
+        toolCall(body, {
+          pergunta: "Cuscuz ou tapioca?",
+          opcoes: ["Cuscuz", "Tapioca"],
+        })
+      );
+    };
+    const scheduler = createBrainScheduler({ infer });
+    scheduler.setParticipants([{ id: "frevo-a-1", model: "modelo-a" }]);
+    scheduler.submit({
+      ...base,
+      id: "boneco-1#1",
+      kind: "question",
+      index: 0,
+      total: 3,
+      previous: [],
+    });
+    const [result] = await drained(scheduler, 1);
+    expect(result).toMatchObject({
+      ok: true,
+      action: {
+        type: "question",
+        question: "Cuscuz ou tapioca?",
+        options: ["Cuscuz", "Tapioca"],
+      },
+    });
+    expect(JSON.stringify(sent?.messages)).toContain("Recife");
+  });
+
+  test("asks for the personality with the free text, and the instrument", async () => {
+    let sent: ChatCompletionBody | undefined;
+    const infer: Inference = (_participantId, body) => {
+      sent = body;
+      return Promise.resolve(
+        toolCall(body, {
+          resumo: "Linha um.\nLinha dois.",
+          instrumento: "tuba",
+          fala: "Achei meu som!",
+        })
+      );
+    };
+    const scheduler = createBrainScheduler({ infer });
+    scheduler.setParticipants([{ id: "frevo-a-1", model: "modelo-a" }]);
+    scheduler.submit({
+      ...base,
+      id: "boneco-1#4",
+      kind: "personality",
+      answers: [{ question: "Cuscuz ou tapioca?", answer: "Cuscuz" }],
+      freeText: "toco zabumba",
+      instruments: ["tuba", "surdo"],
+    });
+    const [result] = await drained(scheduler, 1);
+    expect(result).toMatchObject({
+      ok: true,
+      action: {
+        type: "personality",
+        summary: "Linha um.\nLinha dois.",
+        instrument: "tuba",
+        speech: "Achei meu som!",
+      },
+    });
+    expect(JSON.stringify(sent?.messages)).toContain("toco zabumba");
+  });
+
+  test("repeats when the model answers a question without choices", async () => {
+    let attempts = 0;
+    const infer: Inference = (_participantId, body) => {
+      attempts += 1;
+      return Promise.resolve(toolCall(body, { pergunta: "Frevo?" }));
+    };
+    const scheduler = createBrainScheduler({ infer });
+    scheduler.setParticipants([{ id: "frevo-a-1", model: "modelo-a" }]);
+    scheduler.submit({
+      ...base,
+      id: "boneco-1#1",
+      kind: "question",
+      index: 0,
+      total: 3,
+      previous: [],
+    });
+    const [result] = await drained(scheduler, 1);
+    expect(attempts).toBe(2);
+    expect(result?.ok).toBe(false);
+  });
+});

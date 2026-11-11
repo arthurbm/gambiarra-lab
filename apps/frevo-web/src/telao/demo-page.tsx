@@ -105,6 +105,14 @@ function useDemoWorld(count: number, blocos: boolean) {
       return seed / 2_147_483_647;
     };
     const answer = (request: DecisionRequest) => {
+      // Simulated bonecos only ever ask where to walk.
+      if (request.kind === "question" || request.kind === "personality") {
+        answers.push({
+          at: clock,
+          result: { ok: false, requestId: request.id, reason: "demo" },
+        });
+        return;
+      }
       const others = request.places.filter(
         (candidate) => candidate.id !== request.placeId
       );

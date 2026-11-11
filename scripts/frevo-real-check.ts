@@ -77,13 +77,14 @@ try {
         40_000
       );
       const took = `${Math.round(performance.now() - startedAt)}ms`;
-      if (result.ok) {
+      if (result.ok && result.action.type === "walk") {
         console.log(
           `ok    ${participant.model} (${took}): ${result.action.placeId} — "${result.action.speech}"`
         );
       } else {
         failed = true;
-        console.log(`FAIL  ${participant.model} (${took}): ${result.reason}`);
+        const reason = result.ok ? "not a walk" : result.reason;
+        console.log(`FAIL  ${participant.model} (${took}): ${reason}`);
       }
     }
   } finally {
