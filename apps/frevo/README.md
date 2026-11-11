@@ -44,13 +44,14 @@ The world creates the Room, or reuses the one with the same name (`FREVO_ROOM_NA
 |---|---|---|
 | `GAMBI_HUB_URL` | world, model host | `http://127.0.0.1:3210` |
 | `FREVO_ROOM_NAME` | world, model host | `bloco-de-frevo` |
-| `PORT`, `HOST` | world | `3200`, `0.0.0.0` |
+| `PORT`, `HOST` | world | `3200`, `::` (IPv6 and IPv4) |
 | `FREVO_BONECOS` | world | `1` simulated boneco |
 | `FREVO_DECISION_TIMEOUT_MS` | world | `12000` |
 | `FREVO_ADMIN_SECRET` | world | drawn at start and printed as `/admin?k=<secret>` |
 | `FREVO_BUDGET_USD` | world | `1`: estimated session spending that puts every boneco on autopilot |
 | `FREVO_WEB_DIST` | world | `apps/frevo-web/dist` when built |
 | `FREVO_PUBLIC_URL` | world | none; the QR falls back to the telão's origin |
+| `FREVO_MODEL_HOST_PORT`, `HOST` | model host | a free port, `::`; where `GET /health` answers |
 | `FREVO_MODEL_HOST_MODE` | model host | `openrouter`; `fake` needs no key and no network |
 | `FREVO_MODELS` | model host | the twelve participants of `src/models/catalog.ts` (`model[:participants]`, comma separated) |
 | `OPENROUTER_API_KEY`, `OPENROUTER_API_KEY_FILE` | model host | the file in `~/.config/gambiarra-lab/` |
@@ -71,12 +72,117 @@ One directory per module under `src/`:
   - `blocklist.ts` is the one filter for model text (`filterModelText`): blocked words and letters from other scripts drop the text before it enters the world, so nothing unfiltered reaches the telão.
 - `brains/`: the brain scheduler. One `chat/completions` call per decision, without streaming, with one tool the model must call (`tool_choice: "required"`) and the `participantId` as the model selector. It keeps the free/busy table, because the hub serves one request at a time per participant, refuses a busy one with 409 and does not say who answered; a participant stays busy until the hub answered, even after the decision gave up. A decision goes to a free participant of the boneco's model, or to any free one after `fallbackMs` (1.5 s). The arguments are checked against the tool's schema (and refused with letters outside the Latin alphabet); an unusable answer is repeated once. `metrics.ts` counts decisions, failures and response time per model from the hub's `llm.complete`/`llm.error` events, with the caller's side as fallback when the hub's stream dropped, and estimates the spending (tokens times the catalog's price, or OpenRouter's `usage.cost` when higher).
 - `models/catalog.ts`: the stage models, their labels, prices, request fields (reasoning at its minimum, `max_tokens`, provider routing, measured on 2026-11-11) and the fake stand-ins with their latency and failure rates. `minimax/minimax-m3` replaces `minimax/minimax-m3.1-flash` (issue #18).
-- `model-host/`: the model host, the provider proxy (a local endpoint each participant points at; it adds the key and each model's request fields) and the fake provider, which answers any forced tool with arguments built from the tool's JSON schema.
-- `server/`: HTTP and SSE. `GET /health`, `GET /events/telao`, `POST /api/entrar` (`{ sessao? }` → `{ sessao, boneco, created }`), `POST /api/responder` (`{ sessao, pergunta, opcao | texto | pular | digitando }`; 409 when the question already passed), `GET /events/celular?sessao=…` (the phone's private view), `GET /api/config` (`{ publicUrl }`), `GET /api/models` (the Room's models), `/api/admin/*` behind `Authorization: Bearer <FREVO_ADMIN_SECRET>` (`GET` and `POST /api/admin/models` with `{ model, enabled }`, `POST /api/admin/spending/reset`, `POST /api/admin/formar/abrir` and `/fechar`), and the built web for everything else. `GET /events/telao` carries the snapshot plus one row per model for the panel.
+- `model-host/`: the model host, the provider proxy (a local endpoint each participant points at; it adds the key and each model's request fields) and the fake provider, which answers any forced tool with arguments built from the tool's JSON schema. `health.ts` is the host's only public route, `GET /health`: 200 while the process runs, with how many participants joined. The provider proxy listens on `127.0.0.1` on a free port, inside the process's machine only.
+- `server/`: HTTP and SSE. `GET /health`, `GET /events/telao`, `POST /api/entrar` (`{ sessao? }` → `{ sessao, boneco, created }`), `POST /api/responder` (`{ sessao, pergunta, opcao | texto | pular | digitando }`; 409 when the question already passed), `GET /events/celular?sessao=…` (the phone's private view), `GET /api/config` (`{ publicUrl }`), `GET /api/models` (the Room's models), `/api/admin/*` behind `Authorization: Bearer <FREVO_ADMIN_SECRET>` (`GET` and `POST /api/admin/models` with `{ model, enabled }`, `POST /api/admin/spending/reset`, `POST /api/admin/formar/abrir` and `/fechar`), and the built web for everything else. `GET /events/telao` carries the snapshot plus one row per model for the panel. While no SSE stream is open (telão, phone or admin) and no API call came in the last 5 s, the server sends no decision to the scheduler and the bonecos walk on autopilot, so a deploy left up all day spends nothing on models. A new SSE route must call `watch()` to count as a viewer; `GET /health` reports `viewers`.
 - `gambi/`: the Room by name on the management plane, its inference events (`room-events.ts`, reconnecting) and the call on the inference plane.
 - `testing/`: hub and child processes on free ports for tests, the smoke and `frevo:dev`.
 
 The web keeps the data flow apart from the drawing: `telao/stream.ts` keeps the connection (and reconnects when the browser gives up or the stream goes silent), `telao/world-view.tsx` draws one snapshot and knows nothing else.
+
+## Deploy
+
+Three services from this repository, on Railway (project `bloco-de-frevo`, environment `production`, region `us-east4-eqdc4a`) and in `docker compose` on a notebook as plan B.
+
+| Service | Dockerfile | Network | Health | Secrets |
+|---|---|---|---|---|
+| `hub` | `deploy/frevo/hub.Dockerfile` | private only, `hub.railway.internal:3000` | `/v1/health` | none |
+| `modelos` | `deploy/frevo/modelos.Dockerfile` | private only | `/health` on 3002 | `OPENROUTER_API_KEY` |
+| `mundo` | `deploy/frevo/mundo.Dockerfile` | the only public domain | `/health` on 3001 | `FREVO_ADMIN_SECRET`, `FAL_KEY` |
+
+Every server listens on `::`: Railway's private network needs IPv6 and `0.0.0.0` refuses it. The hub ignores `PORT`, so it gets `--port` by flag and `PORT` repeats the value only for the healthcheck. Hub state is memory only: any redeploy or restart of the hub wipes the Rooms (the world and the model host recover by name).
+
+The SSE stream sends `: keepalive` every 15 s (Railway closes a connection idle for 5 minutes) and the route turns Bun's 10 s idle timeout off. Railway also cuts any HTTP request at 15 minutes; the telão reconnects and the world sends the whole snapshot on connect.
+
+### Configuration as code
+
+`.railway/railway.ts` is the configuration of the whole project, one block per service: Dockerfile path, healthcheck, one replica in one region, non-secret variables, and `preserve()` for the secrets. Railway deprecated the per-service `railway.json` (new services cannot use it, and it stops being read on 2026-12-01), so this file is it. Railway does not read it during a deploy; the CLI applies it. It needs Node >= 22 on `PATH` (the CLI evaluates it with `node --experimental-strip-types`) and the `railway` devDependency. Do not run `railway config` behind `timeout`, `env` or `bunx`. Do not write Railway's default values into it (sleep off, restart on failure): the plan then drifts forever and every apply redeploys the service.
+
+### Variables per service
+
+| Variable | hub | modelos | mundo |
+|---|---|---|---|
+| `HUB_PORT` | `3000` | | |
+| `PORT` | `3000` | `3002` | `3001` |
+| `GAMBI_HUB_URL` | | `http://${{hub.RAILWAY_PRIVATE_DOMAIN}}:${{hub.HUB_PORT}}` | same |
+| `FREVO_ROOM_NAME` | | `bloco-de-frevo` | `bloco-de-frevo` |
+| `FREVO_MODEL_HOST_PORT` | | `3002` | |
+| `FREVO_MODELS` | | unset: the twelve participants of `src/models/catalog.ts` | |
+| `FREVO_BUDGET_USD` | | | `1` |
+| `OPENROUTER_API_KEY` | | secret | |
+| `FREVO_PUBLIC_URL` | | | `https://${{RAILWAY_PUBLIC_DOMAIN}}` |
+| `FREVO_ADMIN_SECRET` | | | secret |
+| `FAL_KEY` | | | secret |
+
+The keys live in raw files in `~/.config/gambiarra-lab/` (`openrouter.key`, `fal.key`, `admin.secret`, all mode 600) and never reach the repository. Create the admin secret once:
+
+```bash
+(umask 077; openssl rand -hex 24 | tr -d '\n' > ~/.config/gambiarra-lab/admin.secret)
+```
+
+The admin link is `https://<mundo domain>/admin?k=<admin secret>`.
+
+### Railway, from the repository root
+
+```bash
+railway link --project 11908982-91b4-4956-bfe2-b68de2283d62 --environment production
+railway config plan                     # read only; must say what you expect
+railway config apply --yes              # creates services and plain variables
+
+# Secrets from file through stdin: not in argv, history or output.
+railway variable set OPENROUTER_API_KEY --stdin --service modelos --skip-deploys --json < ~/.config/gambiarra-lab/openrouter.key
+railway variable set FAL_KEY            --stdin --service mundo   --skip-deploys --json < ~/.config/gambiarra-lab/fal.key
+railway variable set FREVO_ADMIN_SECRET --stdin --service mundo   --skip-deploys --json < ~/.config/gambiarra-lab/admin.secret
+
+# Deploy the working directory (honours .gitignore and .railwayignore).
+railway up --service hub     --ci -m "hub"       # only when its Dockerfile or the gambi version changes
+railway up --service modelos --ci -m "modelos"
+railway up --service mundo   --ci -m "mundo"
+
+railway domain --service mundo --port 3001 --json   # once; the only public domain
+```
+
+Check by names, never by values (`railway variable list --json` and `--kv` print the values):
+
+```bash
+for s in hub modelos mundo; do railway variable list --service $s --json | jq -c 'keys'; done
+for s in hub modelos mundo; do railway domain list --service $s --json; done   # hub and modelos: {"domains":[]}
+railway logs --service mundo --build --lines 200 | grep -A1 -i healthcheck
+curl -s https://<mundo domain>/health    # room, participants, bonecos, viewers
+```
+
+The deploy follows the working directory for now. After the merge to `main` (ticket #21), make each service follow `main`. Connecting deploys `main` right away, and without `watchPatterns` every push redeploys (a hub redeploy wipes the Rooms; do not merge during the show):
+
+```bash
+for s in hub modelos mundo; do
+  railway service source connect --repo arthurbm/gambiarra-lab --branch main --service "$s"
+done
+```
+
+### docker compose on the notebook
+
+`compose.yaml` at the repository root builds the same three images. Only `mundo` publishes a port; the hub stays inside the compose network. The keys come in as compose secrets (`/run/secrets/*`), and `deploy/frevo/secrets-entrypoint.sh` turns each `FOO_FILE` into `FOO`, so `docker inspect` shows only paths.
+
+```bash
+docker compose up --build -d --wait     # telão at http://localhost:3001/telao
+FREVO_MODEL_HOST_MODE=fake docker compose up --build -d --wait   # no key, no spend
+FREVO_PUBLIC_URL=http://<notebook IP>:3001 docker compose up -d --wait   # QR for phones on the same network
+docker compose logs -f mundo
+docker compose down
+```
+
+The secrets arrive with the host file's owner and mode; the images run as uid 1000. On a machine where your uid is not 1000, add `user: "${UID}"` to `modelos` and `mundo`.
+
+### Cost, and taking it all down after the event
+
+With nobody watching, the world asks no model, so the deploy left up spends only Railway's small compute (about US$ 0.15 a day for the three services). The Hobby plan is US$ 5 a month and includes US$ 5 of usage.
+
+```bash
+railway usage
+for s in hub modelos mundo; do railway scale --service "$s" us-east=0; done   # stop, keep the project
+railway delete --project 11908982-91b4-4956-bfe2-b68de2283d62 --yes          # or delete everything
+```
+
+The subscription goes on until it is cancelled in Railway's dashboard.
 
 ## Art
 

@@ -3,9 +3,12 @@
 // fake models (FREVO_FAKE_LATENCY_MS fixes their latency, FREVO_FAKE_FAILURES=0
 // turns their failures off); the default points at OpenRouter through the
 // provider proxy, which holds the key and each model's request fields.
+// FREVO_MODEL_HOST_PORT is where GET /health answers (0 or unset: a free
+// port). It is not PORT, which the world uses when both run from one shell.
 import { modelEntry } from "../models/catalog";
 import { modelHostConfig } from "./config";
 import { startFakeUpstream } from "./fake-upstream";
+import { serveModelHostHealth } from "./health";
 import { startModelHost } from "./host";
 import { startProviderProxy } from "./provider-proxy";
 
@@ -40,8 +43,17 @@ const host = startModelHost({
   onEvent: (event) => console.log(JSON.stringify(event)),
 });
 
+const healthPort = Number(process.env.FREVO_MODEL_HOST_PORT?.trim() || 0);
+if (!Number.isInteger(healthPort) || healthPort < 0) {
+  throw new Error("FREVO_MODEL_HOST_PORT must be a port number");
+}
+const health = serveModelHostHealth(host, {
+  host: process.env.HOST?.trim() || "::",
+  port: healthPort,
+});
+
 console.log(
-  `Frevo model host started: ${host.participantIds.length} participant(s), mode ${config.mode}, Room "${config.roomName}" on ${config.hubUrl}`
+  `Frevo model host started: ${host.participantIds.length} participant(s), mode ${config.mode}, Room "${config.roomName}" on ${config.hubUrl}; health on port ${health.port}`
 );
 
 let stopping = false;
@@ -50,6 +62,7 @@ async function shutdown() {
     return;
   }
   stopping = true;
+  await health.stop();
   await host.stop();
   local.stop();
   process.exit(0);

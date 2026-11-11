@@ -167,10 +167,16 @@ function completions() {
  * an old decision is not enough: the hub has to have answered a new one.
  */
 async function modelDecidesAfter(completedBefore: number) {
-  await until(
-    () => Promise.resolve(completions() > completedBefore ? true : undefined),
-    STEP_TIMEOUT_MS
-  );
+  // The world asks models only while someone watches: keep a telão open.
+  const viewer = await telao();
+  try {
+    await until(
+      () => Promise.resolve(completions() > completedBefore ? true : undefined),
+      STEP_TIMEOUT_MS
+    );
+  } finally {
+    viewer.close();
+  }
   return await watchBoneco(
     (boneco) => boneco.brain === "model" && boneco.speech !== null
   );

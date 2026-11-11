@@ -12,6 +12,7 @@ import { PRACA } from "../sim/world";
 import { type RunningHub, startHub } from "../testing/processes";
 import { until } from "../testing/until";
 import { type FakeUpstream, startFakeUpstream } from "./fake-upstream";
+import { serveModelHostHealth } from "./health";
 import { type ModelHost, startModelHost } from "./host";
 
 const ROOM_NAME = "bloco-de-frevo-teste";
@@ -79,6 +80,24 @@ describe("the model host in a Room", () => {
       "fake-frevo",
       "fake-frevo",
     ]);
+  });
+
+  test("reports on /health how many participants are in the Room", async () => {
+    await connected();
+    const health = serveModelHostHealth(host, { host: "::1", port: 0 });
+    try {
+      const response = await fetch(`http://[::1]:${health.port}/health`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        ok: true,
+        participants: 2,
+        joined: 2,
+      });
+      const other = await fetch(`http://[::1]:${health.port}/v1/models`);
+      expect(other.status).toBe(404);
+    } finally {
+      await health.stop();
+    }
   });
 
   test("a tool call crosses the hub end to end", async () => {

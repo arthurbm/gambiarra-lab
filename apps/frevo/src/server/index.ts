@@ -27,7 +27,8 @@ const webDist =
   ((await exists(resolve(defaultWebDist, "index.html")))
     ? defaultWebDist
     : undefined);
-const host = process.env.HOST?.trim() || "0.0.0.0";
+// `::` takes IPv6 and IPv4; Railway's private network needs IPv6.
+const host = process.env.HOST?.trim() || "::";
 const givenSecret = process.env.FREVO_ADMIN_SECRET?.trim();
 const adminSecret = givenSecret || randomBytes(16).toString("hex");
 const budget = process.env.FREVO_BUDGET_USD?.trim();

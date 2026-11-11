@@ -6,6 +6,7 @@ import {
   startFakeUpstream,
 } from "../model-host/fake-upstream";
 import { type ModelHost, startModelHost } from "../model-host/host";
+import { RESERVE_QUESTIONS } from "../sim/interview";
 import type { PrivateView, PublicSnapshot } from "../sim/world";
 import { type RunningHub, startHub } from "../testing/processes";
 import { openEventStream } from "../testing/sse";
@@ -83,6 +84,24 @@ function phone(sessao: string) {
 }
 
 describe("a phone in the world server", () => {
+  // No telão open: the phone alone is someone watching, from the moment it
+  // enters, so its boneco's first question is written by a model.
+  test("a phone alone gets its interview from a model", async () => {
+    const entered = await enter();
+    const stream = await phone(entered.sessao);
+    try {
+      const first = await stream.find((view) => view.ask !== null);
+      const reserve = RESERVE_QUESTIONS.map((entry) => entry.question);
+      expect(reserve).not.toContain(first.ask?.question);
+      const health = (await (await fetch(`${server.url}/health`)).json()) as {
+        viewers: number;
+      };
+      expect(health.viewers).toBe(1);
+    } finally {
+      stream.close();
+    }
+  }, 20_000);
+
   test("arrives, answers, reloads in the middle and resumes, and finishes the interview", async () => {
     const telao = await openEventStream<PublicSnapshot>(
       `${server.url}/events/telao`

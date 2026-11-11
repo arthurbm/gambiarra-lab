@@ -17,6 +17,7 @@ import { modelPanelRows } from "../models/panel";
 import { closeFormar, enterFormar } from "../sim/formar";
 import {
   answerHuman,
+  type BrainResult,
   createWorld,
   DEFAULT_RULES,
   type HumanAnswer,
@@ -66,6 +67,8 @@ export interface WorldServer {
 // Railway closes a connection that is idle for five minutes; the stream is
 // never quiet for longer than this even when the world stops publishing.
 const KEEPALIVE_MS = 15_000;
+/** How long a call to the API counts as someone watching. */
+const API_ACTIVITY_MS = 5000;
 /** How long the browser waits before connecting again. */
 const SSE_RETRY_MS = 1000;
 const encoder = new TextEncoder();
@@ -205,19 +208,51 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   }, options.roomRefreshMs ?? 2000);
   refreshing = refreshRoom();
 
-  const telao = new Set<ReadableStreamDefaultController<Uint8Array>>();
+  /** Each open telão and the way it leaves. */
+  const telao = new Map<
+    ReadableStreamDefaultController<Uint8Array>,
+    () => void
+  >();
+
+  // The deploy stays up all day. With no stream open (telão, phone or admin)
+  // nobody can see a decision, so none goes to a paid model: the bonecos walk
+  // on autopilot until someone connects. Every SSE route calls `watch`.
+  let viewers = 0;
+  function watch(): () => void {
+    viewers += 1;
+    if (viewers === 1) {
+      log("Someone is watching: the bonecos ask the Room's models");
+    }
+    let left = false;
+    return () => {
+      if (left) {
+        return;
+      }
+      left = true;
+      viewers -= 1;
+      if (viewers === 0) {
+        log("Nobody is watching: the bonecos walk on autopilot");
+      }
+    };
+  }
+  /** Answers for requests nobody asked a model about; fed to the next step. */
+  let unwatched: BrainResult[] = [];
+  // A phone posts `entrar` and opens its stream a moment later; a request in
+  // between (its first question) must still go to a model.
+  let activeUntil = 0;
+  const watched = () => viewers > 0 || Date.now() < activeUntil;
   /** Each phone's streams, by session: one person may have two tabs open. */
   const phones = new Map<
     string,
-    Set<ReadableStreamDefaultController<Uint8Array>>
+    Map<ReadableStreamDefaultController<Uint8Array>, () => void>
   >();
 
   function broadcast(chunk: Uint8Array) {
-    for (const controller of telao) {
+    for (const [controller, leave] of telao) {
       try {
         controller.enqueue(chunk);
       } catch {
-        telao.delete(controller);
+        leave();
       }
     }
   }
@@ -229,11 +264,11 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         continue;
       }
       const chunk = sseEvent("snapshot", view);
-      for (const controller of streams) {
+      for (const [controller, leave] of streams) {
         try {
           controller.enqueue(chunk);
         } catch {
-          streams.delete(controller);
+          leave();
         }
       }
     }
@@ -242,12 +277,21 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
   const tickTimer = setInterval(() => {
     const next = step(world, {
       elapsedMs: tickMs,
-      results: scheduler.drain(),
+      results: [...unwatched, ...scheduler.drain()],
       models,
     });
     ({ world } = next);
+    unwatched = [];
     for (const request of next.requests) {
-      scheduler.submit(request);
+      if (watched()) {
+        scheduler.submit(request);
+      } else {
+        unwatched.push({
+          ok: false,
+          requestId: request.id,
+          reason: "nobody is watching",
+        });
+      }
     }
   }, tickMs);
   const publishTimer = setInterval(() => {
@@ -258,11 +302,11 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     const keepalive = encoder.encode(": keepalive\n\n");
     broadcast(keepalive);
     for (const streams of phones.values()) {
-      for (const controller of streams) {
+      for (const [controller, leave] of streams) {
         try {
           controller.enqueue(keepalive);
         } catch {
-          streams.delete(controller);
+          leave();
         }
       }
     }
@@ -270,7 +314,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
 
   function telaoStream(request: Request): Response {
     let self: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const unwatch = watch();
     const leave = () => {
+      unwatch();
       if (self) {
         telao.delete(self);
       }
@@ -280,7 +326,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         self = controller;
         controller.enqueue(encoder.encode(`retry: ${SSE_RETRY_MS}\n\n`));
         controller.enqueue(sseEvent("snapshot", telaoSnapshot()));
-        telao.add(controller);
+        telao.set(controller, leave);
       },
       cancel: leave,
     });
@@ -295,7 +341,9 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       return new Response("Sessão desconhecida.", { status: 404 });
     }
     let self: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const unwatch = watch();
     const leave = () => {
+      unwatch();
       const streams = phones.get(sessionId);
       if (self && streams) {
         streams.delete(self);
@@ -309,8 +357,8 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
         self = controller;
         controller.enqueue(encoder.encode(`retry: ${SSE_RETRY_MS}\n\n`));
         controller.enqueue(sseEvent("snapshot", view));
-        const streams = phones.get(sessionId) ?? new Set();
-        streams.add(controller);
+        const streams = phones.get(sessionId) ?? new Map();
+        streams.set(controller, leave);
         phones.set(sessionId, streams);
       },
       cancel: leave,
@@ -494,16 +542,40 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     });
   }
 
+  function eventStream(
+    request: Request,
+    bunServer: { timeout: (request: Request, seconds: number) => void },
+    pathname: string,
+    searchParams: URLSearchParams
+  ): Response {
+    if (pathname === "/events/telao") {
+      // The stream stays open; Bun's idle timeout must not close it.
+      bunServer.timeout(request, 0);
+      return telaoStream(request);
+    }
+    if (pathname === "/events/celular") {
+      const sessionId = searchParams.get("sessao") ?? "";
+      if (!SESSION_ID.test(sessionId)) {
+        return new Response("Sessão inválida.", { status: 400 });
+      }
+      bunServer.timeout(request, 0);
+      return phoneStream(request, sessionId);
+    }
+    return new Response("Not Found", { status: 404 });
+  }
+
   const server = Bun.serve({
-    hostname: options.host ?? "0.0.0.0",
+    // `::` takes IPv6 and IPv4; Railway's private network needs IPv6.
+    hostname: options.host ?? "::",
     port: options.port ?? 0,
     fetch(request, bunServer) {
       const { pathname, searchParams } = new URL(request.url);
-      if (pathname.startsWith("/api/admin/")) {
-        return adminApi(request, pathname);
-      }
       if (pathname.startsWith("/api/")) {
-        return api(request, pathname);
+        // A phone entering or answering, or the admin's page polling.
+        activeUntil = Date.now() + API_ACTIVITY_MS;
+        return pathname.startsWith("/api/admin/")
+          ? adminApi(request, pathname)
+          : api(request, pathname);
       }
       if (request.method !== "GET" && request.method !== "HEAD") {
         return new Response("Method Not Allowed", { status: 405 });
@@ -514,23 +586,11 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
           room: roomCode,
           participants: participantCount,
           bonecos: world.bonecos.length,
+          viewers,
         });
       }
-      if (pathname === "/events/telao") {
-        // The stream stays open; Bun's idle timeout must not close it.
-        bunServer.timeout(request, 0);
-        return telaoStream(request);
-      }
-      if (pathname === "/events/celular") {
-        const sessionId = searchParams.get("sessao") ?? "";
-        if (!SESSION_ID.test(sessionId)) {
-          return new Response("Sessão inválida.", { status: 400 });
-        }
-        bunServer.timeout(request, 0);
-        return phoneStream(request, sessionId);
-      }
-      if (pathname.startsWith("/events/") || pathname.startsWith("/api/")) {
-        return new Response("Not Found", { status: 404 });
+      if (pathname.startsWith("/events/")) {
+        return eventStream(request, bunServer, pathname, searchParams);
       }
       return staticFile(pathname);
     },
@@ -550,7 +610,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       ]) {
         clearInterval(timer);
       }
-      for (const controller of telao) {
+      for (const controller of telao.keys()) {
         try {
           controller.close();
         } catch {
@@ -560,7 +620,7 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
       telao.clear();
       await roomEvents.stop();
       for (const streams of phones.values()) {
-        for (const controller of streams) {
+        for (const controller of streams.keys()) {
           try {
             controller.close();
           } catch {

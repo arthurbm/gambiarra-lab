@@ -31,6 +31,8 @@ export interface ModelHostOptions {
 }
 
 export interface ModelHost {
+  /** How many participants are in the Room right now. */
+  joined: () => number;
   participantIds: string[];
   /** Leaves the Room and stops joining again. */
   stop: () => Promise<void>;
@@ -123,6 +125,7 @@ export function startModelHost(options: ModelHostOptions): ModelHost {
   }
 
   return {
+    joined: () => sessions.size,
     participantIds,
     async stop() {
       stopped = true;
