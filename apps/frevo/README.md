@@ -74,6 +74,24 @@ One directory per module under `src/`:
 
 The web keeps the data flow apart from the drawing: `telao/stream.ts` keeps the connection (and reconnects when the browser gives up or the stream goes silent), `telao/world-view.tsx` draws one snapshot and knows nothing else.
 
+## Art
+
+The telão draws the square on a canvas at a whole scale (`apps/frevo-web/src/telao/scale.ts`): every art pixel becomes 3 device pixels on a 720p projector and 4 on a 1080p one, the world centred and the rest of the stage filled with scenery. Bonecos chase their latest position at a capped speed between snapshots (`telao/motion.ts`), walk in four directions and are sorted by depth with the props. Speech balloons are DOM: at most five, the newest speech first, each in the first spot around its boneco that covers no other (`telao/balloons.ts`).
+
+| File | What it is |
+|---|---|
+| `apps/frevo-web/public/art/` | The pack's files, unchanged, and its `NINJA-ADVENTURE-LICENSE.txt` (CC0 1.0) and `NINJA-ADVENTURE-README.md` |
+| `apps/frevo-web/src/art/characters.ts` | The 30 characters (`look` 0 to 29), the eight instruments, `lookOf` (`look ?? hash(id) % 30`) |
+| `apps/frevo-web/src/art/boneco-sprite.tsx` | One boneco as a CSS sprite with its costume, standing or walking, for the phone |
+| `apps/frevo-web/src/art/instrument-icons.ts` | The eight 16 x 16 instrument icons, drawn for this experience |
+| `apps/frevo-web/src/art/credits.ts` | The credit lines, for the final screen |
+| `apps/frevo-web/src/telao/scene.ts` | The square's tiles and props, built on `PRACA` and the meeting spots |
+| `src/sim/meeting-spots.ts` | Where blocos gather, in map units (`@gambiarra-lab/frevo/meeting-spots`) |
+
+`/telao/demo` runs the simulation in the browser with 30 bonecos and a fake brain, to check the art at full load without a hub (`?blocos` sends them to the meeting spots).
+
 ## Credits
 
-The square is inspired by the World of [`gambiarraclub/gambiarra-arena`](https://github.com/gambiarraclub/gambiarra-arena) (MIT), by Filipe Calegario, and written from scratch here.
+- **Art:** [Ninja Adventure - Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack), by Pixel-Boy and AAA, under Creative Commons Zero (CC0 1.0). The pack's page on itch.io says: "They are released under the Creative Commons Zero (CC0) license." (checked on 2026-11-11). The author's GitHub repository ([pixel-boy/NinjaAdventure](https://github.com/pixel-boy/NinjaAdventure)) has no license file; the reference is the itch.io page and the `LICENSE.txt` inside the zip, copied as `apps/frevo-web/public/art/NINJA-ADVENTURE-LICENSE.txt`. The pack's files are unchanged.
+- **Frevo instrument icons:** drawn for this experience; not part of the pack.
+- **Inspiration:** the square is inspired by the World of Filipe Calegario in [`gambiarraclub/gambiarra-arena`](https://github.com/gambiarraclub/gambiarra-arena) (MIT, © 2025 Gambiarra LLM Club), and written from scratch here.

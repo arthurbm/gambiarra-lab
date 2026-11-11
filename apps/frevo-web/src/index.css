@@ -51,33 +51,63 @@ a {
   margin: 0;
 }
 
-/* The telão: one screen, no scrolling. */
+/* The telão: one screen, no scrolling. The square on the left, a column of
+   panels on the right. */
 .telao {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 22vw, 440px);
   height: 100%;
   overflow: hidden;
 }
 
+.telao-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #adbc3a;
+}
+
+.telao-waiting {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Panels from other tickets stack here, in order. */
+.telao-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-height: 0;
+  padding: 0.9rem;
+  overflow: hidden;
+  background: var(--night);
+  border-left: 4px solid var(--night-soft);
+}
+
 .telao-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 1.2rem;
-  background: var(--night-soft);
 }
 
 .telao-header h1 {
   margin: 0;
-  font-size: clamp(1.1rem, 2.2vw, 2rem);
+  font-size: clamp(1.3rem, 1.9vw, 2.2rem);
+  line-height: 1.1;
   color: var(--yellow);
   letter-spacing: 0.02em;
 }
 
 .telao-status {
   padding: 0.2rem 0.8rem;
-  font-size: clamp(0.8rem, 1.2vw, 1.1rem);
-  font-weight: 600;
+  font-size: clamp(0.85rem, 1vw, 1.1rem);
+  font-weight: 700;
   color: var(--paper);
   background: var(--red);
   border-radius: 999px;
@@ -88,30 +118,11 @@ a {
   background: #3bceac;
 }
 
-/* The stage on the left, a side column for panels on the right. */
-.telao-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 0;
-}
-
-.telao-side {
-  display: grid;
-  gap: 0.8rem;
-  align-content: start;
-  min-height: 0;
-  padding: 0.8rem 0.8rem 0.8rem 0;
-}
-
-.telao-side:empty {
-  display: none;
-}
-
+/* The entrance QR, a panel of the side column (#13). */
 .entrada-qr {
   display: grid;
   gap: 0.4rem;
   justify-items: center;
-  width: clamp(11rem, 18vw, 20rem);
   padding: 0.8rem;
   text-align: center;
   background: var(--night-soft);
@@ -125,7 +136,7 @@ a {
 }
 
 .entrada-qr-code {
-  width: 100%;
+  width: min(100%, 18rem);
   height: auto;
   border-radius: 6px;
 }
@@ -143,171 +154,145 @@ a {
   opacity: 0.85;
 }
 
-.telao-stage {
-  display: grid;
-  place-items: center;
-  min-height: 0;
-  padding: 0.8rem;
-  container-type: size;
-}
-
-.telao-waiting {
-  font-size: 1.4rem;
-}
-
+/* The square: a canvas covering the stage, balloons in the DOM above it. */
 .world {
-  position: relative;
-  /* As large as the stage allows while keeping the map's shape. */
-  width: min(100cqw, 100cqh * 16 / 9);
+  position: absolute;
+  inset: 0;
   overflow: hidden;
-  font-size: clamp(0.6rem, 1.5cqw, 1.3rem);
-  background:
-    radial-gradient(circle at 50% 50%, #3a9a70 0 18%, transparent 19%),
-    repeating-linear-gradient(
-      45deg,
-      var(--ground) 0 28px,
-      var(--ground-dark) 28px 56px
-    );
-  border: 4px solid var(--night-soft);
-  border-radius: 12px;
 }
 
-.world-place {
+.world-canvas {
   position: absolute;
-  display: grid;
-  gap: 0.2em;
-  justify-items: center;
-  transform: translate(-50%, -50%);
-}
-
-.world-place-mark {
-  width: 3.2em;
-  height: 3.2em;
-  border: 0.25em dashed var(--paper);
-  border-radius: 50%;
-  opacity: 0.55;
-}
-
-.world-place-name {
-  padding: 0.1em 0.6em;
-  font-size: 0.85em;
-  white-space: nowrap;
-  background: rgb(27 16 53 / 70%);
-  border-radius: 0.4em;
-}
-
-.world-boneco {
-  position: absolute;
-  z-index: 1;
-  display: grid;
-  justify-items: center;
-  transform: translate(-50%, -70%);
-  /* Matches how often the server publishes, so the walk looks continuous. */
-  transition:
-    left 220ms linear,
-    top 220ms linear;
-}
-
-.world-boneco-body {
-  width: 1.8em;
-  height: 2.2em;
-  border: 0.2em solid var(--ink);
-  border-radius: 45% 45% 35% 35%;
-}
-
-.world-boneco[data-walking="true"] .world-boneco-body {
-  animation: frevo-step 360ms ease-in-out infinite alternate;
-}
-
-.world-boneco-name {
-  margin-top: 0.15em;
-  font-weight: 700;
-  text-shadow: 0 1px 2px var(--ink);
-}
-
-.world-boneco-caption {
-  min-height: 1.2em;
-  font-size: 0.7em;
-  white-space: nowrap;
-  text-shadow: 0 1px 2px var(--ink);
-  opacity: 0.85;
+  top: 0;
+  left: 0;
+  display: block;
+  image-rendering: pixelated;
 }
 
 .world-balloon {
   position: absolute;
-  bottom: 100%;
-  width: max-content;
-  max-width: 16em;
-  padding: 0.4em 0.7em;
-  margin: 0 0 0.5em;
-  font-weight: 600;
-  line-height: 1.25;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  padding: 0.3em 0.6em;
+  margin: 0;
+  font-size: var(--balloon-font, 1.5rem);
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--ink);
-  text-align: center;
-  background: var(--paper);
-  border: 0.15em solid var(--ink);
-  border-radius: 0.8em;
+  background: rgb(255 248 231 / 96%);
+  border: 0.14em solid var(--ink);
+  border-radius: 0.5em;
+  box-shadow: 0 0.12em 0 rgb(27 16 53 / 45%);
+  animation: frevo-balloon-in 150ms ease-out;
+  will-change: transform;
 }
 
-.world-thinking {
+.world-balloon span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+}
+
+/* The tail points at the speaker's head. */
+.world-balloon::after {
   position: absolute;
+  top: 100%;
+  left: calc(var(--tail-x, 50%) - 0.45em);
+  content: "";
+  border: 0.45em solid transparent;
+  border-top-color: var(--ink);
+}
+
+.world-balloon[data-slot="below"]::after {
+  top: auto;
   bottom: 100%;
-  display: flex;
-  gap: 0.25em;
-  padding: 0.35em 0.5em;
-  margin-bottom: 0.4em;
-  background: var(--paper);
-  border-radius: 999px;
+  border-top-color: transparent;
+  border-bottom-color: var(--ink);
 }
 
-.world-thinking i {
-  width: 0.4em;
-  height: 0.4em;
-  background: var(--ink);
-  border-radius: 50%;
-  animation: frevo-think 900ms ease-in-out infinite;
+.world-balloon strong {
+  display: block;
+  font-size: 0.7em;
+  line-height: 1.2;
+  color: #b8204a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.world-thinking i:nth-child(2) {
-  animation-delay: 150ms;
-}
-
-.world-thinking i:nth-child(3) {
-  animation-delay: 300ms;
-}
-
-@keyframes frevo-step {
+@keyframes frevo-balloon-in {
   from {
-    transform: translateY(0) rotate(-6deg);
+    opacity: 0;
   }
 
   to {
-    transform: translateY(-0.35em) rotate(6deg);
-  }
-}
-
-@keyframes frevo-think {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-
-  50% {
     opacity: 1;
   }
 }
 
+/* The phone's boneco: a character sheet as a CSS sprite. */
+.boneco-sprite {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--boneco-size);
+  height: var(--boneco-size);
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-size: calc(var(--boneco-size) * 4) calc(var(--boneco-size) * 7);
+}
+
+.boneco-sprite[data-walking="true"] {
+  animation: boneco-walk 500ms steps(4) infinite;
+}
+
+.boneco-sprite-instrument {
+  position: absolute;
+  top: calc(var(--boneco-size) / 8);
+  left: calc(var(--boneco-size) / 2);
+  width: var(--boneco-size);
+  height: var(--boneco-size);
+}
+
+@keyframes boneco-walk {
+  from {
+    background-position-y: 0;
+  }
+
+  to {
+    background-position-y: calc(var(--boneco-size) * -4);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .world-boneco-body,
-  .world-thinking i {
+  .boneco-sprite[data-walking="true"],
+  .world-balloon {
     animation: none;
   }
 }
 
+/* /telao/demo only. */
+.telao-demo {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  background: var(--night-soft);
+  border-radius: 0.6rem;
+}
+
+.telao-demo p {
+  margin: 0;
+}
+
+.telao-demo-sprites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.6rem;
+}
+
 /* The models panel, in the telão's side column. */
 .models-panel {
-  box-sizing: border-box;
-  width: clamp(14rem, 22vw, 24rem);
   padding: 0.8rem;
   font-size: clamp(0.7rem, 1vw, 1rem);
   background: var(--night-soft);
