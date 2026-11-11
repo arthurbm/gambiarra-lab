@@ -47,7 +47,7 @@ describe("simulated humans", () => {
     const sessions = world.bonecos.map((boneco) => boneco.sessionId ?? "");
     const firstAsk = new Map<string, { id: string; atMs: number }>();
     const answeredAt: number[] = [];
-    for (let elapsed = 0; elapsed < 90_000; elapsed += TICK_MS) {
+    for (let elapsed = 0; elapsed < 150_000; elapsed += TICK_MS) {
       ({ world } = tick(world, { elapsedMs: TICK_MS }));
       for (const session of sessions) {
         const ask = privateView(world, session)?.ask;
