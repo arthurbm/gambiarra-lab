@@ -37,16 +37,16 @@ function composed(sizes: number[]): World {
   const total = sizes.reduce((sum, size) => sum + size, 0);
   const world = createWorld({ seed: 3, bonecos: total });
   let next = 0;
-  const blocos: Bloco[] = sizes.map((size, mark) => {
+  const blocos: Bloco[] = sizes.map((size, index) => {
     const members = world.bonecos.slice(next, next + size).map((b) => b.id);
     next += size;
     return {
-      id: `bloco-${mark + 1}`,
-      mark,
+      id: `bloco-${index + 1}`,
+      mark: index,
       members,
       spot: { id: null, x: 10, y: 10 },
       formedBy: "maestro",
-      ...(mark === 0
+      ...(index === 0
         ? {
             name: "Sombrinha Elétrica",
             refrain: ["Lá vem a sombrinha", "Girando no ar"],
@@ -70,6 +70,17 @@ function composed(sizes: number[]): World {
     })),
     phase: "compor",
   };
+}
+
+/** The world after the host marks or unmarks a bloco. */
+function mark(world: World, blocoId: string, chosen: boolean): World {
+  const { world: next } = setChosen(world, blocoId, chosen);
+  return next;
+}
+
+function expelled(world: World, bonecoId: string): World {
+  const { world: next } = expel(world, bonecoId);
+  return next;
 }
 
 function paraded(sizes: number[]): World {
@@ -175,7 +186,7 @@ describe("the jury", () => {
     for (const id of ["bloco-3", "bloco-1", "bloco-4"]) {
       const marked = setChosen(world, id, true);
       expect(marked.error).toBeUndefined();
-      world = marked.world;
+      ({ world } = marked);
     }
     const refused = setChosen(world, "bloco-2", true);
     expect(refused.error).toBe(`Já há ${MAX_CHOSEN} blocos escolhidos.`);
@@ -193,9 +204,9 @@ describe("the jury", () => {
   test("unmarking frees a place, and marking twice changes nothing", () => {
     let world = paraded([3, 3, 3, 3]);
     for (const id of ["bloco-1", "bloco-2", "bloco-2", "bloco-3"]) {
-      world = setChosen(world, id, true).world;
+      world = mark(world, id, true);
     }
-    world = setChosen(world, "bloco-1", false).world;
+    world = mark(world, "bloco-1", false);
     const marked = setChosen(world, "bloco-4", true);
     expect(marked.error).toBeUndefined();
     expect(desfileView(marked.world)?.chosen).toEqual([
@@ -213,13 +224,13 @@ describe("the jury", () => {
       "Bloco não encontrado."
     );
     const final = advancePhase(paraded([3, 3]));
-    expect(desfileView(setChosen(final, "bloco-2", true).world)?.chosen).toEqual(
-      ["bloco-2"]
-    );
+    expect(desfileView(mark(final, "bloco-2", true))?.chosen).toEqual([
+      "bloco-2",
+    ]);
   });
 
   test("the final announces the chosen blocos", () => {
-    let world = setChosen(paraded([3, 3]), "bloco-2", true).world;
+    let world = mark(paraded([3, 3]), "bloco-2", true);
     world = advancePhase(world);
     expect(world.events.at(-1)?.text).toBe(
       "Fim do desfile! Escolhidos do júri: Bloco 2."
@@ -227,15 +238,15 @@ describe("the jury", () => {
   });
 
   test("a bloco emptied by the host leaves the parade and the choices", () => {
-    let world = setChosen(paraded([1, 3]), "bloco-1", true).world;
-    world = expel(world, "boneco-1").world;
+    let world = mark(paraded([1, 3]), "bloco-1", true);
+    world = expelled(world, "boneco-1");
     const view = desfileView(world);
     expect(view?.blocos.map((bloco) => bloco.id)).toEqual(["bloco-2"]);
     expect(view?.chosen).toEqual([]);
   });
 
   test("restarting forgets the desfile and the choices", () => {
-    let world = setChosen(paraded([3, 3]), "bloco-1", true).world;
+    let world = mark(paraded([3, 3]), "bloco-1", true);
     world = restartWorld(advancePhase(world));
     expect(world.phase).toBe("entrada");
     expect(world.desfile).toBeNull();
@@ -261,7 +272,7 @@ describe("the phone in the desfile", () => {
   });
 
   test("in the final, shows whether its bloco was chosen", () => {
-    let world = setChosen(paraded([3, 3]), "bloco-2", true).world;
+    let world = mark(paraded([3, 3]), "bloco-2", true);
     world = advancePhase(world);
     expect(phoneDesfile(world, "boneco-4")).toMatchObject({
       phase: "final",

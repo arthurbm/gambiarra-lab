@@ -80,40 +80,31 @@ export function AdminModelsSection({ secret }: { secret: string }) {
               </button>
             </p>
           ) : null}
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Modelo</th>
-                <th scope="col">Participants</th>
-                <th scope="col">Decisões</th>
-                <th scope="col">Falhas</th>
-                <th scope="col" />
-              </tr>
-            </thead>
-            <tbody>
-              {state.models.map((row) => (
-                <tr key={row.model}>
-                  <th scope="row">{row.label}</th>
-                  <td>{row.participants}</td>
-                  <td>{row.decisions}</td>
-                  <td>{row.failures}</td>
-                  <td>
-                    <button
-                      onClick={() =>
-                        run("/models", {
-                          model: row.model,
-                          enabled: !row.enabled,
-                        })
-                      }
-                      type="button"
-                    >
-                      {row.enabled ? "Desligar" : "Ligar"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ul className="admin-models-list">
+            {state.models.map((row) => (
+              <li data-off={!row.enabled} key={row.model}>
+                <div>
+                  <strong>{row.label}</strong>
+                  <small>
+                    {row.participants} participants · {row.decisions} decisões ·{" "}
+                    {row.failures} falhas
+                    {row.enabled ? "" : " · desligado"}
+                  </small>
+                </div>
+                <button
+                  onClick={() =>
+                    run("/models", {
+                      model: row.model,
+                      enabled: !row.enabled,
+                    })
+                  }
+                  type="button"
+                >
+                  {row.enabled ? "Desligar" : "Ligar"}
+                </button>
+              </li>
+            ))}
+          </ul>
         </>
       ) : null}
     </section>

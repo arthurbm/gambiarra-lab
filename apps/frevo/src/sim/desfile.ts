@@ -86,7 +86,7 @@ export function blocoName(bloco: Bloco): string {
 }
 
 export function blocoRefrain(bloco: Bloco): string[] {
-  const refrain = (bloco as Composed).refrain;
+  const { refrain } = bloco as Composed;
   return refrain && refrain.length > 0 ? refrain : DEFAULT_REFRAIN;
 }
 
@@ -162,7 +162,9 @@ function describeBloco(world: World, bloco: Bloco): DesfileBloco {
 }
 
 export function desfileView(world: World): DesfileView | null {
-  if (!(world.desfile && (world.phase === "desfile" || world.phase === "final"))) {
+  if (
+    !(world.desfile && (world.phase === "desfile" || world.phase === "final"))
+  ) {
     return null;
   }
   const blocos = parade(world);
@@ -191,7 +193,7 @@ export function desfileView(world: World): DesfileView | null {
 // --- Hooks the phase clock calls -------------------------------------------
 
 export function enterDesfile(world: World): World {
-  const first = parade(world)[0];
+  const [first] = parade(world);
   const next: World = {
     ...world,
     desfile: { index: 0, sinceMs: 0, chosen: world.desfile?.chosen ?? [] },
@@ -251,7 +253,9 @@ export function setChosen(
   blocoId: string,
   chosen: boolean
 ): { error?: string; world: World } {
-  if (!(world.desfile && (world.phase === "desfile" || world.phase === "final"))) {
+  if (
+    !(world.desfile && (world.phase === "desfile" || world.phase === "final"))
+  ) {
     return { world, error: "O júri só escolhe no desfile e no final." };
   }
   if (!parade(world).some((bloco) => bloco.id === blocoId)) {
@@ -267,13 +271,13 @@ export function setChosen(
   const next = chosen
     ? [...current, blocoId]
     : current.filter((id) => id !== blocoId);
-  const bloco = parade(world).find((other) => other.id === blocoId) as Bloco;
+  const target = parade(world).find((other) => other.id === blocoId) as Bloco;
   return {
     world: logEvent(
       { ...world, desfile: { ...world.desfile, chosen: next } },
       chosen
-        ? `O júri escolheu ${blocoName(bloco)}!`
-        : `O júri desmarcou ${blocoName(bloco)}.`
+        ? `O júri escolheu ${blocoName(target)}!`
+        : `O júri desmarcou ${blocoName(target)}.`
     ),
   };
 }
@@ -289,16 +293,16 @@ export function phoneDesfile(
     view?.blocos.findIndex((bloco) =>
       bloco.members.some((member) => member.id === bonecoId)
     ) ?? -1;
-  const bloco = view?.blocos[index];
-  if (!(view && bloco)) {
+  const own = view?.blocos[index];
+  if (!(view && own)) {
     return null;
   }
   return {
     phase: view.phase,
-    name: bloco.name,
-    refrain: bloco.refrain,
+    name: own.name,
+    refrain: own.refrain,
     onStage: view.current === index,
-    chosen: bloco.chosen,
-    placement: bloco.placement,
+    chosen: own.chosen,
+    placement: own.placement,
   };
 }

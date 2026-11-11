@@ -106,5 +106,10 @@ export function useTelaoAudio(audio: TelaoAudio | null | undefined) {
     audio?.blocoId && audio.url && audio.ageMs < FEATURE_MS
       ? audio.blocoId
       : null;
-  return { enabled, enable, playing, featured: playing ?? (enabled ? null : asked) };
+  return {
+    enabled,
+    enable,
+    playing,
+    featured: playing ?? (enabled ? null : asked),
+  };
 }

@@ -492,24 +492,23 @@ export function startWorldServer(options: WorldServerOptions): WorldServer {
     return Response.json({ ok: true });
   }
 
+  /** The public API, by method and path. */
+  const routes: Record<string, (request: Request) => Promise<Response>> = {
+    "POST /api/entrar": enter,
+    "POST /api/responder": respond,
+    "POST /api/telao/som": soundReport,
+    "GET /api/models": () => Promise.resolve(publicModels()),
+    "GET /api/config": () =>
+      Promise.resolve(Response.json({ publicUrl: options.publicUrl ?? null })),
+  };
+
   async function api(request: Request, pathname: string): Promise<Response> {
-    try {
-      if (request.method === "POST" && pathname === "/api/entrar") {
-        return await enter(request);
-      }
-      if (request.method === "POST" && pathname === "/api/responder") {
-        return await respond(request);
-      }
-      if (request.method === "POST" && pathname === "/api/telao/som") {
-        return await soundReport(request);
-      }
-      if (request.method === "GET" && pathname === "/api/models") {
-        return publicModels();
-      }
-      if (request.method === "GET" && pathname === "/api/config") {
-        return Response.json({ publicUrl: options.publicUrl ?? null });
-      }
+    const route = routes[`${request.method} ${pathname}`];
+    if (!(route && Object.hasOwn(routes, `${request.method} ${pathname}`))) {
       return new Response("Not Found", { status: 404 });
+    }
+    try {
+      return await route(request);
     } catch (error) {
       if (error instanceof Response) {
         return error;

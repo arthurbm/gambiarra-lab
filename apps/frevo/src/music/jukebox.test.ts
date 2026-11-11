@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { EMBEDDED_TRACK, embeddedMusic, type MusicGenerator } from "./generator";
+import {
+  EMBEDDED_TRACK,
+  embeddedMusic,
+  type MusicGenerator,
+} from "./generator";
 import { createJukebox } from "./jukebox";
 
 const BLOCO = {
@@ -11,8 +15,10 @@ const BLOCO = {
 /** A generator the test answers by hand. */
 function manual() {
   const calls: Parameters<MusicGenerator>[0][] = [];
-  let settle: { reject: (error: Error) => void; resolve: (url: string) => void } | null =
-    null;
+  let settle: {
+    reject: (error: Error) => void;
+    resolve: (url: string) => void;
+  } | null = null;
   const generator: MusicGenerator = (input) => {
     calls.push(input);
     return new Promise((resolve, reject) => {
@@ -97,10 +103,14 @@ describe("the jukebox", () => {
     const patient = createJukebox({ generator: slow.generator, timeoutMs: 20 });
     patient.prepare(BLOCO);
     await Bun.sleep(40);
-    expect(patient.tracks()["bloco-1"]?.state).toBe("reserva");
+    expect(patient.tracks()).toMatchObject({
+      "bloco-1": { state: "reserva" },
+    });
     slow.resolve("https://musica/tarde.mp3");
     await Bun.sleep(0);
-    expect(patient.tracks()["bloco-1"]?.state).toBe("reserva");
+    expect(patient.tracks()).toMatchObject({
+      "bloco-1": { state: "reserva" },
+    });
   });
 
   test("stopping sends the telão a command with no track", () => {

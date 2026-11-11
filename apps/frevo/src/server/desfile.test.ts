@@ -158,9 +158,7 @@ describe("the desfile through the world server", () => {
     }
 
     // The host moves the parade on and back.
-    expect((await admin("desfile/proximo")).body.jury.desfile?.current).toBe(
-      1
-    );
+    expect((await admin("desfile/proximo")).body.jury.desfile?.current).toBe(1);
     expect((await admin("desfile/anterior")).body.jury.desfile?.current).toBe(
       0
     );

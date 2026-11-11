@@ -223,10 +223,10 @@
 }
 
 .final-bloco-members span {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
 }
 
 .final-bloco-models {

@@ -385,17 +385,6 @@ a {
   text-align: left;
 }
 
-.admin-models table {
-  border-collapse: collapse;
-}
-
-.admin-models th,
-.admin-models td {
-  padding: 0.3rem 0.5rem;
-  text-align: left;
-  border-bottom: 1px solid rgb(255 248 231 / 0.2);
-}
-
 .admin-warning {
   padding: 0.6rem 0.8rem;
   font-weight: 600;

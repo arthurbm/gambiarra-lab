@@ -135,7 +135,10 @@ export function createJukebox(options: JukeboxOptions = {}): Jukebox {
     prepare,
     play(bloco) {
       prepare(bloco);
-      return issue(bloco.blocoId, tracks.get(bloco.blocoId)?.url ?? fallbackUrl);
+      return issue(
+        bloco.blocoId,
+        tracks.get(bloco.blocoId)?.url ?? fallbackUrl
+      );
     },
     stop: () => issue(null, null),
     current: () => command,

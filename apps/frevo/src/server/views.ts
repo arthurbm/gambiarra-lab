@@ -1,11 +1,7 @@
 // What the world server sends to each screen, beyond the simulation's own
 // views: the phase clock on the telão and the phones, the phone's notices,
 // and the host's state on the admin. The web imports these types.
-import type {
-  PlayCommand,
-  SoundStatus,
-  TrackStatus,
-} from "../music/jukebox";
+import type { PlayCommand, SoundStatus, TrackStatus } from "../music/jukebox";
 import {
   type DesfileView,
   desfileView,
@@ -15,8 +11,8 @@ import {
 import { type PhaseStatus, phaseStatus } from "../sim/phases";
 import {
   type PrivateView,
-  privateView,
   type PublicSnapshot,
+  privateView,
   publicSnapshot,
   type World,
 } from "../sim/world";
