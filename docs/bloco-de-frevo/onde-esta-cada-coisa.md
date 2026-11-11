@@ -24,7 +24,8 @@ A galeria não tem link para o mundo ao vivo nem para o admin, de propósito: um
 
 - Projeto `bloco-de-frevo`, id `11908982-91b4-4956-bfe2-b68de2283d62`, ambiente `production`.
 - Serviços: `hub` (só rede privada), `modelos` (só rede privada, guarda a key do OpenRouter), `mundo` (o único público, guarda o segredo do admin e a key do fal.ai).
-- Os três serviços seguem a `main` do GitHub (`source` em `.railway/railway.ts`): um push na `main` que toque os padrões de rebuild de um serviço (`watchPatterns`) o redeploya. O `hub` só rebuilda quando o próprio Dockerfile ou o `bun.lock` mudam.
+- Os três serviços têm a `main` do GitHub como origem (`source` em `.railway/railway.ts`), com padrões de rebuild por serviço (`watchPatterns`); o `hub` só rebuilda quando o próprio Dockerfile ou o `bun.lock` mudam.
+- **O deploy automático por push não está confirmado.** Ligar a origem em 2026-11-11 deployou os três serviços a partir do commit `68eafb2` do GitHub. O merge seguinte na `main` (`03091ac`, PR #23, que tocou `apps/frevo/**`) não tinha gerado deploy nenhum trinta minutos depois. Até alguém ver um push redeployar, confira o commit no ar com `railway deployment list --service mundo --json` e publique à mão com `railway up`. A causa não foi investigada; o primeiro lugar a olhar é o acesso do GitHub App da Railway ao repositório, no painel.
 - Redeploy do `mundo` derruba a dinâmica em memória; redeploy do `hub` apaga as Rooms. Antes de uma apresentação, não faça merge na `main`, ou desligue a origem com `railway service source disconnect --service <nome>`.
 - `railway up --service <nome> --ci` a partir de um checkout continua valendo como deploy manual. Comandos em `apps/frevo/README.md`, seção "Deploy".
 
