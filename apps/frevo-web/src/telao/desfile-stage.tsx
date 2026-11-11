@@ -96,10 +96,10 @@ const OTHERS_IN_ONE_ROW = 7;
 const OTHERS_MIN_COLUMNS = 4;
 const OTHERS_TWO_ROW_COLUMNS = 5;
 
-function othersColumns(count: number): number {
-  return count > OTHERS_IN_ONE_ROW
+function othersColumns(total: number): number {
+  return total > OTHERS_IN_ONE_ROW
     ? OTHERS_TWO_ROW_COLUMNS
-    : Math.max(OTHERS_MIN_COLUMNS, count);
+    : Math.max(OTHERS_MIN_COLUMNS, total);
 }
 
 function FinalBloco({ bloco }: { bloco: DesfileBloco }) {
